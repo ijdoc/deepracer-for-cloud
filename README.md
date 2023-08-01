@@ -32,6 +32,36 @@ DRfC supports a wide set of features to ensure that you can focus on creating th
 * Technology
 	* Supports both Docker Swarm (used for connecting multiple nodes together) and Docker Compose (used to support OpenGL)
 
+## Armoury desktop instructions
+
+1. Install Ubuntu 22.04
+2. Install proprietary drivers
+   ![](./.assets/drivers.png)
+3. Install pyenv
+   ```shell
+	 curl https://pyenv.run | bash
+	 ```
+4. Install package dependencies
+   ```
+	 sudo apt-get install jq awscli docker-compose
+	 ```
+5. Install python dependencies
+   ```
+	 pip install boto3 pyyaml
+	 ```
+6. Configure docker to use nvidia GPU
+   ```
+	 sudo nvidia-ctk runtime configure --runtime=docker
+	 sudo systemctl restart docker
+	 sudo docker run --rm --runtime=nvidia --gpus all nvidia/cuda:11.6.2-base-ubuntu20.04 nvidia-smi
+	 ```
+7. Initialize repo
+   ```shell
+	 bin/init.sh -c local -a gpu
+	 source bin/activate.sh run.env
+	 dr-start-training -w
+	 ```
+
 ## Documentation
 
 Full documentation can be found on the [Deepracer-for-Cloud GitHub Pages](https://aws-deepracer-community.github.io/deepracer-for-cloud).
