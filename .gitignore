@@ -1,5 +1,4 @@
 .vscode/
-custom_files/
 logs/
 docker/volumes/
 recording/

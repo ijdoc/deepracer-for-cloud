@@ -62,6 +62,11 @@ DRfC supports a wide set of features to ensure that you can focus on creating th
 	 dr-start-training -w
 	 ```
 
+
+## Configurations
+- Track names available [here](https://github.com/aws-deepracer-community/deepracer-race-data/tree/main/raw_data/tracks)
+
+
 ## Documentation
 
 Full documentation can be found on the [Deepracer-for-Cloud GitHub Pages](https://aws-deepracer-community.github.io/deepracer-for-cloud).
