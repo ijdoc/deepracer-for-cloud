@@ -1,8 +1,6 @@
 import math
 
 LAST_PROGRESS   = 0.0
-# Direction change ranges from -0.40174577800358763 to 0.32913860551437557
-# Expected ideal location range: (-0.23477351610260344, 0.21254900557465373)
 
 
 def get_next_distinct_index(i, waypoints):
@@ -55,56 +53,27 @@ def get_direction_change(i, waypoints):
 
 def reward_function(params):
     '''
-    Progress with track difficulty, steer consistency and speed bias bonuses
+    Progress with track difficulty
     '''
-    
 
     global LAST_PROGRESS
-    look_ahead = 3
+    difficulty_factor = 5
+    # look_ahead = 3
 
     #Obtain difficulty
     curve      = get_direction_change(params['closest_waypoints'][0], params['waypoints'])
-    difficulty = 1 + float(5 * abs(curve))
+    difficulty = 1 + float(difficulty_factor * abs(curve))
     progress   = params['progress']
-    distance_from_center = params['distance_from_center'] / (params['track_width']/2)
-    if params['is_left_of_center']:
-        distance_from_center = -distance_from_center
 
-    point_ahead = params['closest_waypoints'][1]
-    for _ in range(look_ahead):
-        point_ahead = get_next_distinct_index(point_ahead, params['waypoints'])
+    # point_ahead = params['closest_waypoints'][1]
+    # for _ in range(look_ahead):
+    #     point_ahead = get_next_distinct_index(point_ahead, params['waypoints'])
 
-    loc_factor = (get_direction_change(point_ahead, params['waypoints'])
-                  - get_direction_change(get_prev_distinct_index(point_ahead, params['waypoints']), params['waypoints'])) / 0.2
     #Base reward
     step_progress   = progress - LAST_PROGRESS
-    # print(f"Curr: {params['closest_waypoints'][0]} Ahead: {point_ahead} Loc:", "{:4.1f}".format(loc_factor))
-    print("Error", "{:4.1f}".format(abs(distance_from_center - loc_factor)), "Real:","{:4.1f}".format(distance_from_center), "Ideal:", "{:4.1f}".format(loc_factor))
-    # print(f"Pos: {params['closest_waypoints'][0]} Change: {curve}")
-    # if abs(curve) < 0.075:
-    curve_ahead = get_direction_change(point_ahead, params['waypoints'])
-    # print(f"Curve: {-curve} Ahead: {-curve_ahead} Total: {len(params['waypoints'])}")
-    # if abs(curve_ahead) < 0.75:
-    #     print("NOOP")
-    # else:
-    #     if curve_ahead < 0:
-    #         print ("BE LEFT")
-    #     else:
-    #         print ("BE RIGHT")
-    # print(f"Difficulty: {difficulty} Step: {step_progress}")
     LAST_PROGRESS   = progress
 
     if step_progress < 0:
-        # max = -1.0
-        # min = 1.0
-        # for point in range(len(params['waypoints'])):
-        #     change = get_direction_change(point, params['waypoints']) - get_direction_change(get_prev_distinct_index(point, params['waypoints']), params['waypoints'])
-        #     if change > max:
-        #         max = change
-        #     if change < min:
-        #         min = change
-        # print(f'Expected location range: ({min}, {max})')
-        # Episode reset, no reward
-        return float(0.0)
+        return float(0.00001)
 
-    return float(step_progress * difficulty * (1 - abs(distance_from_center - loc_factor) / 3.0))
+    return float(step_progress * difficulty)
