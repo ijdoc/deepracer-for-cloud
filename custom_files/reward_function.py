@@ -80,4 +80,4 @@ def reward_function(params):
 
     speed_factor = float((2 ** (8.5 * step_progress)) - 1.0)
 
-    return float(step_progress * difficulty * speed_factor)
+    return float(step_progress * difficulty * speed_factor / 10.0)
