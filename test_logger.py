@@ -29,6 +29,7 @@ os.environ["WANDB_RESUME"] = "allow"
 iter_metrics = {"test":{"reward": None, "steps": [], "progress": [], "speed": []},
                 "train":{"reward": [], "steps": [], "progress": [], "speed": []},
                 "learn":{"loss": [], "KL_div": [], "entropy": []}}
+best_metrics = {"reward": -1.0, "steps": 0, "progress": 0.0, "speed": 0.0}
 is_stopped = True
 start_step = {"timestamp": None, "progress": None}
 is_testing = False
@@ -68,6 +69,7 @@ def process_line(line):
     global is_stopped
     global start_step
     global is_testing
+    global best_metrics
 
     timestamp = datetime.now()
     if "Training>" in line and "[SAGE]" in line:
@@ -103,6 +105,12 @@ def process_line(line):
             iter_metrics["learn"]["loss"] = np.mean(iter_metrics["learn"]["loss"])
             iter_metrics["learn"]["KL_div"] = np.mean(iter_metrics["learn"]["KL_div"])
             iter_metrics["learn"]["entropy"] = np.mean(iter_metrics["learn"]["entropy"])
+            # Update best metrics for summary
+            if iter_metrics["test"]["reward"] > best_metrics["reward"]:
+                best_metrics["reward"] = iter_metrics["test"]["reward"]
+                best_metrics["steps"] = iter_metrics["test"]["steps"]
+                best_metrics["progress"] = iter_metrics["test"]["progress"]
+                best_metrics["speed"] = iter_metrics["test"]["speed"]
             if DEBUG:
                 print(f"{timestamp} [W&B] {iter_metrics}")
             else:
@@ -118,6 +126,12 @@ def process_line(line):
                            "test/progress": iter_metrics["test"]["progress"],
                            "test/speed": iter_metrics["test"]["speed"]
                            })
+                # Update test metrics summary
+                wandb.run.summary["test/reward"] = best_metrics["reward"]
+                wandb.run.summary["test/steps"] = best_metrics["steps"]
+                wandb.run.summary["test/progress"] = best_metrics["progress"]
+                wandb.run.summary["test/speed"] = best_metrics["speed"]
+            # Reset metrics
             iter_metrics = {"test":{"reward": None, "steps": [], "progress": [], "speed": []},
                             "train":{"reward": [], "steps": [], "progress": [], "speed": []},
                             "learn":{"loss": [], "KL_div": [], "entropy": []}}
@@ -214,10 +228,11 @@ while not model_found:
             print(f"[W&B] Model updated")
 
 
+# FIXME: Upload to bucket and then reference
 # Log model!
 if not DEBUG:
     # resume_job(jobs["train"])
-    model = wandb.Artifact(f"model-{wandb.run.id}", type="model")
+    model = wandb.Artifact(f"racer-model", type="model")
     model.add_file("./model.tar.gz", "model.tar.gz")
     wandb.log_artifact(model)
     print(f"[W&B] Model logged")
