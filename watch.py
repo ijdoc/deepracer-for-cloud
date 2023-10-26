@@ -186,8 +186,9 @@ def process_line(line):
         name = line.split("\"")[1]
         name = name.split(".")[0]
         print(f"{timestamp} Best checkpoint: {name} at episode {last_episode}")
-        if last_episode >= MAX_EPISODES or iter_metrics["test"]["progress"] >= MAX_PROGRESS:
+        if last_episode >= MAX_EPISODES or best_metrics["progress"] >= MAX_PROGRESS:
             print(f'{timestamp} Must stop with progress: {best_metrics["progress"]} @speed: {best_metrics["speed"]}')
+            subprocess.run(f"echo 'source {SCRIPT_PATH}/bin/activate.sh {SCRIPT_PATH}/run.env && dr-stop-training'", shell=True)
             subprocess.run(f"source {SCRIPT_PATH}/bin/activate.sh {SCRIPT_PATH}/run.env && dr-stop-training", shell=True)
     elif "SIM_TRACE_LOG" in line:
         parts = line.split("SIM_TRACE_LOG:")[1].split('\t')[0].split('\n')[0].split(",")
