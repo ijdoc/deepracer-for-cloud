@@ -169,7 +169,7 @@ def process_line(line):
                 wandb.run.summary["test/progress"] = best_metrics["progress"]
                 wandb.run.summary["test/speed"] = best_metrics["speed"]
             if last_episode >= MAX_EPISODES or iter_metrics["test"]["progress"] >= MAX_PROGRESS:
-                print(f"{timestamp} Stopping at episode: {last_episode}, progress: {iter_metrics["test"]["progress"]}")
+                print(f'{timestamp} Stopping at episode: {last_episode}, progress: {iter_metrics["test"]["progress"]}')
                 subprocess.run("source bin/activate.sh run.env && dr-stop-training", shell=True)
             # Reset metrics
             iter_metrics = {"test":{"reward": None, "steps": [], "progress": [], "speed": []},
