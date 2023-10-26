@@ -59,6 +59,7 @@ last_episode = 0
 os.environ["WANDB_RUN_GROUP"] = "2310"
 
 def update_run_env(name):
+    world_name = ""
     # Open the file in read and write mode
     file_path = "./run.env"
     with open(file_path, 'r') as file:
@@ -66,6 +67,8 @@ def update_run_env(name):
     # Modify the content in memory
     new_lines = []
     for line in lines:
+        if line.startswith("DR_WORLD_NAME="):
+            world_name = line.split("=")[1]
         if line.startswith("DR_UPLOAD_S3_PREFIX="):
             new_lines.append(f"DR_UPLOAD_S3_PREFIX={name}\n")
         else:
@@ -73,6 +76,7 @@ def update_run_env(name):
     # Write the modified content back to the file
     with open(file_path, 'w') as file:
         file.writelines(new_lines)
+    return world_name
 
 # Open the JSON file for reading
 with open("./custom_files/hyperparameters.json", "r") as json_file:
@@ -82,10 +86,12 @@ with open("./custom_files/hyperparameters.json", "r") as json_file:
 # Start training job
 if not DEBUG:
     if args.pretrained:
-        wandb.init(config=config_dict, job_type="retrain")
+        wandb.init(job_type="retrain")
     else:
-        wandb.init(config=config_dict, job_type="train")
-    update_run_env(wandb.run.name)
+        wandb.init(job_type="train")
+    world_name = update_run_env(wandb.run.name)
+    config_dict["world_name"] = world_name
+    wandb.config = config_dict
     # Log input files
     config_files = wandb.Artifact(name="config", type="inputs")
     env_files = wandb.Artifact(name="env", type="inputs")
