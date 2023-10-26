@@ -16,13 +16,15 @@ parser = argparse.ArgumentParser(description='Log testing metrics')
 # Define arguments
 parser.add_argument('--pretrained', action='store_true', help='This is a pretrained model')
 parser.add_argument('--debug', action='store_true', help='This is a pretrained model')
-parser.add_argument('--max', type=int, help='The maximum number of episodes to train for', default=10000)
+parser.add_argument('--episodes', type=int, help='The maximum number of episodes to train for', default=10000)
+parser.add_argument('--progress', type=int, help='The average evaluation progress to stop at', default=100)
 
 # Parse the arguments
 args = parser.parse_args()
 
 DEBUG = args.debug
-MAX_EPISODE = args.max
+MAX_EPISODES = args.episodes
+MAX_PROGRESS = args.progress
 
 s3 = boto3.client('s3',
                     aws_access_key_id=os.environ["DR_LOCAL_ACCESS_KEY_ID"],
@@ -53,6 +55,22 @@ last_episode = 0
 # Define group
 os.environ["WANDB_RUN_GROUP"] = "2310"
 
+def update_run_env(name):
+    # Open the file in read and write mode
+    file_path = "./run.env"
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+    # Modify the content in memory
+    new_lines = []
+    for line in lines:
+        if line.startswith("DR_UPLOAD_S3_PREFIX="):
+            new_lines.append(f"DR_UPLOAD_S3_PREFIX={name}\n")
+        else:
+            new_lines.append(line)
+    # Write the modified content back to the file
+    with open(file_path, 'w') as file:
+        file.writelines(new_lines)
+
 # Open the JSON file for reading
 with open("./custom_files/hyperparameters.json", "r") as json_file:
     # Load the JSON data into a Python dictionary
@@ -64,6 +82,7 @@ if not DEBUG:
         wandb.init(config=config_dict, job_type="retrain")
     else:
         wandb.init(config=config_dict, job_type="train")
+    update_run_env(wandb.run.name)
     # Log input files
     config_files = wandb.Artifact(name="config", type="inputs")
     env_files = wandb.Artifact(name="env", type="inputs")
@@ -149,7 +168,7 @@ def process_line(line):
                 wandb.run.summary["test/steps"] = best_metrics["steps"]
                 wandb.run.summary["test/progress"] = best_metrics["progress"]
                 wandb.run.summary["test/speed"] = best_metrics["speed"]
-            if last_episode >= MAX_EPISODE:
+            if last_episode >= MAX_EPISODES or iter_metrics["test"]["progress"] >= MAX_PROGRESS:
                 subprocess.run("source bin/activate.sh run.env && dr-stop-training", shell=True)
             # Reset metrics
             iter_metrics = {"test":{"reward": None, "steps": [], "progress": [], "speed": []},
@@ -250,6 +269,7 @@ while not model_found:
 
 # FIXME: Upload to bucket and then reference
 # Log model!
+subprocess.run("source bin/activate.sh run.env && dr-upload-model -b", shell=True)
 if not DEBUG:
     # resume_job(jobs["train"])
     model = wandb.Artifact(f"racer-model", type="model")
