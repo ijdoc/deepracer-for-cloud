@@ -15,7 +15,7 @@ parser = argparse.ArgumentParser(description='Log testing metrics')
 
 # Define arguments
 parser.add_argument('--pretrained', action='store_true', help='This is a pretrained model')
-parser.add_argument('--debug', action='store_true', help='This is a pretrained model')
+parser.add_argument('--debug', action='store_true', help='Log to console instead of W&B')
 parser.add_argument('--episodes', type=int, help='The maximum number of episodes to train for', default=10000)
 parser.add_argument('--progress', type=int, help='The average evaluation progress to stop at', default=100)
 
