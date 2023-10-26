@@ -7,8 +7,10 @@ import json
 from datetime import datetime
 import time
 import numpy as np
+import subprocess
 
 DEBUG = False
+MAX_EPISODE = 200
 
 s3 = boto3.client('s3',
                     aws_access_key_id=os.environ["DR_LOCAL_ACCESS_KEY_ID"],
@@ -34,6 +36,7 @@ is_stopped = True
 start_step = {"timestamp": None, "progress": None}
 is_testing = False
 test_metrics = {"steps": None, "progress": None}
+last_episode = 0
 
 # Define group
 os.environ["WANDB_RUN_GROUP"] = "2310"
@@ -45,7 +48,6 @@ with open("./custom_files/hyperparameters.json", "r") as json_file:
 
 # Start training job
 if not DEBUG:
-    # wandb.init(config=config_dict, id=jobs["train"]["id"], job_type=jobs["train"]["name"])
     wandb.init(config=config_dict, job_type="train")
     # Log input files
     config_files = wandb.Artifact(name="config", type="inputs")
@@ -70,12 +72,13 @@ def process_line(line):
     global start_step
     global is_testing
     global best_metrics
+    global last_episode
 
     timestamp = datetime.now()
     if "Training>" in line and "[SAGE]" in line:
         # Capture training episode metrics
         metrics = line.split(",")
-        # episode = int(metrics[2].split("=")[1])
+        last_episode = int(metrics[2].split("=")[1])
         reward = float(metrics[3].split("=")[1])
         # steps = int(metrics[4].split("=")[1])
         # iter = int(metrics[5].split("=")[1])
@@ -131,6 +134,9 @@ def process_line(line):
                 wandb.run.summary["test/steps"] = best_metrics["steps"]
                 wandb.run.summary["test/progress"] = best_metrics["progress"]
                 wandb.run.summary["test/speed"] = best_metrics["speed"]
+            if last_episode >= MAX_EPISODE:
+                subprocess.run("dr-stop-training", shell=True)
+                pass
             # Reset metrics
             iter_metrics = {"test":{"reward": None, "steps": [], "progress": [], "speed": []},
                             "train":{"reward": [], "steps": [], "progress": [], "speed": []},
@@ -139,7 +145,7 @@ def process_line(line):
     elif "[BestModelSelection] Updating the best checkpoint" in line:
         name = line.split("\"")[1]
         name = name.split(".")[0]
-        print(f"{timestamp} [W&B] Best checkpoint: {name}")
+        print(f"{timestamp} [W&B] Best checkpoint: {name} at episode {last_episode}")
     elif "SIM_TRACE_LOG" in line:
         parts = line.split("SIM_TRACE_LOG:")[1].split('\t')[0].split('\n')[0].split(",")
         if is_stopped:

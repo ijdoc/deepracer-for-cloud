@@ -76,8 +76,7 @@ def reward_function(params):
     if step_progress < 0:
         return float(0.00001)
 
+    weighted = float((5.0 * step_progress) ** 1.75)
     print(f"MY_TRACE_LOG:{params['steps']},{progress}")
 
-    speed_factor = float((2 ** (8.5 * step_progress)) - 1.0)
-
-    return float(step_progress * difficulty * speed_factor / 10.0)
+    return float(weighted * difficulty)
