@@ -187,8 +187,8 @@ def process_line(line):
         print(f"{timestamp} Best checkpoint: {name} at episode {last_episode}")
         if last_episode >= MAX_EPISODES or best_metrics["progress"] >= MAX_PROGRESS:
             print(f'{timestamp} Must stop with progress: {best_metrics["progress"]} @speed: {best_metrics["speed"]}')
-            subprocess.run(f'echo "source {SCRIPT_PATH}/bin/activate.sh {SCRIPT_PATH}/run.env && dr-stop-training"', shell=True)
-            subprocess.run(f"source {SCRIPT_PATH}/bin/activate.sh {SCRIPT_PATH}/run.env && dr-stop-training", shell=True)
+            subprocess.run(f'echo ". {SCRIPT_PATH}/bin/activate.sh {SCRIPT_PATH}/run.env && dr-stop-training"', shell=True)
+            subprocess.run(f". {SCRIPT_PATH}/bin/activate.sh {SCRIPT_PATH}/run.env && dr-stop-training", shell=True)
     elif "SIM_TRACE_LOG" in line:
         parts = line.split("SIM_TRACE_LOG:")[1].split('\t')[0].split('\n')[0].split(",")
         if is_stopped:
@@ -289,5 +289,5 @@ if not DEBUG:
 
 # Log model!
 print(f"{datetime.now()} Uploading model...")
-subprocess.run(f'echo "source {SCRIPT_PATH}/bin/activate.sh {SCRIPT_PATH}/run.env && dr-upload-model -b"', shell=True)
-subprocess.run(f"source {SCRIPT_PATH}/bin/activate.sh {SCRIPT_PATH}/run.env && dr-upload-model -b", shell=True)
+subprocess.run(f'echo ". {SCRIPT_PATH}/bin/activate.sh {SCRIPT_PATH}/run.env && dr-upload-model -b"', shell=True)
+subprocess.run(f". {SCRIPT_PATH}/bin/activate.sh {SCRIPT_PATH}/run.env && dr-upload-model -b", shell=True)
