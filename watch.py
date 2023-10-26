@@ -25,6 +25,9 @@ args = parser.parse_args()
 DEBUG = args.debug
 MAX_EPISODES = args.episodes
 MAX_PROGRESS = args.progress
+SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
+if DEBUG:
+    print(f'{datetime.now()} Script path: {SCRIPT_PATH}')
 
 s3 = boto3.client('s3',
                     aws_access_key_id=os.environ["DR_LOCAL_ACCESS_KEY_ID"],
@@ -170,7 +173,7 @@ def process_line(line):
                 wandb.run.summary["test/speed"] = best_metrics["speed"]
             if last_episode >= MAX_EPISODES or iter_metrics["test"]["progress"] >= MAX_PROGRESS:
                 print(f'{timestamp} Stopping at episode: {last_episode}, progress: {iter_metrics["test"]["progress"]}')
-                subprocess.run("source bin/activate.sh run.env && dr-stop-training", shell=True)
+                subprocess.run("source {SCRIPT_PATH}/bin/activate.sh run.env && dr-stop-training", shell=True)
             # Reset metrics
             iter_metrics = {"test":{"reward": None, "steps": [], "progress": [], "speed": []},
                             "train":{"reward": [], "steps": [], "progress": [], "speed": []},
@@ -268,9 +271,10 @@ while not model_found:
             print(f"{datetime.now()} Model updated")
 
 
-# FIXME: Upload to bucket and then reference
+# FIXME: Upload to bucket, then reference instead of uploading to W&B
 # Log model!
-subprocess.run("source bin/activate.sh run.env && dr-upload-model -b", shell=True)
+print(f"{datetime.now()} Uploading model...")
+subprocess.run("source {SCRIPT_PATH}/bin/activate.sh run.env && dr-upload-model -b", shell=True)
 if not DEBUG:
     # resume_job(jobs["train"])
     model = wandb.Artifact(f"racer-model", type="model")
