@@ -86,9 +86,9 @@ with open("./custom_files/hyperparameters.json", "r") as json_file:
 # Start training job
 if not DEBUG:
     if args.pretrained:
-        wandb.init(job_type="retrain")
+        wandb.init(config=config_dict, job_type="retrain")
     else:
-        wandb.init(job_type="train")
+        wandb.init(config=config_dict, job_type="train")
     # Log input files
     config_files = wandb.Artifact(name="config", type="inputs")
     env_files = wandb.Artifact(name="env", type="inputs")
@@ -98,9 +98,7 @@ if not DEBUG:
     wandb.use_artifact(config_files)
     wandb.use_artifact(env_files)
     # Update run.env only after logging it
-    world_name = update_run_env(wandb.run.name)
-    config_dict["world_name"] = world_name
-    wandb.config = config_dict
+    wandb.config["world_name"] = update_run_env(wandb.run.name)
 
 def get_float(string):
     try:
