@@ -149,7 +149,7 @@ def process_line(line):
                 best_metrics["progress"] = iter_metrics["test"]["progress"]
                 best_metrics["speed"] = iter_metrics["test"]["speed"]
             if DEBUG:
-                print(f"{timestamp} [W&B] {iter_metrics}")
+                print(f"{timestamp} {iter_metrics}")
             else:
                 wandb.log({"train/reward": iter_metrics["train"]["reward"],
                            "train/steps": iter_metrics["train"]["steps"],
@@ -169,6 +169,7 @@ def process_line(line):
                 wandb.run.summary["test/progress"] = best_metrics["progress"]
                 wandb.run.summary["test/speed"] = best_metrics["speed"]
             if last_episode >= MAX_EPISODES or iter_metrics["test"]["progress"] >= MAX_PROGRESS:
+                print(f"{timestamp} Stopping at episode: {last_episode}, progress: {iter_metrics["test"]["progress"]}")
                 subprocess.run("source bin/activate.sh run.env && dr-stop-training", shell=True)
             # Reset metrics
             iter_metrics = {"test":{"reward": None, "steps": [], "progress": [], "speed": []},
@@ -207,7 +208,7 @@ def process_line(line):
         iter_metrics["test"]["progress"].append(test_metrics["progress"]) 
         iter_metrics["test"]["speed"].append(test_metrics["progress"] / test_metrics["steps"]) 
         if DEBUG:
-            print(f"{timestamp} [W&B] test metrics: {test_metrics}")
+            print(f"{timestamp} test metrics: {test_metrics}")
     elif "MY_TRACE_LOG" in line:
         if is_testing:
             parts = line.split("MY_TRACE_LOG:")[1].split('\t')[0].split('\n')[0].split(",")
@@ -261,10 +262,10 @@ while not model_found:
     for obj in response.get('Contents', []):
         if "model.tar.gz" in obj['Key']:
             model_found = True
-            print(f"[W&B] Model found")
+            print(f"{datetime.now()} Model found")
             # Download model
             s3.download_file(os.environ["DR_LOCAL_S3_BUCKET"], "rl-deepracer-sagemaker/model.tar.gz", "model.tar.gz")
-            print(f"[W&B] Model updated")
+            print(f"{datetime.now()} Model updated")
 
 
 # FIXME: Upload to bucket and then reference
@@ -275,6 +276,6 @@ if not DEBUG:
     model = wandb.Artifact(f"racer-model", type="model")
     model.add_file("./model.tar.gz", "model.tar.gz")
     wandb.log_artifact(model)
-    print(f"[W&B] Model logged")
-    print(f"[W&B] Finishing...")
+    print(f"{datetime.now()} Model logged")
+    print(f"{datetime.now()} Finishing...")
     wandb.finish()
