@@ -8,9 +8,21 @@ from datetime import datetime
 import time
 import numpy as np
 import subprocess
+import argparse
 
-DEBUG = False
-MAX_EPISODE = 200
+# Create ArgumentParser
+parser = argparse.ArgumentParser(description='Log testing metrics')
+
+# Define arguments
+parser.add_argument('--pretrained', action='store_true', help='This is a pretrained model')
+parser.add_argument('--debug', action='store_true', help='This is a pretrained model')
+parser.add_argument('--max', type=int, help='The maximum number of episodes to train for', default=10000)
+
+# Parse the arguments
+args = parser.parse_args()
+
+DEBUG = args.debug
+MAX_EPISODE = args.max
 
 s3 = boto3.client('s3',
                     aws_access_key_id=os.environ["DR_LOCAL_ACCESS_KEY_ID"],
@@ -48,7 +60,10 @@ with open("./custom_files/hyperparameters.json", "r") as json_file:
 
 # Start training job
 if not DEBUG:
-    wandb.init(config=config_dict, job_type="train")
+    if args.pretrained:
+        wandb.init(config=config_dict, job_type="retrain")
+    else:
+        wandb.init(config=config_dict, job_type="train")
     # Log input files
     config_files = wandb.Artifact(name="config", type="inputs")
     env_files = wandb.Artifact(name="env", type="inputs")
@@ -135,8 +150,7 @@ def process_line(line):
                 wandb.run.summary["test/progress"] = best_metrics["progress"]
                 wandb.run.summary["test/speed"] = best_metrics["speed"]
             if last_episode >= MAX_EPISODE:
-                subprocess.run("dr-stop-training", shell=True)
-                pass
+                subprocess.run("source bin/activate.sh run.env && dr-stop-training", shell=True)
             # Reset metrics
             iter_metrics = {"test":{"reward": None, "steps": [], "progress": [], "speed": []},
                             "train":{"reward": [], "steps": [], "progress": [], "speed": []},
@@ -145,7 +159,7 @@ def process_line(line):
     elif "[BestModelSelection] Updating the best checkpoint" in line:
         name = line.split("\"")[1]
         name = name.split(".")[0]
-        print(f"{timestamp} [W&B] Best checkpoint: {name} at episode {last_episode}")
+        print(f"{timestamp} Best checkpoint: {name} at episode {last_episode}")
     elif "SIM_TRACE_LOG" in line:
         parts = line.split("SIM_TRACE_LOG:")[1].split('\t')[0].split('\n')[0].split(",")
         if is_stopped:
@@ -244,4 +258,3 @@ if not DEBUG:
     print(f"[W&B] Model logged")
     print(f"[W&B] Finishing...")
     wandb.finish()
-
