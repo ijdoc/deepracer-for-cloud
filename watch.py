@@ -171,9 +171,6 @@ def process_line(line):
                 wandb.run.summary["test/steps"] = best_metrics["steps"]
                 wandb.run.summary["test/progress"] = best_metrics["progress"]
                 wandb.run.summary["test/speed"] = best_metrics["speed"]
-            if last_episode >= MAX_EPISODES or iter_metrics["test"]["progress"] >= MAX_PROGRESS:
-                print(f'{timestamp} Stopping at episode: {last_episode}, progress: {iter_metrics["test"]["progress"]}')
-                subprocess.run("source {SCRIPT_PATH}/bin/activate.sh run.env && dr-stop-training", shell=True)
             # Reset metrics
             iter_metrics = {"test":{"reward": None, "steps": [], "progress": [], "speed": []},
                             "train":{"reward": [], "steps": [], "progress": [], "speed": []},
@@ -183,6 +180,9 @@ def process_line(line):
         name = line.split("\"")[1]
         name = name.split(".")[0]
         print(f"{timestamp} Best checkpoint: {name} at episode {last_episode}")
+        if last_episode >= MAX_EPISODES or iter_metrics["test"]["progress"] >= MAX_PROGRESS:
+            print(f'{timestamp} Must stop with progress: {best_metrics["progress"]} @speed: {best_metrics["speed"]}')
+            subprocess.run(f"source {SCRIPT_PATH}/bin/activate.sh {SCRIPT_PATH}/run.env && dr-stop-training", shell=True)
     elif "SIM_TRACE_LOG" in line:
         parts = line.split("SIM_TRACE_LOG:")[1].split('\t')[0].split('\n')[0].split(",")
         if is_stopped:
@@ -272,14 +272,15 @@ while not model_found:
 
 
 # FIXME: Upload to bucket, then reference instead of uploading to W&B
-# Log model!
-print(f"{datetime.now()} Uploading model...")
-subprocess.run("source {SCRIPT_PATH}/bin/activate.sh run.env && dr-upload-model -b", shell=True)
 if not DEBUG:
     # resume_job(jobs["train"])
-    model = wandb.Artifact(f"racer-model", type="model")
+    model = wandb.Artifact(f"2310-qualifier", type="model")
     model.add_file("./model.tar.gz", "model.tar.gz")
     wandb.log_artifact(model)
     print(f"{datetime.now()} Model logged")
     print(f"{datetime.now()} Finishing...")
     wandb.finish()
+
+# Log model!
+print(f"{datetime.now()} Uploading model...")
+subprocess.run(f"source {SCRIPT_PATH}/bin/activate.sh {SCRIPT_PATH}/run.env && dr-upload-model -b", shell=True)
