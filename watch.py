@@ -98,7 +98,7 @@ if not DEBUG:
     wandb.use_artifact(config_files)
     wandb.use_artifact(env_files)
     # Update run.env only after logging it
-    wandb.config["world_name"] = update_run_env(wandb.run.name)
+    wandb.config["world_name"] = update_run_env(wandb.run.name).replace("\n", "")
 
 def get_float(string):
     try:
@@ -187,7 +187,7 @@ def process_line(line):
         print(f"{timestamp} Best checkpoint: {name} at episode {last_episode}")
         if last_episode >= MAX_EPISODES or best_metrics["progress"] >= MAX_PROGRESS:
             print(f'{timestamp} Must stop with progress: {best_metrics["progress"]} @speed: {best_metrics["speed"]}')
-            subprocess.run(f"echo 'source {SCRIPT_PATH}/bin/activate.sh {SCRIPT_PATH}/run.env && dr-stop-training'", shell=True)
+            subprocess.run(f'echo "source {SCRIPT_PATH}/bin/activate.sh {SCRIPT_PATH}/run.env && dr-stop-training"', shell=True)
             subprocess.run(f"source {SCRIPT_PATH}/bin/activate.sh {SCRIPT_PATH}/run.env && dr-stop-training", shell=True)
     elif "SIM_TRACE_LOG" in line:
         parts = line.split("SIM_TRACE_LOG:")[1].split('\t')[0].split('\n')[0].split(",")
@@ -289,4 +289,5 @@ if not DEBUG:
 
 # Log model!
 print(f"{datetime.now()} Uploading model...")
+subprocess.run(f'echo "source {SCRIPT_PATH}/bin/activate.sh {SCRIPT_PATH}/run.env && dr-upload-model -b"', shell=True)
 subprocess.run(f"source {SCRIPT_PATH}/bin/activate.sh {SCRIPT_PATH}/run.env && dr-upload-model -b", shell=True)
