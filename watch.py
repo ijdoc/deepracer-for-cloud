@@ -274,7 +274,7 @@ while not model_found:
             print(f"{datetime.now()} Model found")
             # Download model
             s3.download_file(os.environ["DR_LOCAL_S3_BUCKET"], "rl-deepracer-sagemaker/model.tar.gz", "model.tar.gz")
-            print(f"{datetime.now()} Model updated")
+            print(f"{datetime.now()} Model retrieved")
 
 
 # FIXME: Upload to bucket, then reference instead of uploading to W&B
@@ -289,5 +289,5 @@ if not DEBUG:
 
 # Log model!
 print(f"{datetime.now()} Uploading model...")
-subprocess.run(f'echo ". {SCRIPT_PATH}/bin/activate.sh {SCRIPT_PATH}/run.env && dr-upload-model -b"', shell=True)
-subprocess.run(f". {SCRIPT_PATH}/bin/activate.sh {SCRIPT_PATH}/run.env && dr-upload-model -b", shell=True)
+subprocess.run(f'echo ". /bin/bash {SCRIPT_PATH}/bin/activate.sh {SCRIPT_PATH}/run.env && dr-upload-model -b"', shell=True)
+subprocess.run(f". /bin/bash {SCRIPT_PATH}/bin/activate.sh {SCRIPT_PATH}/run.env && dr-upload-model -b", shell=True)
