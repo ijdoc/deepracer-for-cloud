@@ -89,9 +89,6 @@ if not DEBUG:
         wandb.init(job_type="retrain")
     else:
         wandb.init(job_type="train")
-    world_name = update_run_env(wandb.run.name)
-    config_dict["world_name"] = world_name
-    wandb.config = config_dict
     # Log input files
     config_files = wandb.Artifact(name="config", type="inputs")
     env_files = wandb.Artifact(name="env", type="inputs")
@@ -100,6 +97,10 @@ if not DEBUG:
     env_files.add_file("./system.env")
     wandb.use_artifact(config_files)
     wandb.use_artifact(env_files)
+    # Update run.env only after logging it
+    world_name = update_run_env(wandb.run.name)
+    config_dict["world_name"] = world_name
+    wandb.config = config_dict
 
 def get_float(string):
     try:
