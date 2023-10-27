@@ -20,6 +20,7 @@ while getopts ":h-:" opt; do
                     exit 0
                     ;;
                 debug)
+                    debug_flag=1
                     # Continue (just accept the option)
                     ;;
                 pretrained)
@@ -44,10 +45,14 @@ while getopts ":h-:" opt; do
     esac
 done
 
-# Check if the branch is dirty
-if [[ -n $(git status --porcelain) ]]; then
-  error "Your Git branch is dirty. Please commit your changes."
+# Skip git check if debugging
+if [ $debug_flag -ne 1 ]; then
+    # Check if the branch is dirty
+    if [[ -n $(git status --porcelain) ]]; then
+      error "Your Git branch is dirty. Please commit your changes."
+    fi
 fi
+
 
 source bin/activate.sh run.env
 dr-stop-viewer
