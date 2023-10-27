@@ -7,6 +7,7 @@ display_help() {
 }
 
 # Parse command-line options
+debug_flag=0
 while getopts ":h-:" opt; do
     case "$opt" in
         h)
