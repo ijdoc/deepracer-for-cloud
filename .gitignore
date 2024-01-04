@@ -1,6 +1,7 @@
 retrain.sh
 *.tar.gz
-wandb/
+.wandb/**
+wandb/**
 .vscode/
 logs/
 docker/volumes/
