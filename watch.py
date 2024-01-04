@@ -11,13 +11,27 @@ import subprocess
 import argparse
 
 # Create ArgumentParser
-parser = argparse.ArgumentParser(description='Log testing metrics')
+parser = argparse.ArgumentParser(description="Log testing metrics")
 
 # Define arguments
-parser.add_argument('--pretrained', action='store_true', help='This is a pretrained model')
-parser.add_argument('--debug', action='store_true', help='Log to console instead of W&B')
-parser.add_argument('--episodes', type=int, help='The maximum number of episodes to train for', default=10000)
-parser.add_argument('--progress', type=int, help='The average evaluation progress to stop at', default=100)
+parser.add_argument(
+    "--pretrained", action="store_true", help="This is a pretrained model"
+)
+parser.add_argument(
+    "--debug", action="store_true", help="Log to console instead of W&B"
+)
+parser.add_argument(
+    "--episodes",
+    type=int,
+    help="The maximum number of episodes to train for",
+    default=10000,
+)
+parser.add_argument(
+    "--progress",
+    type=int,
+    help="The average evaluation progress to stop at",
+    default=100,
+)
 
 # Parse the arguments
 args = parser.parse_args()
@@ -27,12 +41,14 @@ MAX_EPISODES = args.episodes
 MAX_PROGRESS = args.progress
 SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 if DEBUG:
-    print(f'{datetime.now()} Script path: {SCRIPT_PATH}')
+    print(f"{datetime.now()} Script path: {SCRIPT_PATH}")
 
-s3 = boto3.client('s3',
-                    aws_access_key_id=os.environ["DR_LOCAL_ACCESS_KEY_ID"],
-                    aws_secret_access_key=os.environ["DR_LOCAL_SECRET_ACCESS_KEY"],
-                    endpoint_url="http://localhost:9000")
+s3 = boto3.client(
+    "s3",
+    aws_access_key_id=os.environ["DR_LOCAL_ACCESS_KEY_ID"],
+    aws_secret_access_key=os.environ["DR_LOCAL_SECRET_ACCESS_KEY"],
+    endpoint_url="http://localhost:9000",
+)
 
 # Configure project path
 os.environ["WANDB_ENTITY"] = "iamjdoc"
@@ -45,9 +61,11 @@ os.environ["WANDB_SILENT"] = "true"
 os.environ["WANDB_RESUME"] = "allow"
 
 # running_job = jobs["train"]["id"]
-iter_metrics = {"test":{"reward": None, "steps": [], "progress": [], "speed": []},
-                "train":{"reward": [], "steps": [], "progress": [], "speed": []},
-                "learn":{"loss": [], "KL_div": [], "entropy": []}}
+iter_metrics = {
+    "test": {"reward": None, "steps": [], "progress": [], "speed": []},
+    "train": {"reward": [], "steps": [], "progress": [], "speed": []},
+    "learn": {"loss": [], "KL_div": [], "entropy": []},
+}
 best_metrics = {"reward": -1.0, "steps": 0, "progress": 0.0, "speed": 0.0}
 is_stopped = True
 start_step = {"timestamp": None, "progress": None}
@@ -55,14 +73,15 @@ is_testing = False
 test_metrics = {"steps": None, "progress": None}
 last_episode = 0
 
-# Define group
-os.environ["WANDB_RUN_GROUP"] = "2310"
+# FIXME: Define group from command line in train.sh script
+os.environ["WANDB_RUN_GROUP"] = "2402"
+
 
 def update_run_env(name):
     world_name = ""
     # Open the file in read and write mode
     file_path = "./run.env"
-    with open(file_path, 'r') as file:
+    with open(file_path, "r") as file:
         lines = file.readlines()
     # Modify the content in memory
     new_lines = []
@@ -74,9 +93,10 @@ def update_run_env(name):
         else:
             new_lines.append(line)
     # Write the modified content back to the file
-    with open(file_path, 'w') as file:
+    with open(file_path, "w") as file:
         file.writelines(new_lines)
     return world_name
+
 
 # Open the JSON file for reading
 with open("./custom_files/hyperparameters.json", "r") as json_file:
@@ -100,12 +120,14 @@ if not DEBUG:
     # Update run.env only after logging it
     wandb.config["world_name"] = update_run_env(wandb.run.name).replace("\n", "")
 
+
 def get_float(string):
     try:
         x = float(string)
         return x
     except ValueError:
         return None
+
 
 def process_line(line):
     # Process training episodes and policy training
@@ -125,13 +147,17 @@ def process_line(line):
         # steps = int(metrics[4].split("=")[1])
         # iter = int(metrics[5].split("=")[1])
         iter_metrics["train"]["reward"].append(reward)
-    elif "Policy training>"  in line:
+    elif "Policy training>" in line:
         metrics = line.split(",")
         # epoch = int(metrics[3].split("=")[1])
         loss = float(metrics[0].split("=")[1])
         divergence = float(metrics[1].split("=")[1])
         entropy = float(metrics[2].split("=")[1])
-        metrics = {"learn/loss":loss, "learn/KL_div": divergence, "learn/entropy": entropy}
+        metrics = {
+            "learn/loss": loss,
+            "learn/KL_div": divergence,
+            "learn/entropy": entropy,
+        }
         iter_metrics["learn"]["loss"].append(loss)
         iter_metrics["learn"]["KL_div"].append(divergence)
         iter_metrics["learn"]["entropy"].append(entropy)
@@ -145,7 +171,9 @@ def process_line(line):
             iter_metrics["test"]["speed"] = np.mean(iter_metrics["test"]["speed"])
             iter_metrics["train"]["reward"] = np.mean(iter_metrics["train"]["reward"])
             iter_metrics["train"]["steps"] = np.mean(iter_metrics["train"]["steps"])
-            iter_metrics["train"]["progress"] = np.mean(iter_metrics["train"]["progress"])
+            iter_metrics["train"]["progress"] = np.mean(
+                iter_metrics["train"]["progress"]
+            )
             iter_metrics["train"]["speed"] = np.mean(iter_metrics["train"]["speed"])
             iter_metrics["learn"]["loss"] = np.mean(iter_metrics["learn"]["loss"])
             iter_metrics["learn"]["KL_div"] = np.mean(iter_metrics["learn"]["KL_div"])
@@ -159,37 +187,44 @@ def process_line(line):
             if DEBUG:
                 print(f"{timestamp} {iter_metrics}")
             else:
-                wandb.log({"train/reward": iter_metrics["train"]["reward"],
-                           "train/steps": iter_metrics["train"]["steps"],
-                           "train/progress": iter_metrics["train"]["progress"],
-                           "train/speed": iter_metrics["train"]["speed"],
-                           "learn/loss": iter_metrics["learn"]["loss"],
-                           "learn/KL_div": iter_metrics["learn"]["KL_div"],
-                           "learn/entropy": iter_metrics["learn"]["entropy"],
-                           "test/reward": iter_metrics["test"]["reward"],
-                           "test/steps": iter_metrics["test"]["steps"],
-                           "test/progress": iter_metrics["test"]["progress"],
-                           "test/speed": iter_metrics["test"]["speed"]
-                           })
+                wandb.log(
+                    {
+                        "train/reward": iter_metrics["train"]["reward"],
+                        "train/steps": iter_metrics["train"]["steps"],
+                        "train/progress": iter_metrics["train"]["progress"],
+                        "train/speed": iter_metrics["train"]["speed"],
+                        "learn/loss": iter_metrics["learn"]["loss"],
+                        "learn/KL_div": iter_metrics["learn"]["KL_div"],
+                        "learn/entropy": iter_metrics["learn"]["entropy"],
+                        "test/reward": iter_metrics["test"]["reward"],
+                        "test/steps": iter_metrics["test"]["steps"],
+                        "test/progress": iter_metrics["test"]["progress"],
+                        "test/speed": iter_metrics["test"]["speed"],
+                    }
+                )
                 # Update test metrics summary
                 wandb.run.summary["test/reward"] = best_metrics["reward"]
                 wandb.run.summary["test/steps"] = best_metrics["steps"]
                 wandb.run.summary["test/progress"] = best_metrics["progress"]
                 wandb.run.summary["test/speed"] = best_metrics["speed"]
             # Reset metrics
-            iter_metrics = {"test":{"reward": None, "steps": [], "progress": [], "speed": []},
-                            "train":{"reward": [], "steps": [], "progress": [], "speed": []},
-                            "learn":{"loss": [], "KL_div": [], "entropy": []}}
+            iter_metrics = {
+                "test": {"reward": None, "steps": [], "progress": [], "speed": []},
+                "train": {"reward": [], "steps": [], "progress": [], "speed": []},
+                "learn": {"loss": [], "KL_div": [], "entropy": []},
+            }
         is_testing = False
     elif "[BestModelSelection] Updating the best checkpoint" in line:
-        name = line.split("\"")[1]
+        name = line.split('"')[1]
         name = name.split(".")[0]
         print(f"{timestamp} Best checkpoint: {name} at episode {last_episode}")
         if last_episode >= MAX_EPISODES or best_metrics["progress"] >= MAX_PROGRESS:
-            print(f'{timestamp} Stopping at progress: {best_metrics["progress"]} & speed: {best_metrics["speed"]}')
+            print(
+                f'{timestamp} Stopping at progress: {best_metrics["progress"]} & speed: {best_metrics["speed"]}'
+            )
             subprocess.run(f"./stop.sh", shell=True)
     elif "SIM_TRACE_LOG" in line:
-        parts = line.split("SIM_TRACE_LOG:")[1].split('\t')[0].split('\n')[0].split(",")
+        parts = line.split("SIM_TRACE_LOG:")[1].split("\t")[0].split("\n")[0].split(",")
         if is_stopped:
             timestamp = float(parts[14])
             progress = float(parts[11])
@@ -197,14 +232,16 @@ def process_line(line):
             if DEBUG:
                 print(f"{timestamp} [DEBUG] {start_step}")
             is_stopped = False
-        if 'True' in parts[9]:
+        if "True" in parts[9]:
             timestamp = float(parts[14])
             steps = int(parts[1])
             progress = float(parts[11])
             # speed = ((progress / 100.0) * float(parts[13])) / (timestamp - start_step["timestamp"])
             speed = progress / steps
             if DEBUG:
-                print(f"{timestamp} [DEBUG] Steps: {steps} Progress: {progress} Speed: {speed}")
+                print(
+                    f"{timestamp} [DEBUG] Steps: {steps} Progress: {progress} Speed: {speed}"
+                )
             iter_metrics["train"]["steps"].append(steps)
             iter_metrics["train"]["progress"].append(progress)
             iter_metrics["train"]["speed"].append(speed)
@@ -212,14 +249,18 @@ def process_line(line):
     elif "Starting evaluation phase" in line:
         is_testing = True
     elif "Testing>" in line:
-        iter_metrics["test"]["steps"].append(test_metrics["steps"]) 
-        iter_metrics["test"]["progress"].append(test_metrics["progress"]) 
-        iter_metrics["test"]["speed"].append(test_metrics["progress"] / test_metrics["steps"]) 
+        iter_metrics["test"]["steps"].append(test_metrics["steps"])
+        iter_metrics["test"]["progress"].append(test_metrics["progress"])
+        iter_metrics["test"]["speed"].append(
+            test_metrics["progress"] / test_metrics["steps"]
+        )
         if DEBUG:
             print(f"{timestamp} test metrics: {test_metrics}")
     elif "MY_TRACE_LOG" in line:
         if is_testing:
-            parts = line.split("MY_TRACE_LOG:")[1].split('\t')[0].split('\n')[0].split(",")
+            parts = (
+                line.split("MY_TRACE_LOG:")[1].split("\t")[0].split("\n")[0].split(",")
+            )
             test_metrics["steps"] = int(float(parts[0]))
             test_metrics["progress"] = float(parts[1])
             if DEBUG:
@@ -228,16 +269,18 @@ def process_line(line):
         if DEBUG:
             print(f"{timestamp} {line}")
 
+
 def aggregate_logs(container, label):
-    buffer = ''
+    buffer = ""
     logs = container.logs(stream=True, follow=True)
     for chunk in logs:
         # Process each line of the log here
-        buffer += chunk.decode('utf-8')
-        while '\n' in buffer:
-            line, buffer = buffer.split('\n', 1)
+        buffer += chunk.decode("utf-8")
+        while "\n" in buffer:
+            line, buffer = buffer.split("\n", 1)
             if line.strip() != "":
-                process_line(f'{label} {line.strip()}')
+                process_line(f"{label} {line.strip()}")
+
 
 # Get containers
 client = docker.from_env()
@@ -265,21 +308,27 @@ aggregate_logs(sagemaker, "[SAGE]")
 model_found = False
 while not model_found:
     # List the objects in the bucket
-    response = s3.list_objects_v2(Bucket=os.environ["DR_LOCAL_S3_BUCKET"], Prefix="rl-deepracer-sagemaker")
+    response = s3.list_objects_v2(
+        Bucket=os.environ["DR_LOCAL_S3_BUCKET"], Prefix="rl-deepracer-sagemaker"
+    )
     # Display the contents of the bucket
-    for obj in response.get('Contents', []):
-        if "model.tar.gz" in obj['Key']:
+    for obj in response.get("Contents", []):
+        if "model.tar.gz" in obj["Key"]:
             model_found = True
             print(f"{datetime.now()} Model found")
             # Download model
-            s3.download_file(os.environ["DR_LOCAL_S3_BUCKET"], "rl-deepracer-sagemaker/model.tar.gz", "model.tar.gz")
+            s3.download_file(
+                os.environ["DR_LOCAL_S3_BUCKET"],
+                "rl-deepracer-sagemaker/model.tar.gz",
+                "model.tar.gz",
+            )
             print(f"{datetime.now()} Model retrieved")
 
 
 # FIXME: Upload to bucket, then reference instead of uploading to W&B
 if not DEBUG:
     # resume_job(jobs["train"])
-    model = wandb.Artifact(f"2310-qualifier", type="model")
+    model = wandb.Artifact(f"{os.environ['WANDB_RUN_GROUP']}-qualifier", type="model")
     model.add_file("./model.tar.gz", "model.tar.gz")
     wandb.log_artifact(model)
     print(f"{datetime.now()} Model logged")
