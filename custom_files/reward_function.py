@@ -70,8 +70,7 @@ def reward_function(params):
     global MAX_DIFFICULTY
     difficulty_factor = 5
     look_ahead = 10
-    speed_scaler = 2.0
-    speed_factor = 1.0
+    print_stuff = False
 
     # Obtain difficulty
     curve = get_direction_change(params["closest_waypoints"][0], params["waypoints"])
@@ -93,11 +92,14 @@ def reward_function(params):
 
     if difficulty_ahead > MAX_DIFFICULTY:
         MAX_DIFFICULTY = difficulty_ahead
-        print(f"Max difficulty ahead: {MAX_DIFFICULTY:.4f}")
+        print_stuff = True
 
     if step_progress > MAX_PROGRESS:
         MAX_PROGRESS = step_progress
-        print(f"Max progress: {MAX_PROGRESS:.4f}")
+        print_stuff = True
+
+    if print_stuff:
+        print(f"MY_DEBUG_LOG:{MAX_DIFFICULTY:.4f},{MAX_PROGRESS:.4f}")
 
     weighted = float((5.0 * step_progress) ** 1.75)
     print(f"MY_TRACE_LOG:{params['steps']},{progress}")
