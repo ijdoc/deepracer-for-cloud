@@ -1,6 +1,9 @@
 import math
 
 LAST_PROGRESS = 0.0
+CURVE_LIMITS = {
+    "caecer_loop": {"min": 2.220446049250313e-16, "max": 0.25648735747756357}
+}
 
 
 def get_next_distinct_index(i, waypoints):
@@ -64,11 +67,16 @@ def reward_function(params):
     """
 
     global LAST_PROGRESS
-    difficulty_factor = 10
     # look_ahead = 3
+    difficulty_constant = 4.0
 
     # Obtain difficulty
     curve = get_direction_change(params["closest_waypoints"][0], params["waypoints"])
+    # Progressing through the hardest curve should be 1 + difficulty_constant
+    # times more rewarding than progressing through a straight
+    difficulty_factor = difficulty_constant * (
+        abs(curve) / CURVE_LIMITS["caecer_loop"]["max"]
+    )
     difficulty = 1 + float(difficulty_factor * abs(curve))
     progress = params["progress"]
 
@@ -83,7 +91,9 @@ def reward_function(params):
     if step_progress < 0:
         return float(0.00001)
 
-    weighted = float((5.0 * step_progress) ** 1.75)
+    # Compensate for reduced number of steps by weighting progress with a
+    # function that grows faster than f(x) = x after a certain point
+    weighted_progress = float((5.0 * step_progress) ** 1.75)
     print(f"MY_TRACE_LOG:{params['steps']},{progress}")
 
-    return float(weighted * difficulty)
+    return float(weighted_progress * difficulty)
