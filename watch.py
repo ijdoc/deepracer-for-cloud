@@ -220,9 +220,9 @@ def process_line(line):
         print(f"{timestamp} Best checkpoint: {name} at episode {last_episode}")
         if last_episode >= MAX_EPISODES or best_metrics["progress"] >= MAX_PROGRESS:
             print(
-                f'{timestamp} TODO: Stopping at progress: {best_metrics["progress"]} & speed: {best_metrics["speed"]}'
+                f'{timestamp} Stopping at progress: {best_metrics["progress"]} & speed: {best_metrics["speed"]}'
             )
-            # subprocess.run(f"./stop.sh", shell=True)
+            subprocess.run(f"sudo ./stop-training.sh", shell=True)
     elif "SIM_TRACE_LOG" in line:
         parts = line.split("SIM_TRACE_LOG:")[1].split("\t")[0].split("\n")[0].split(",")
         if is_stopped:
