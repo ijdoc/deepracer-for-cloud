@@ -66,7 +66,7 @@ def reward_function(params):
     global LAST_PROGRESS
     difficulty_factor = 5
     look_ahead = 5
-    speed_scaler = 3.0
+    speed_scaler = 2.0
     speed_factor = 1.0
 
     # Obtain difficulty
@@ -81,11 +81,17 @@ def reward_function(params):
         point_ahead = get_next_distinct_index(point_ahead, params["waypoints"])
 
     # Encourage low speeds when difficulty is high
-    if difficulty_ahead > 0.5:
+    if difficulty_ahead >= 0.6:
         if params["speed"] >= 2.0:
             speed_factor /= speed_scaler
         else:
             speed_factor *= speed_scaler
+
+    if difficulty_ahead <= 0.5:
+        if params["speed"] >= 2.0:
+            speed_factor *= speed_scaler
+        else:
+            speed_factor /= speed_scaler
 
     # Base reward
     step_progress = progress - LAST_PROGRESS
