@@ -1,6 +1,8 @@
 import math
 
 LAST_PROGRESS = 0.0
+MAX_PROGRESS = 0.0
+MAX_DIFFICULTY = 0.0
 
 
 def get_next_distinct_index(i, waypoints):
@@ -64,6 +66,8 @@ def reward_function(params):
     """
 
     global LAST_PROGRESS
+    global MAX_PROGRESS
+    global MAX_DIFFICULTY
     difficulty_factor = 5
     look_ahead = 10
     speed_scaler = 2.0
@@ -80,19 +84,6 @@ def reward_function(params):
         difficulty_ahead += abs(get_direction_change(point_ahead, params["waypoints"]))
         point_ahead = get_next_distinct_index(point_ahead, params["waypoints"])
 
-    # Encourage low speeds when difficulty is high
-    if difficulty_ahead >= 0.6:
-        if params["speed"] >= 2.0:
-            speed_factor /= speed_scaler
-        else:
-            speed_factor *= speed_scaler
-
-    if difficulty_ahead <= 0.5:
-        if params["speed"] >= 2.0:
-            speed_factor *= speed_scaler
-        else:
-            speed_factor /= speed_scaler
-
     # Base reward
     step_progress = progress - LAST_PROGRESS
     LAST_PROGRESS = progress
@@ -100,11 +91,18 @@ def reward_function(params):
     if step_progress < 0:
         step_progress = float(0.00001)
 
+    if difficulty_ahead > MAX_DIFFICULTY:
+        MAX_DIFFICULTY = difficulty_ahead
+        print(f"Max difficulty ahead: {MAX_DIFFICULTY:.4f}")
+
+    if step_progress > MAX_PROGRESS:
+        MAX_PROGRESS = step_progress
+        print(f"Max progress: {MAX_PROGRESS:.4f}")
+
     weighted = float((5.0 * step_progress) ** 1.75)
     print(f"MY_TRACE_LOG:{params['steps']},{progress}")
-    print(f"MY_DEBUG_LOG:{difficulty_ahead:.4f},{step_progress}")
 
-    if step_progress < 0:
+    if step_progress < 0.0:
         return step_progress
 
     return float(weighted * difficulty)
