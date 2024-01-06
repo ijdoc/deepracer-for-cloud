@@ -222,7 +222,7 @@ def process_line(line):
             print(
                 f'{timestamp} Stopping at progress: {best_metrics["progress"]} & speed: {best_metrics["speed"]}'
             )
-            subprocess.run(f"sudo ./stop-training.sh", shell=True)
+            subprocess.run(f"./stop-training.sh", shell=True)
     elif "SIM_TRACE_LOG" in line:
         parts = line.split("SIM_TRACE_LOG:")[1].split("\t")[0].split("\n")[0].split(",")
         if is_stopped:
