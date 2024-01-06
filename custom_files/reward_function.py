@@ -91,9 +91,13 @@ def reward_function(params):
     if step_progress < 0:
         return float(0.00001)
 
+    bonus = 0.0
+    if progress >= 99.9:
+        bonus = 100000.0 / params["steps"]
+
     # Compensate for reduced number of steps by weighting progress with a
     # function that grows faster than f(x) = x after a certain point
     weighted_progress = float((5.0 * step_progress) ** 1.75)
     print(f"MY_TRACE_LOG:{params['steps']},{progress}")
 
-    return float(weighted_progress * difficulty)
+    return float((weighted_progress * difficulty) + bonus)
