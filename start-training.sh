@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -e # Exit script immediately on first error.
 source ./header.sh
 
 # Function to display the script's usage/help information
@@ -58,6 +59,8 @@ fi
 source bin/activate.sh run.env
 dr-stop-viewer
 dr-stop-training
+dr-reload
+test_command_outcome "[upload.sh] Reload"
 dr-update && dr-update-env && dr-upload-custom-files
 # 'w' for overwrite, 'v' for start viewer, 'a' for follow all logs
 dr-start-training -wva
