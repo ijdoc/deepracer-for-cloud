@@ -26,7 +26,7 @@ while getopts ":h-:" opt; do
                     # Continue (just accept the option)
                     ;;
                 pretrained)
-                    # Continue (just accept the option)
+                    pretrained_flag=1
                     ;;
                 *)
                     echo "Invalid option: --$OPTARG"
@@ -49,15 +49,25 @@ if [ $debug_flag -ne 1 ]; then
     fi
 fi
 
-
 source bin/activate.sh run.env
 dr-stop-viewer && dr-stop-training
-test_command_outcome "[start-training.sh] Stop previous training"
+test_command_outcome "[$0] Stop previous training"
 dr-reload
-test_command_outcome "[start-training.sh] Reload"
+test_command_outcome "[$0] Reload"
 dr-update && dr-update-env && dr-upload-custom-files
-test_command_outcome "[start-training.sh] Update and upload training files"
-# 'w' for overwrite, 'v' for start viewer, 'a' for follow all logs
-dr-start-training -wva
+test_command_outcome "[$0] Update and upload training files"
+
+# Placeholder if statement for the pretrained option
+if [ $pretrained_flag -eq 1 ]; then
+    dr-upload-custom-files
+    test_command_outcome "[$0] Upload custom files"
+    dr-increment-training
+    test_command_outcome "[$0] Increment training"
+    dr-start-training -va
+else
+    # 'w' for overwrite, 'v' for start viewer, 'a' for follow all logs
+    dr-start-training -wva
+fi
+
 sleep 1
 python watch.py "$@"
