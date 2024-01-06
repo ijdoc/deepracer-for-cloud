@@ -28,12 +28,6 @@ while getopts ":h-:" opt; do
                 pretrained)
                     # Continue (just accept the option)
                     ;;
-                progress)
-                    # Continue (just accept the option)
-                    ;;
-                episodes)
-                    # Continue (just accept the option)
-                    ;;
                 *)
                     echo "Invalid option: --$OPTARG"
                     exit 1
@@ -57,11 +51,12 @@ fi
 
 
 source bin/activate.sh run.env
-dr-stop-viewer
-dr-stop-training
+dr-stop-viewer && dr-stop-training
+test_command_outcome "[start-training.sh] Stop previous training"
 dr-reload
-test_command_outcome "[upload.sh] Reload"
+test_command_outcome "[start-training.sh] Reload"
 dr-update && dr-update-env && dr-upload-custom-files
+test_command_outcome "[start-training.sh] Update and upload training files"
 # 'w' for overwrite, 'v' for start viewer, 'a' for follow all logs
 dr-start-training -wva
 sleep 1

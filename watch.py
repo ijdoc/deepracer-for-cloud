@@ -20,25 +20,11 @@ parser.add_argument(
 parser.add_argument(
     "--debug", action="store_true", help="Log to console instead of W&B"
 )
-parser.add_argument(
-    "--episodes",
-    type=int,
-    help="The maximum number of episodes to train for",
-    default=10000,
-)
-parser.add_argument(
-    "--progress",
-    type=int,
-    help="The average evaluation progress to stop at",
-    default=100,
-)
 
 # Parse the arguments
 args = parser.parse_args()
 
 DEBUG = args.debug
-MAX_EPISODES = args.episodes
-MAX_PROGRESS = args.progress
 SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 if DEBUG:
     print(f"{datetime.now()} Script path: {SCRIPT_PATH}")
@@ -77,7 +63,7 @@ last_episode = 0
 os.environ["WANDB_RUN_GROUP"] = "2402"
 
 
-def update_run_env(name):
+def update_run_env(name, checkpoint):
     world_name = ""
     # Open the file in read and write mode
     file_path = "./run.env"
@@ -89,7 +75,7 @@ def update_run_env(name):
         if line.startswith("DR_WORLD_NAME="):
             world_name = line.split("=")[1]
         if line.startswith("DR_UPLOAD_S3_PREFIX="):
-            new_lines.append(f"DR_UPLOAD_S3_PREFIX={name}\n")
+            new_lines.append(f"DR_UPLOAD_S3_PREFIX={name}_{checkpoint}\n")
         else:
             new_lines.append(line)
     # Write the modified content back to the file
@@ -117,8 +103,6 @@ if not DEBUG:
     env_files.add_file("./system.env")
     wandb.use_artifact(config_files)
     wandb.use_artifact(env_files)
-    # Update run.env only after logging it
-    wandb.config["world_name"] = update_run_env(wandb.run.name).replace("\n", "")
 
 
 def get_float(string):
@@ -218,11 +202,16 @@ def process_line(line):
         name = line.split('"')[1]
         name = name.split(".")[0]
         print(f"{timestamp} Best checkpoint: {name} at episode {last_episode}")
-        if last_episode >= MAX_EPISODES or best_metrics["progress"] >= MAX_PROGRESS:
+        if best_metrics["progress"] >= 100:
+            checkpoint = name.split("_")[0]
             print(
-                f'{timestamp} Stopping at progress: {best_metrics["progress"]} & speed: {best_metrics["speed"]}'
+                f'{timestamp} Uploading checkpoint {checkpoint} with speed {best_metrics["speed"]:0.4f}@{best_metrics["progress"]}% progress'
             )
-            subprocess.run(f"./stop-training.sh", shell=True)
+            wandb.config["world_name"] = update_run_env(
+                wandb.run.name, checkpoint
+            ).replace("\n", "")
+            # FIXME: Get the model reference and log it to W&B
+            subprocess.run(f"./upload.sh", shell=True)
     elif "SIM_TRACE_LOG" in line:
         parts = line.split("SIM_TRACE_LOG:")[1].split("\t")[0].split("\n")[0].split(",")
         if is_stopped:
