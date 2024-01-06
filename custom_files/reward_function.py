@@ -68,7 +68,7 @@ def reward_function(params):
 
     global LAST_PROGRESS
     # look_ahead = 3
-    difficulty_constant = 9.0
+    difficulty_constant = 4.0
 
     # Obtain difficulty
     curve = get_direction_change(params["closest_waypoints"][0], params["waypoints"])
