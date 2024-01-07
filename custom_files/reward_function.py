@@ -66,51 +66,32 @@ def reward_function(params):
 
     global LAST_PROGRESS
 
-    # look_ahead = 3
-    # point_ahead = params['closest_waypoints'][1]
-    # for _ in range(look_ahead):
-    #     point_ahead = get_next_distinct_index(point_ahead, params['waypoints'])
-
     # Base reward
-    step_progress = params["progress"] - LAST_PROGRESS
-    LAST_PROGRESS = params["progress"]
+    progress = params["progress"]
+    step_progress = progress - LAST_PROGRESS
+    LAST_PROGRESS = progress
 
-    if step_progress < 0.0:
-        return float(0.0)
-
-    print(f"MY_TRACE_LOG:{params['steps']},{params['progress']}")
-
-    # Encourage the agent to stay on the right side of the track
-    if (
-        not params["is_left_of_center"]
-        and params["closest_waypoints"][1] >= 40
-        and params["closest_waypoints"][1] <= 48
-    ):
-        step_progress *= 10.0
-
-    # Encourage the agent to brake when approaching the curve
-    if (
-        params["speed"] <= 1.0
-        and params["closest_waypoints"][1] >= 41
-        and params["closest_waypoints"][1] <= 48
-    ):
-        step_progress *= 10.0
-
-    # Encourage the brake straight before the curve
-    if (
-        params["steering_angle"] == 0.0
-        and params["closest_waypoints"][1] >= 41
-        and params["closest_waypoints"][1] <= 46
-    ):
-        step_progress *= 10.0
-
-    bonus = 0.0
-    if params["progress"] == 100.0:
-        bonus = 1000 * params["progress"] / params["steps"]
+    # Address trial start
+    if step_progress < 0:
+        return float(0.00001)
 
     # Obtain difficulty
-    difficulty_factor = 22.0
+    difficulty_bonus = 9.0
     curve = get_direction_change(params["closest_waypoints"][0], params["waypoints"])
-    difficulty = 1 + float(difficulty_factor * abs(curve))
+    # Progressing through the hardest curve will be 1 + difficulty_bonus
+    # times more rewarding than progressing through a straight
+    difficulty_factor = difficulty_bonus * (
+        abs(curve) / CURVE_LIMITS["caecer_loop"]["max"]
+    )
+    difficulty = float((1 + difficulty_factor))
 
-    return float((step_progress * difficulty) + bonus)
+    completion_bonus = 0.0
+    if params["progress"] == 100.0:
+        completion_bonus = 100.0
+
+    # Compensate for reduced number of steps by weighting progress with a
+    # function that grows faster than f(x) = x after a certain point
+    weighted_progress = float((5.0 * step_progress) ** 1.75)
+    print(f"MY_TRACE_LOG:{params['steps']},{progress}")
+
+    return float((weighted_progress * difficulty) + completion_bonus)
