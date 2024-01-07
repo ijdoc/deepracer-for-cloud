@@ -105,7 +105,7 @@ def reward_function(params):
         step_progress *= 10.0
 
     bonus = 0.0
-    if params["is_offtrack"] or params["progress"] == 100.0:
+    if params["progress"] == 100.0:
         bonus = 1000 * params["progress"] / params["steps"]
 
     # Obtain difficulty
