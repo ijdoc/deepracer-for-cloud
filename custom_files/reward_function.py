@@ -71,6 +71,7 @@ def reward_function(params):
 
     # For the first couple steps, just record the waypoint
     if params["steps"] < 2:
+        print(f"MY_DEBUG_LOG: Resetting at waypoint {this_waypoint}")
         LAST_WAYPOINT = this_waypoint
         CUMULATIVE_REWARD = 0.0
         return float(0.0)
@@ -91,5 +92,8 @@ def reward_function(params):
         # ~50% additional reward for 200 steps
         # ~33% additional reward for 300 steps
         bonus = CUMULATIVE_REWARD / (params["steps"] / 100.0)
+
+    if params["is_offtrack"] or params["progress"] == 100.0:
+        print(f"MY_DEBUG_LOG: Trial ended with reward {CUMULATIVE_REWARD:0.4f}")
 
     return float(reward + bonus)
