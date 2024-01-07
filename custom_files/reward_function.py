@@ -1,9 +1,7 @@
 import math
 
 LAST_PROGRESS = 0.0
-CURVE_LIMITS = {
-    "caecer_loop": {"min": 2.220446049250313e-16, "max": 0.25648735747756357}
-}
+CURVE_LIMITS = {"caecer_loop": {"min": 0.0, "max": 0.18297208942448917}}
 
 
 def get_next_distinct_index(i, waypoints):
@@ -67,37 +65,52 @@ def reward_function(params):
     """
 
     global LAST_PROGRESS
+
     # look_ahead = 3
-    difficulty_constant = 4.0
-
-    # Obtain difficulty
-    curve = get_direction_change(params["closest_waypoints"][0], params["waypoints"])
-    # Progressing through the hardest curve should be 1 + difficulty_constant
-    # times more rewarding than progressing through a straight
-    difficulty_factor = difficulty_constant * (
-        abs(curve) / CURVE_LIMITS["caecer_loop"]["max"]
-    )
-    difficulty = 1 + float(difficulty_factor * abs(curve))
-    progress = params["progress"]
-
     # point_ahead = params['closest_waypoints'][1]
     # for _ in range(look_ahead):
     #     point_ahead = get_next_distinct_index(point_ahead, params['waypoints'])
 
-    # Base reward
-    step_progress = progress - LAST_PROGRESS
-    LAST_PROGRESS = progress
+    if params["steps"] <= 1:
+        # Trial started
+        LAST_PROGRESS = 0.0
+        return 0.0
 
-    if step_progress < 0:
-        return float(0.00001)
+    # Base reward
+    step_progress = params["progress"] - LAST_PROGRESS
+    LAST_PROGRESS = params["progress"]
+
+    # Encourage the agent to stay on the right side of the track
+    if (
+        not params["is_left_of_center"]
+        and params["closest_waypoints"][1] >= 40
+        and params["closest_waypoints"][1] <= 48
+    ):
+        step_progress *= 10.0
+
+    # Encourage the agent to brake when approaching the curve
+    if (
+        params["speed"] <= 1.0
+        and params["closest_waypoints"][1] >= 41
+        and params["closest_waypoints"][1] <= 48
+    ):
+        step_progress *= 10.0
+
+    # Encourage the brake straight before the curve
+    if (
+        params["steering_angle"] == 0.0
+        and params["closest_waypoints"][1] >= 41
+        and params["closest_waypoints"][1] <= 46
+    ):
+        step_progress *= 10.0
 
     bonus = 0.0
-    if progress >= 99.9:
-        bonus = 100000.0 / params["steps"]
+    if params["is_offtrack"] or params["progress"] == 100.0:
+        bonus = 1000 * params["progress"] / params["steps"]
 
-    # Compensate for reduced number of steps by weighting progress with a
-    # function that grows faster than f(x) = x after a certain point
-    weighted_progress = float((5.0 * step_progress) ** 1.75)
-    print(f"MY_TRACE_LOG:{params['steps']},{progress}")
+    # Obtain difficulty
+    difficulty_factor = 22.0
+    curve = get_direction_change(params["closest_waypoints"][0], params["waypoints"])
+    difficulty = 1 + float(difficulty_factor * abs(curve))
 
-    return float((weighted_progress * difficulty) + bonus)
+    return float((step_progress * difficulty) + bonus)
