@@ -66,6 +66,7 @@ def reward_function(params):
 
     global LAST_PROGRESS
 
+    print(f"MY_TRACE_LOG:{params['steps']},{params['progress']}")
     # look_ahead = 3
     # point_ahead = params['closest_waypoints'][1]
     # for _ in range(look_ahead):
