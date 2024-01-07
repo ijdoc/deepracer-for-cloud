@@ -66,20 +66,19 @@ def reward_function(params):
 
     global LAST_PROGRESS
 
-    print(f"MY_TRACE_LOG:{params['steps']},{params['progress']}")
     # look_ahead = 3
     # point_ahead = params['closest_waypoints'][1]
     # for _ in range(look_ahead):
     #     point_ahead = get_next_distinct_index(point_ahead, params['waypoints'])
 
-    if params["steps"] <= 1:
-        # Trial started
-        LAST_PROGRESS = 0.0
-        return 0.0
-
     # Base reward
     step_progress = params["progress"] - LAST_PROGRESS
     LAST_PROGRESS = params["progress"]
+
+    if step_progress < 0.0:
+        return float(0.0)
+
+    print(f"MY_TRACE_LOG:{params['steps']},{params['progress']}")
 
     # Encourage the agent to stay on the right side of the track
     if (
