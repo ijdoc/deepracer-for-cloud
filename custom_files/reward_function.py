@@ -69,7 +69,7 @@ def reward_function(params):
 
     this_waypoint = params["closest_waypoints"][0]
 
-    # For the first couple steps, just record the waypoint
+    # For the first couple steps, just reset & record the waypoint
     if params["steps"] < 2:
         print(f"MY_DEBUG_LOG: Resetting at waypoint {this_waypoint}")
         LAST_WAYPOINT = this_waypoint
@@ -80,17 +80,32 @@ def reward_function(params):
     if this_waypoint == LAST_WAYPOINT:
         return float(0.0)
 
+    # Save the waypoint for next time
+    LAST_WAYPOINT = this_waypoint
+
     # Calculate the direction change
     direction_change = abs(get_direction_change(this_waypoint, params["waypoints"]))
     reward = direction_change / CURVE_LIMITS["caecer_loop"]["max"]
-    LAST_WAYPOINT = this_waypoint
+
+    # Encourage good behavior at the curve
+    factor = 1.0
+    if this_waypoint >= 40 and this_waypoint <= 44:
+        if not params["is_left_of_center"]:  # correct side of track
+            factor += 0.25
+        if params["speed"] <= 1.0:  # breaking before curve
+            factor += 0.25
+        if params["steering_angle"] == 0.0:  # not turning
+            factor += 0.25
+
+    reward *= factor
+
     CUMULATIVE_REWARD += reward
 
+    # Bonus reward at finish line
+    # ~50% additional reward for 200 steps
+    # ~33% additional reward for 300 steps
     bonus = 0.0
     if params["progress"] == 100.0:
-        # Reward speed at the finish line
-        # ~50% additional reward for 200 steps
-        # ~33% additional reward for 300 steps
         bonus = CUMULATIVE_REWARD / (params["steps"] / 100.0)
 
     if params["is_offtrack"] or params["progress"] == 100.0:
