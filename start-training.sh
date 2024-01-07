@@ -2,6 +2,9 @@
 set -e # Exit script immediately on first error.
 source ./header.sh
 
+# Initialize flags
+pretrained_flag=0
+
 # Function to display the script's usage/help information
 display_help() {
     python watch.py -h

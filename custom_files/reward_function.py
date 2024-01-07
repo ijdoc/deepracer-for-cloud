@@ -1,6 +1,7 @@
 import math
 
-LAST_PROGRESS = 0.0
+LAST_WAYPOINT = 0.0
+CUMULATIVE_REWARD = 0.0
 CURVE_LIMITS = {"caecer_loop": {"min": 0.0, "max": 0.18297208942448917}}
 
 
@@ -60,38 +61,35 @@ def get_direction_change(i, waypoints):
 
 
 def reward_function(params):
-    """
-    Progress with track difficulty
-    """
+    global LAST_WAYPOINT
+    global CUMULATIVE_REWARD
 
-    global LAST_PROGRESS
+    # This trace is needed for test logging
+    print(f"MY_TRACE_LOG:{params['steps']},{params['progress']}")
 
-    # Base reward
-    progress = params["progress"]
-    step_progress = progress - LAST_PROGRESS
-    LAST_PROGRESS = progress
+    this_waypoint = params["closest_waypoints"][0]
 
-    # Address trial start
-    if step_progress < 0:
-        return float(0.00001)
+    # For the first couple steps, just record the waypoint
+    if params["steps"] < 2:
+        LAST_WAYPOINT = this_waypoint
+        CUMULATIVE_REWARD = 0.0
+        return float(0.0)
 
-    # Obtain difficulty
-    difficulty_bonus = 9.0
-    curve = get_direction_change(params["closest_waypoints"][0], params["waypoints"])
-    # Progressing through the hardest curve will be 1 + difficulty_bonus
-    # times more rewarding than progressing through a straight
-    difficulty_factor = difficulty_bonus * (
-        abs(curve) / CURVE_LIMITS["caecer_loop"]["max"]
-    )
-    difficulty = float((1 + difficulty_factor))
+    # Waypoint hasn't changed, so no reward
+    if this_waypoint == LAST_WAYPOINT:
+        return float(0.0)
 
-    completion_bonus = 0.0
+    # Calculate the direction change
+    direction_change = abs(get_direction_change(this_waypoint, params["waypoints"]))
+    reward = direction_change / CURVE_LIMITS["caecer_loop"]["max"]
+    LAST_WAYPOINT = this_waypoint
+    CUMULATIVE_REWARD += reward
+
+    bonus = 0.0
     if params["progress"] == 100.0:
-        completion_bonus = 100.0
+        # Reward speed at the finish line
+        # ~50% additional reward for 200 steps
+        # ~33% additional reward for 300 steps
+        bonus = CUMULATIVE_REWARD / (params["steps"] / 100.0)
 
-    # Compensate for reduced number of steps by weighting progress with a
-    # function that grows faster than f(x) = x after a certain point
-    weighted_progress = float((5.0 * step_progress) ** 1.75)
-    print(f"MY_TRACE_LOG:{params['steps']},{progress}")
-
-    return float((weighted_progress * difficulty) + completion_bonus)
+    return float(reward + bonus)
