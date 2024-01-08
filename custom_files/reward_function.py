@@ -69,11 +69,10 @@ def reward_function(params):
     global LAST_PERCENT
     global LAST_SPEED
 
-    # Get difficulty as a number from 0.0 to 5.0
+    # Get difficulty as a number from 0.0 to 1.0
     this_waypoint = params["closest_waypoints"][0]
     difficulty = (
-        5.0
-        * abs(get_direction_change(this_waypoint, params["waypoints"]))
+        abs(get_direction_change(this_waypoint, params["waypoints"]))
         / TRACKS["caecer_loop"]["max_angle"]
     )
 
@@ -110,7 +109,7 @@ def reward_function(params):
     if params["progress"] == 100.0:
         bonus = 100.0
 
-    reward = float(LAST_SPEED + difficulty + bonus)
+    reward = float((difficulty * LAST_SPEED) + bonus)
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:
