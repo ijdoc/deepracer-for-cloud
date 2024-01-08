@@ -56,8 +56,8 @@ best_metrics = {"reward": -1.0, "progress": 0.0, "speed": 0.0}
 is_stopped = True
 start_step = {"timestamp": None, "progress": None}
 is_testing = False
-train_metrics = {"speed": None, "progress": None}
-test_metrics = {"speed": None, "progress": None}
+train_metrics = {"speed": [], "progress": []}
+test_metrics = {"speed": [], "progress": []}
 last_episode = 0
 
 # FIXME: Define group from command line in train.sh script

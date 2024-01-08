@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -e # Exit script immediately on first error.
 source ./header.sh
 
 source bin/activate.sh run.env
