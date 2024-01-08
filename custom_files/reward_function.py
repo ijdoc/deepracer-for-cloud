@@ -112,7 +112,11 @@ def reward_function(params):
     if params["is_offtrack"] or params["progress"] == 100.0:
         is_finished = 1
 
-    # This trace is needed for test logging
-    print(f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{step_progress},{speed},{difficulty},{reward},{is_finished}")
+    reward = float((step_progress * (speed + difficulty)) + bonus)
 
-    return float((step_progress * (speed + difficulty)) + bonus)
+    # This trace is needed for test logging
+    print(
+        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{step_progress},{speed},{difficulty},{reward},{is_finished}"
+    )
+
+    return reward
