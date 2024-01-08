@@ -104,8 +104,13 @@ if not DEBUG:
     wandb.use_artifact(config_files)
     wandb.use_artifact(env_files)
     # Setup reward tables
-    test_reward_table = wandb.Table(columns=["step", "waypoint", "progress", "speed", "difficulty", "reward"])
-    train_reward_table = wandb.Table(columns=["step", "waypoint", "progress", "speed", "difficulty", "reward"])
+    test_reward_table = wandb.Table(
+        columns=["step", "waypoint", "progress", "speed", "difficulty", "reward"]
+    )
+    train_reward_table = wandb.Table(
+        columns=["step", "waypoint", "progress", "speed", "difficulty", "reward"]
+    )
+
 
 def get_float(string):
     try:
@@ -123,6 +128,8 @@ def process_line(line):
     global is_testing
     global best_metrics
     global last_episode
+    global train_reward_table
+    global test_reward_table
 
     timestamp = datetime.now()
     if "Training>" in line and "[SAGE]" in line:
@@ -189,9 +196,27 @@ def process_line(line):
                 wandb.run.summary["test/progress"] = best_metrics["progress"]
                 # Log and reset tables
                 wandb.log({f"train_table_{last_episode}": train_reward_table})
-                train_reward_table = wandb.Table(columns=["step", "waypoint", "progress", "speed", "difficulty", "reward"])
+                train_reward_table = wandb.Table(
+                    columns=[
+                        "step",
+                        "waypoint",
+                        "progress",
+                        "speed",
+                        "difficulty",
+                        "reward",
+                    ]
+                )
                 wandb.log({f"test_table_{last_episode}": test_reward_table})
-                test_reward_table = wandb.Table(columns=["step", "waypoint", "progress", "speed", "difficulty", "reward"])
+                test_reward_table = wandb.Table(
+                    columns=[
+                        "step",
+                        "waypoint",
+                        "progress",
+                        "speed",
+                        "difficulty",
+                        "reward",
+                    ]
+                )
 
             # Reset metrics
             iter_metrics = {
@@ -221,21 +246,33 @@ def process_line(line):
             print(f"{timestamp} {line}")
         else:
             # print(f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{step_progress},{speed},{difficulty},{reward},{is_finished}")
-            parts = line.split("MY_TRACE_LOG:")[1].split("\t")[0].split("\n")[0].split(",")
+            parts = (
+                line.split("MY_TRACE_LOG:")[1].split("\t")[0].split("\n")[0].split(",")
+            )
             if is_testing:
-                test_reward_table.add_data(parts[0], parts[1], parts[2], parts[3], parts[4], parts[5])
+                test_reward_table.add_data(
+                    parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]
+                )
                 test_metrics["progress"].append(float(parts[2]))
                 test_metrics["speed"].append(float(parts[3]))
                 if int(parts[6]) == 1:
-                    iter_metrics["test"]["progress"].append(np.sum(test_metrics["progress"]))
+                    iter_metrics["test"]["progress"].append(
+                        np.sum(test_metrics["progress"])
+                    )
                     iter_metrics["test"]["speed"].append(np.mean(test_metrics["speed"]))
             else:
-                train_reward_table.add_data(parts[0], parts[1], parts[2], parts[3], parts[4], parts[5])
+                train_reward_table.add_data(
+                    parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]
+                )
                 train_metrics["progress"].append(float(parts[2]))
                 train_metrics["speed"].append(float(parts[3]))
                 if int(parts[6]) == 1:
-                    iter_metrics["train"]["progress"].append(np.sum(train_metrics["progress"]))
-                    iter_metrics["train"]["speed"].append(np.mean(train_metrics["speed"]))
+                    iter_metrics["train"]["progress"].append(
+                        np.sum(train_metrics["progress"])
+                    )
+                    iter_metrics["train"]["speed"].append(
+                        np.mean(train_metrics["speed"])
+                    )
     else:
         if DEBUG:
             print(f"{timestamp} {line}")
