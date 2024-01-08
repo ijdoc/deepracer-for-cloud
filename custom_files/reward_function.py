@@ -3,7 +3,10 @@ import time
 
 LAST_TIME = 0.0
 LAST_PERCENT = 0.0
-TRACKS = {"caecer_loop": {"length": 39.12, "min_angle": 0.0, "max_angle": 0.18297208942448917}}
+LAST_SPEED = 0.0
+TRACKS = {
+    "caecer_loop": {"length": 39.12, "min_angle": 0.0, "max_angle": 0.18297208942448917}
+}
 
 
 def get_next_distinct_index(i, waypoints):
@@ -64,11 +67,13 @@ def get_direction_change(i, waypoints):
 def reward_function(params):
     global LAST_TIME
     global LAST_PERCENT
+    global LAST_SPEED
 
     # Get difficulty as a number from 0.0 to 5.0
     this_waypoint = params["closest_waypoints"][0]
     difficulty = (
-        5.0 * abs(get_direction_change(this_waypoint, params["waypoints"]))
+        5.0
+        * abs(get_direction_change(this_waypoint, params["waypoints"]))
         / TRACKS["caecer_loop"]["max_angle"]
     )
 
@@ -76,16 +81,16 @@ def reward_function(params):
     if this_percent > LAST_PERCENT:
         # Calculate speed in m/s
         now = time.time()
-        speed = 0.01 * TRACKS["caecer_loop"]["length"] / (now - LAST_TIME)
+        LAST_SPEED = 0.01 * TRACKS["caecer_loop"]["length"] / (now - LAST_TIME)
         LAST_PERCENT = this_percent
         LAST_TIME = now
 
     # Reset speed tracking at the beginning
     if params["steps"] <= 2:
-        speed = 0.0
+        LAST_SPEED = 0.0
         LAST_TIME = time.time()
         LAST_PERCENT = 0.0
-    
+
     # Encourage good behavior at the curve
     # factor = 1.0
     # if this_waypoint >= 40 and this_waypoint <= 42:
@@ -105,7 +110,7 @@ def reward_function(params):
     if params["progress"] == 100.0:
         bonus = 100.0
 
-    reward = float(speed + difficulty + bonus)
+    reward = float(LAST_SPEED + difficulty + bonus)
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:
@@ -113,7 +118,7 @@ def reward_function(params):
 
     # This trace is needed for test logging
     print(
-        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']:0.1f},{speed},{difficulty},{reward},{is_finished}"
+        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']:0.1f},{LAST_SPEED},{difficulty},{reward},{is_finished}"
     )
 
     return reward
