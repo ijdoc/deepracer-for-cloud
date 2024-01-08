@@ -246,7 +246,6 @@ def process_line(line):
         if DEBUG:
             print(f"{timestamp} {line}")
         else:
-            # print(f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{step_progress},{speed},{difficulty},{reward},{is_finished}")
             parts = (
                 line.split("MY_TRACE_LOG:")[1].split("\t")[0].split("\n")[0].split(",")
             )
@@ -254,23 +253,19 @@ def process_line(line):
                 test_reward_table.add_data(
                     parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]
                 )
-                test_metrics["progress"].append(float(parts[2]))
+                test_metrics["progress"] = float(parts[2])
                 test_metrics["speed"].append(float(parts[3]))
                 if int(parts[6]) == 1:
-                    iter_metrics["test"]["progress"].append(
-                        np.sum(test_metrics["progress"])
-                    )
+                    iter_metrics["test"]["progress"].append(test_metrics["progress"])
                     iter_metrics["test"]["speed"].append(np.mean(test_metrics["speed"]))
             else:
                 train_reward_table.add_data(
                     parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]
                 )
-                train_metrics["progress"].append(float(parts[2]))
+                train_metrics["progress"] = float(parts[2])
                 train_metrics["speed"].append(float(parts[3]))
                 if int(parts[6]) == 1:
-                    iter_metrics["train"]["progress"].append(
-                        np.sum(train_metrics["progress"])
-                    )
+                    iter_metrics["train"]["progress"].append(train_metrics["progress"])
                     iter_metrics["train"]["speed"].append(
                         np.mean(train_metrics["speed"])
                     )
