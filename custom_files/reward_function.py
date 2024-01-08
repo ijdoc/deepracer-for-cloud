@@ -72,6 +72,8 @@ def reward_function(params):
     step_progress = progress - LAST_PROGRESS
     if step_progress < 0.0:
         step_progress = 0.0
+    # Step resolution isn't perfect, so round to 1 decimal place
+    step_progress = round(step_progress, 1)
 
     # Difficulty is a number from 0.0 to 5.0
     difficulty = (

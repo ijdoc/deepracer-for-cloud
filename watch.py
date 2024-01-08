@@ -189,6 +189,8 @@ def process_line(line):
                         "test/reward": iter_metrics["test"]["reward"],
                         "test/speed": iter_metrics["test"]["speed"],
                         "test/progress": iter_metrics["test"]["progress"],
+                        f"train_table_{last_episode}": train_reward_table,
+                        f"test_table_{last_episode}": test_reward_table,
                     }
                 )
                 # Update test metrics summary
@@ -196,7 +198,6 @@ def process_line(line):
                 wandb.run.summary["test/speed"] = best_metrics["speed"]
                 wandb.run.summary["test/progress"] = best_metrics["progress"]
                 # Log and reset tables
-                wandb.log({f"train_table_{last_episode}": train_reward_table})
                 train_reward_table = wandb.Table(
                     columns=[
                         "step",
@@ -207,7 +208,6 @@ def process_line(line):
                         "reward",
                     ]
                 )
-                wandb.log({f"test_table_{last_episode}": test_reward_table})
                 test_reward_table = wandb.Table(
                     columns=[
                         "step",
