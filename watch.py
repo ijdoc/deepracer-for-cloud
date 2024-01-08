@@ -103,7 +103,9 @@ if not DEBUG:
     env_files.add_file("./system.env")
     wandb.use_artifact(config_files)
     wandb.use_artifact(env_files)
-
+    # Setup reward tables
+    test_reward_table = wandb.Table(columns=["step", "waypoint", "progress", "speed", "difficulty", "reward"])
+    train_reward_table = wandb.Table(columns=["step", "waypoint", "progress", "speed", "difficulty", "reward"])
 
 def get_float(string):
     try:
@@ -185,6 +187,12 @@ def process_line(line):
                 wandb.run.summary["test/reward"] = best_metrics["reward"]
                 wandb.run.summary["test/speed"] = best_metrics["speed"]
                 wandb.run.summary["test/progress"] = best_metrics["progress"]
+                # Log and reset tables
+                wandb.log({f"train_table_{last_episode}": train_reward_table})
+                train_reward_table = wandb.Table(columns=["step", "waypoint", "progress", "speed", "difficulty", "reward"])
+                wandb.log({f"test_table_{last_episode}": test_reward_table})
+                test_reward_table = wandb.Table(columns=["step", "waypoint", "progress", "speed", "difficulty", "reward"])
+
             # Reset metrics
             iter_metrics = {
                 "test": {"reward": None, "progress": [], "speed": []},
@@ -206,46 +214,28 @@ def process_line(line):
             ).replace("\n", "")
             # FIXME: Get the model reference and log it to W&B
             subprocess.run(f"./upload.sh", shell=True)
-    # elif "SIM_TRACE_LOG" in line:
-    #     parts = line.split("SIM_TRACE_LOG:")[1].split("\t")[0].split("\n")[0].split(",")
-    #     if is_stopped:
-    #         timestamp = float(parts[14])
-    #         progress = float(parts[11])
-    #         start_step = {"timestamp": timestamp, "progress": progress}
-    #         if DEBUG:
-    #             print(f"{timestamp} [DEBUG] {start_step}")
-    #         is_stopped = False
-    #     if "True" in parts[9]:
-    #         timestamp = float(parts[14])
-    #         steps = int(parts[1])
-    #         progress = float(parts[11])
-    #         # speed = ((progress / 100.0) * float(parts[13])) / (timestamp - start_step["timestamp"])
-    #         speed = progress / steps
-    #         if DEBUG:
-    #             print(
-    #                 f"{timestamp} [DEBUG] Steps: {steps} Progress: {progress} Speed: {speed}"
-    #             )
-    #         iter_metrics["train"]["steps"].append(steps)
-    #         iter_metrics["train"]["progress"].append(progress)
-    #         iter_metrics["train"]["speed"].append(speed)
-    #         is_stopped = True
     elif "Starting evaluation phase" in line:
         is_testing = True
-    elif "Testing>" in line:
-        iter_metrics["test"]["speed"].append(test_metrics["speed"])
-        iter_metrics["test"]["progress"].append(test_metrics["progress"])
-        if DEBUG:
-            print(f"{timestamp} test metrics: {test_metrics}")
     elif "MY_TRACE_LOG" in line:
-        parts = line.split("MY_TRACE_LOG:")[1].split("\t")[0].split("\n")[0].split(",")
-        if is_testing:
-            test_metrics["speed"] = float(parts[0])
-            test_metrics["progress"] = float(parts[1])
-        else:
-            iter_metrics["train"]["speed"].append(float(parts[0]))
-            iter_metrics["train"]["progress"].append(float(parts[1]))
         if DEBUG:
             print(f"{timestamp} {line}")
+        else:
+            # print(f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{step_progress},{speed},{difficulty},{reward},{is_finished}")
+            parts = line.split("MY_TRACE_LOG:")[1].split("\t")[0].split("\n")[0].split(",")
+            if is_testing:
+                test_reward_table.add_data(parts[0], parts[1], parts[2], parts[3], parts[4], parts[5])
+                test_metrics["progress"].append(float(parts[2]))
+                test_metrics["speed"].append(float(parts[3]))
+                if int(parts[6]) == 1:
+                    iter_metrics["test"]["progress"].append(np.sum(test_metrics["progress"]))
+                    iter_metrics["test"]["speed"].append(np.mean(test_metrics["speed"]))
+            else:
+                train_reward_table.add_data(parts[0], parts[1], parts[2], parts[3], parts[4], parts[5])
+                train_metrics["progress"].append(float(parts[2]))
+                train_metrics["speed"].append(float(parts[3]))
+                if int(parts[6]) == 1:
+                    iter_metrics["train"]["progress"].append(np.sum(train_metrics["progress"]))
+                    iter_metrics["train"]["speed"].append(np.mean(train_metrics["speed"]))
     else:
         if DEBUG:
             print(f"{timestamp} {line}")
@@ -309,10 +299,10 @@ while not model_found:
 # FIXME: Upload to bucket, then reference instead of uploading to W&B
 if not DEBUG:
     # resume_job(jobs["train"])
-    model = wandb.Artifact(f"{os.environ['WANDB_RUN_GROUP']}-qualifier", type="model")
-    model.add_file("./model.tar.gz", "model.tar.gz")
-    wandb.log_artifact(model)
-    print(f"{datetime.now()} Model logged")
+    # model = wandb.Artifact(f"{os.environ['WANDB_RUN_GROUP']}-qualifier", type="model")
+    # model.add_file("./model.tar.gz", "model.tar.gz")
+    # wandb.log_artifact(model)
+    # print(f"{datetime.now()} Model logged")
     print(f"{datetime.now()} Finishing...")
     wandb.finish()
 

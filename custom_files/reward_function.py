@@ -1,7 +1,6 @@
 import math
 import time
 
-LAST_WAYPOINT = 0.0
 LAST_TIME = 0.0
 LAST_PROGRESS = 0.0
 CURVE_LIMITS = {"caecer_loop": {"min": 0.0, "max": 0.18297208942448917}}
@@ -63,32 +62,20 @@ def get_direction_change(i, waypoints):
 
 
 def reward_function(params):
-    global LAST_WAYPOINT
     global LAST_TIME
     global LAST_PROGRESS
 
     now = time.time()
-
+    progress = params["progress"]
     this_waypoint = params["closest_waypoints"][0]
-    if this_waypoint == 49:
-        this_waypoint = 50
-    if this_waypoint == 120:
-        this_waypoint = 0
 
-    # For the first step, just reset
-    if params["steps"] < 2:
+    step_progress = progress - LAST_PROGRESS
+    LAST_PROGRESS = progress
+
+    if step_progress < 0.0:
         LAST_TIME = now
-        LAST_WAYPOINT = this_waypoint
-        LAST_PROGRESS = params["progress"]
         return float(1e-5)
 
-    # Waypoint hasn't increased, so no reward
-    if (this_waypoint <= LAST_WAYPOINT) and (
-        not (this_waypoint == 0 and LAST_WAYPOINT == 119)
-    ):
-        return float(1e-5)
-
-    # Waypoint has increased, so calculate reward
     # Difficulty is a number from 0.0 to 5.0
     difficulty = (
         5.0
@@ -119,10 +106,13 @@ def reward_function(params):
 
     # Save for next time
     LAST_TIME = now
-    LAST_WAYPOINT = this_waypoint
     LAST_PROGRESS = params["progress"]
 
-    # This trace is needed for test logging
-    print(f"MY_TRACE_LOG:{speed},{params['progress']}")
+    is_finished = 0
+    if params["is_offtrack"] or params["progress"] == 100.0:
+        is_finished = 1
 
-    return float(difficulty + speed + bonus)
+    # This trace is needed for test logging
+    print(f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{step_progress},{speed},{difficulty},{reward},{is_finished}")
+
+    return float((step_progress * (speed + difficulty)) + bonus)
