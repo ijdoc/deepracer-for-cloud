@@ -1,7 +1,9 @@
 import math
+import time
 
 LAST_WAYPOINT = 0.0
-CUMULATIVE_REWARD = 0.0
+LAST_TIME = 0.0
+LAST_PROGRESS = 0.0
 CURVE_LIMITS = {"caecer_loop": {"min": 0.0, "max": 0.18297208942448917}}
 
 
@@ -62,53 +64,65 @@ def get_direction_change(i, waypoints):
 
 def reward_function(params):
     global LAST_WAYPOINT
-    global CUMULATIVE_REWARD
+    global LAST_TIME
+    global LAST_PROGRESS
 
-    # This trace is needed for test logging
-    print(f"MY_TRACE_LOG:{params['steps']},{params['progress']}")
+    now = time.time()
 
     this_waypoint = params["closest_waypoints"][0]
+    if this_waypoint == 49:
+        this_waypoint = 50
+    if this_waypoint == 120:
+        this_waypoint = 0
 
-    # For the first couple steps, just reset & record the waypoint
+    # For the first step, just reset
     if params["steps"] < 2:
-        print(f"MY_DEBUG_LOG: Resetting at waypoint {this_waypoint}")
+        LAST_TIME = now
         LAST_WAYPOINT = this_waypoint
-        CUMULATIVE_REWARD = 0.0
-        return float(0.0)
+        LAST_PROGRESS = params["progress"]
+        return float(1e-5)
 
-    # Waypoint hasn't changed, so no reward
-    if this_waypoint == LAST_WAYPOINT:
-        return float(0.0)
+    # Waypoint hasn't increased, so no reward
+    if (this_waypoint <= LAST_WAYPOINT) and (
+        not (this_waypoint == 0 and LAST_WAYPOINT == 119)
+    ):
+        return float(1e-5)
 
-    # Save the waypoint for next time
-    LAST_WAYPOINT = this_waypoint
+    # Waypoint has increased, so calculate reward
+    # Difficulty is a number from 1.0 to 4.0
+    difficulty = 1.0 + (
+        3.0
+        * abs(get_direction_change(this_waypoint, params["waypoints"]))
+        / CURVE_LIMITS["caecer_loop"]["max"]
+    )
 
-    # Calculate the direction change
-    direction_change = abs(get_direction_change(this_waypoint, params["waypoints"]))
-    reward = direction_change / CURVE_LIMITS["caecer_loop"]["max"]
+    speed = (params["progress"] - LAST_PROGRESS) / (now - LAST_TIME)
 
     # Encourage good behavior at the curve
-    factor = 1.0
-    if this_waypoint >= 40 and this_waypoint <= 44:
-        if not params["is_left_of_center"]:  # correct side of track
-            factor += 0.25
-        if params["speed"] <= 1.0:  # breaking before curve
-            factor += 0.25
-        if params["steering_angle"] == 0.0:  # not turning
-            factor += 0.25
+    # factor = 1.0
+    # if this_waypoint >= 40 and this_waypoint <= 42:
+    #     if not params["is_left_of_center"]:  # correct side of track
+    #         factor += 0.25
+    # if this_waypoint >= 41 and this_waypoint <= 45:
+    #     if params["speed"] <= 1.0:  # breaking before & start of curve
+    #         factor += 0.25
+    # if this_waypoint >= 41 and this_waypoint <= 43:
+    #     if params["steering_angle"] == 0.0:  # not turning
+    #         factor += 0.25
 
-    reward *= factor
+    # reward *= factor
 
-    CUMULATIVE_REWARD += reward
-
-    # Bonus reward at finish line
-    # ~50% additional reward for 200 steps
-    # ~33% additional reward for 300 steps
+    # Bonus reward for completing the track
     bonus = 0.0
     if params["progress"] == 100.0:
-        bonus = CUMULATIVE_REWARD / (params["steps"] / 100.0)
+        bonus = 100.0
 
-    if params["is_offtrack"] or params["progress"] == 100.0:
-        print(f"MY_DEBUG_LOG: Trial ended with reward {CUMULATIVE_REWARD:0.4f}")
+    # Save for next time
+    LAST_TIME = now
+    LAST_WAYPOINT = this_waypoint
+    LAST_PROGRESS = params["progress"]
 
-    return float(reward + bonus)
+    # This trace is needed for test logging
+    print(f"MY_TRACE_LOG:{speed},{params['progress']}")
+
+    return float((difficulty * speed) + bonus)

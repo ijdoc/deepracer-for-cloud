@@ -48,15 +48,15 @@ os.environ["WANDB_RESUME"] = "allow"
 
 # running_job = jobs["train"]["id"]
 iter_metrics = {
-    "test": {"reward": None, "steps": [], "progress": [], "speed": []},
-    "train": {"reward": [], "steps": [], "progress": [], "speed": []},
+    "test": {"reward": None, "progress": [], "speed": []},
+    "train": {"reward": [], "progress": [], "speed": []},
     "learn": {"loss": [], "KL_div": [], "entropy": []},
 }
-best_metrics = {"reward": -1.0, "steps": 0, "progress": 0.0, "speed": 0.0}
+best_metrics = {"reward": -1.0, "progress": 0.0, "speed": 0.0}
 is_stopped = True
 start_step = {"timestamp": None, "progress": None}
 is_testing = False
-test_metrics = {"steps": None, "progress": None}
+test_metrics = {"speed": None, "progress": None}
 last_episode = 0
 
 # FIXME: Define group from command line in train.sh script
@@ -150,11 +150,9 @@ def process_line(line):
         if not test_reward is None:
             # Calculate means and log everything here!!
             iter_metrics["test"]["reward"] = float(test_reward)
-            iter_metrics["test"]["steps"] = np.mean(iter_metrics["test"]["steps"])
-            iter_metrics["test"]["progress"] = np.mean(iter_metrics["test"]["progress"])
             iter_metrics["test"]["speed"] = np.mean(iter_metrics["test"]["speed"])
+            iter_metrics["test"]["progress"] = np.mean(iter_metrics["test"]["progress"])
             iter_metrics["train"]["reward"] = np.mean(iter_metrics["train"]["reward"])
-            iter_metrics["train"]["steps"] = np.mean(iter_metrics["train"]["steps"])
             iter_metrics["train"]["progress"] = np.mean(
                 iter_metrics["train"]["progress"]
             )
@@ -165,36 +163,32 @@ def process_line(line):
             # Update best metrics for summary
             if iter_metrics["test"]["reward"] > best_metrics["reward"]:
                 best_metrics["reward"] = iter_metrics["test"]["reward"]
-                best_metrics["steps"] = iter_metrics["test"]["steps"]
-                best_metrics["progress"] = iter_metrics["test"]["progress"]
                 best_metrics["speed"] = iter_metrics["test"]["speed"]
+                best_metrics["progress"] = iter_metrics["test"]["progress"]
             if DEBUG:
                 print(f"{timestamp} {iter_metrics}")
             else:
                 wandb.log(
                     {
                         "train/reward": iter_metrics["train"]["reward"],
-                        "train/steps": iter_metrics["train"]["steps"],
                         "train/progress": iter_metrics["train"]["progress"],
                         "train/speed": iter_metrics["train"]["speed"],
                         "learn/loss": iter_metrics["learn"]["loss"],
                         "learn/KL_div": iter_metrics["learn"]["KL_div"],
                         "learn/entropy": iter_metrics["learn"]["entropy"],
                         "test/reward": iter_metrics["test"]["reward"],
-                        "test/steps": iter_metrics["test"]["steps"],
-                        "test/progress": iter_metrics["test"]["progress"],
                         "test/speed": iter_metrics["test"]["speed"],
+                        "test/progress": iter_metrics["test"]["progress"],
                     }
                 )
                 # Update test metrics summary
                 wandb.run.summary["test/reward"] = best_metrics["reward"]
-                wandb.run.summary["test/steps"] = best_metrics["steps"]
-                wandb.run.summary["test/progress"] = best_metrics["progress"]
                 wandb.run.summary["test/speed"] = best_metrics["speed"]
+                wandb.run.summary["test/progress"] = best_metrics["progress"]
             # Reset metrics
             iter_metrics = {
-                "test": {"reward": None, "steps": [], "progress": [], "speed": []},
-                "train": {"reward": [], "steps": [], "progress": [], "speed": []},
+                "test": {"reward": None, "progress": [], "speed": []},
+                "train": {"reward": [], "progress": [], "speed": []},
                 "learn": {"loss": [], "KL_div": [], "entropy": []},
             }
         is_testing = False
@@ -212,48 +206,46 @@ def process_line(line):
             ).replace("\n", "")
             # FIXME: Get the model reference and log it to W&B
             subprocess.run(f"./upload.sh", shell=True)
-    elif "SIM_TRACE_LOG" in line:
-        parts = line.split("SIM_TRACE_LOG:")[1].split("\t")[0].split("\n")[0].split(",")
-        if is_stopped:
-            timestamp = float(parts[14])
-            progress = float(parts[11])
-            start_step = {"timestamp": timestamp, "progress": progress}
-            if DEBUG:
-                print(f"{timestamp} [DEBUG] {start_step}")
-            is_stopped = False
-        if "True" in parts[9]:
-            timestamp = float(parts[14])
-            steps = int(parts[1])
-            progress = float(parts[11])
-            # speed = ((progress / 100.0) * float(parts[13])) / (timestamp - start_step["timestamp"])
-            speed = progress / steps
-            if DEBUG:
-                print(
-                    f"{timestamp} [DEBUG] Steps: {steps} Progress: {progress} Speed: {speed}"
-                )
-            iter_metrics["train"]["steps"].append(steps)
-            iter_metrics["train"]["progress"].append(progress)
-            iter_metrics["train"]["speed"].append(speed)
-            is_stopped = True
+    # elif "SIM_TRACE_LOG" in line:
+    #     parts = line.split("SIM_TRACE_LOG:")[1].split("\t")[0].split("\n")[0].split(",")
+    #     if is_stopped:
+    #         timestamp = float(parts[14])
+    #         progress = float(parts[11])
+    #         start_step = {"timestamp": timestamp, "progress": progress}
+    #         if DEBUG:
+    #             print(f"{timestamp} [DEBUG] {start_step}")
+    #         is_stopped = False
+    #     if "True" in parts[9]:
+    #         timestamp = float(parts[14])
+    #         steps = int(parts[1])
+    #         progress = float(parts[11])
+    #         # speed = ((progress / 100.0) * float(parts[13])) / (timestamp - start_step["timestamp"])
+    #         speed = progress / steps
+    #         if DEBUG:
+    #             print(
+    #                 f"{timestamp} [DEBUG] Steps: {steps} Progress: {progress} Speed: {speed}"
+    #             )
+    #         iter_metrics["train"]["steps"].append(steps)
+    #         iter_metrics["train"]["progress"].append(progress)
+    #         iter_metrics["train"]["speed"].append(speed)
+    #         is_stopped = True
     elif "Starting evaluation phase" in line:
         is_testing = True
     elif "Testing>" in line:
-        iter_metrics["test"]["steps"].append(test_metrics["steps"])
+        iter_metrics["test"]["speed"].append(test_metrics["speed"])
         iter_metrics["test"]["progress"].append(test_metrics["progress"])
-        iter_metrics["test"]["speed"].append(
-            test_metrics["progress"] / test_metrics["steps"]
-        )
         if DEBUG:
             print(f"{timestamp} test metrics: {test_metrics}")
     elif "MY_TRACE_LOG" in line:
+        parts = line.split("MY_TRACE_LOG:")[1].split("\t")[0].split("\n")[0].split(",")
         if is_testing:
-            parts = (
-                line.split("MY_TRACE_LOG:")[1].split("\t")[0].split("\n")[0].split(",")
-            )
-            test_metrics["steps"] = int(float(parts[0]))
+            test_metrics["speed"] = float(parts[0])
             test_metrics["progress"] = float(parts[1])
-            if DEBUG:
-                print(f"{timestamp} {line}")
+        else:
+            iter_metrics["train"]["speed"].append(float(parts[0]))
+            iter_metrics["train"]["progress"].append(float(parts[1]))
+        if DEBUG:
+            print(f"{timestamp} {line}")
     else:
         if DEBUG:
             print(f"{timestamp} {line}")
