@@ -70,11 +70,8 @@ def reward_function(params):
     this_waypoint = params["closest_waypoints"][0]
 
     step_progress = progress - LAST_PROGRESS
-    LAST_PROGRESS = progress
-
     if step_progress < 0.0:
-        LAST_TIME = now
-        return float(1e-5)
+        step_progress = 0.0
 
     # Difficulty is a number from 0.0 to 5.0
     difficulty = (
@@ -83,7 +80,7 @@ def reward_function(params):
         / CURVE_LIMITS["caecer_loop"]["max"]
     )
 
-    speed = (params["progress"] - LAST_PROGRESS) / (now - LAST_TIME)
+    speed = step_progress / (now - LAST_TIME)
 
     # Encourage good behavior at the curve
     # factor = 1.0
@@ -104,19 +101,19 @@ def reward_function(params):
     if params["progress"] == 100.0:
         bonus = 100.0
 
-    # Save for next time
-    LAST_TIME = now
-    LAST_PROGRESS = params["progress"]
+    reward = float((step_progress * (speed + difficulty)) + bonus)
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:
         is_finished = 1
 
-    reward = float((step_progress * (speed + difficulty)) + bonus)
-
     # This trace is needed for test logging
     print(
         f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{step_progress},{speed},{difficulty},{reward},{is_finished}"
     )
+
+    # Save for next time
+    LAST_TIME = now
+    LAST_PROGRESS = params["progress"]
 
     return reward
