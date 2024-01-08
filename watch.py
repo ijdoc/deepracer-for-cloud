@@ -340,4 +340,4 @@ if not DEBUG:
     wandb.finish()
 
 # Upload model
-subprocess.run(f"./upload.sh", shell=True)
+# subprocess.run(f"./upload.sh", shell=True)

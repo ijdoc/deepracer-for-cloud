@@ -107,7 +107,7 @@ def reward_function(params):
     # Bonus reward for completing the track
     bonus = 0.0
     if params["progress"] == 100.0:
-        bonus = 100.0
+        bonus = 14.0 + (4e6 / (params["steps"] ** 2))
 
     reward = float((difficulty * LAST_SPEED) + bonus)
 
