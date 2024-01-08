@@ -89,9 +89,9 @@ def reward_function(params):
         return float(1e-5)
 
     # Waypoint has increased, so calculate reward
-    # Difficulty is a number from 1.0 to 4.0
-    difficulty = 1.0 + (
-        3.0
+    # Difficulty is a number from 0.0 to 5.0
+    difficulty = (
+        5.0
         * abs(get_direction_change(this_waypoint, params["waypoints"]))
         / CURVE_LIMITS["caecer_loop"]["max"]
     )
@@ -125,4 +125,4 @@ def reward_function(params):
     # This trace is needed for test logging
     print(f"MY_TRACE_LOG:{speed},{params['progress']}")
 
-    return float((difficulty * speed) + bonus)
+    return float(difficulty + speed + bonus)
