@@ -12,7 +12,7 @@ import argparse
 
 # FIXME: Define from command line arguments in parent script
 os.environ["WANDB_RUN_GROUP"] = "2402"
-GLOBAL_MIN_STEPS = 227
+GLOBAL_MIN_STEPS = 211.0
 
 # Create ArgumentParser
 parser = argparse.ArgumentParser(description="Log testing metrics")
