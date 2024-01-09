@@ -10,6 +10,10 @@ import numpy as np
 import subprocess
 import argparse
 
+# FIXME: Define from command line arguments in parent script
+os.environ["WANDB_RUN_GROUP"] = "2402"
+GLOBAL_MIN_STEPS = 227
+
 # Create ArgumentParser
 parser = argparse.ArgumentParser(description="Log testing metrics")
 
@@ -77,9 +81,6 @@ is_testing = False
 train_metrics = {"speed": [], "progress": None, "steps": None}
 test_metrics = {"speed": [], "progress": None, "steps": None}
 last_episode = 0
-
-# FIXME: Define group from command line in train.sh script
-os.environ["WANDB_RUN_GROUP"] = "2402"
 
 
 def update_run_env(name, checkpoint):
@@ -217,6 +218,7 @@ def process_line(line):
             # Update best metrics for summary
             if step_metrics["test"]["reward"] > best_metrics["reward"] or (
                 step_metrics["test"]["progress"] >= 100.0
+                and step_metrics["test"]["steps"] < GLOBAL_MIN_STEPS
                 and step_metrics["test"]["steps"] < best_metrics["steps"]
             ):
                 best_metrics["reward"] = step_metrics["test"]["reward"]
@@ -224,7 +226,11 @@ def process_line(line):
                 best_metrics["steps"] = step_metrics["test"]["steps"]
                 best_metrics["progress"] = step_metrics["test"]["progress"]
                 print(f"{timestamp} Checkpoint {checkpoint} is the new best model")
-                if not DEBUG and best_metrics["progress"] >= 100.0:
+                if (
+                    not DEBUG
+                    and best_metrics["progress"] >= 100.0
+                    and step_metrics["test"]["steps"] < GLOBAL_MIN_STEPS
+                ):
                     print(
                         f"{timestamp} Uploading full progress checkpoint {checkpoint} with reward={best_metrics['reward']:0.3f} @ speed {best_metrics['speed']:0.3f} over {best_metrics['steps']:0.2f} steps"
                     )
