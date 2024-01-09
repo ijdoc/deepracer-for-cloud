@@ -215,7 +215,7 @@ def process_line(line):
                 best_metrics["progress"] = iter_metrics["test"]["progress"]
                 print(f"{timestamp} Checkpoint {checkpoint} is the new best model")
                 print(
-                    f"{timestamp} Uploading checkpoint {checkpoint} with speed {best_metrics['speed']}@{best_metrics['progres']}% progress and reward {best_metrics['reward']} over {best_metrics['steps']} steps"
+                    f"{timestamp} Uploading checkpoint {checkpoint} with speed {best_metrics['speed']}@{best_metrics['progress']}% progress and reward {best_metrics['reward']} over {best_metrics['steps']} steps"
                 )
                 wandb.config["world_name"] = update_run_env(
                     wandb.run.name, checkpoint
@@ -311,26 +311,6 @@ sage_thread.start()
 # sage_thread.join()
 
 aggregate_logs(sagemaker, "[SAGE]")
-
-model_found = False
-while not model_found:
-    # List the objects in the bucket
-    response = s3.list_objects_v2(
-        Bucket=os.environ["DR_LOCAL_S3_BUCKET"], Prefix="rl-deepracer-sagemaker"
-    )
-    # Display the contents of the bucket
-    for obj in response.get("Contents", []):
-        if "model.tar.gz" in obj["Key"]:
-            model_found = True
-            print(f"{datetime.now()} Model found")
-            # Download model
-            s3.download_file(
-                os.environ["DR_LOCAL_S3_BUCKET"],
-                "rl-deepracer-sagemaker/model.tar.gz",
-                "model.tar.gz",
-            )
-            print(f"{datetime.now()} Model retrieved")
-
 
 if not DEBUG:
     print(f"{datetime.now()} Finishing...")
