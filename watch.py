@@ -46,18 +46,11 @@ os.environ["WANDB_SILENT"] = "true"
 # Make sure it is possible to resume & auto-create runs
 os.environ["WANDB_RESUME"] = "allow"
 
-# running_job = jobs["train"]["id"]
-iter_metrics = {
-    "test": {"reward": None, "progress": [], "speed": []},
-    "train": {"reward": [], "progress": [], "speed": []},
-    "learn": {"loss": [], "KL_div": [], "entropy": []},
-}
-best_metrics = {"reward": -1.0, "progress": 0.0, "speed": 0.0}
-is_stopped = True
-start_step = {"timestamp": None, "progress": None}
+iter_metrics = reset_iter_metrics()
+best_metrics = {"reward": -1.0, "progress": 0.0, "speed": 0.0, "steps": 0.0}
 is_testing = False
-train_metrics = {"speed": [], "progress": []}
-test_metrics = {"speed": [], "progress": []}
+train_metrics = {"speed": [], "progress": None, "steps": None}
+test_metrics = {"speed": [], "progress": None, "steps": None}
 last_episode = 0
 
 # FIXME: Define group from command line in train.sh script
@@ -76,7 +69,7 @@ def update_run_env(name, checkpoint):
         if line.startswith("DR_WORLD_NAME="):
             world_name = line.split("=")[1]
         if line.startswith("DR_UPLOAD_S3_PREFIX="):
-            new_lines.append(f"DR_UPLOAD_S3_PREFIX={name}_{checkpoint}\n")
+            new_lines.append(f"DR_UPLOAD_S3_PREFIX={name}-{checkpoint}\n")
         else:
             new_lines.append(line)
     # Write the modified content back to the file
@@ -121,11 +114,17 @@ def get_float(string):
         return None
 
 
+def reset_iter_metrics():
+    return {
+        "test": {"reward": None, "steps": [], "progress": [], "speed": []},
+        "train": {"reward": [], "steps": [], "progress": [], "speed": []},
+        "learn": {"loss": [], "KL_div": [], "entropy": []},
+    }
+
+
 def process_line(line):
     # Process training episodes and policy training
     global iter_metrics
-    global is_stopped
-    global start_step
     global is_testing
     global best_metrics
     global last_episode
@@ -133,13 +132,44 @@ def process_line(line):
     global test_reward_table
 
     timestamp = datetime.now()
-    if "Training>" in line and "[SAGE]" in line:
+    if "MY_TRACE_LOG" in line:
+        if DEBUG:
+            print(f"{timestamp} {line}")
+        else:
+            # f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{speed},{difficulty},{reward},{is_finished}"
+            parts = (
+                line.split("MY_TRACE_LOG:")[1].split("\t")[0].split("\n")[0].split(",")
+            )
+            if is_testing:
+                test_reward_table.add_data(
+                    parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]
+                )
+                test_metrics["speed"].append(float(parts[3]))
+                if int(parts[6]) == 1:
+                    iter_metrics["test"]["steps"].append(float(parts[0]))
+                    iter_metrics["test"]["progress"].append(float(parts[2]))
+                    iter_metrics["test"]["speed"].append(np.mean(test_metrics["speed"]))
+                    test_metrics["speed"] = []
+            else:
+                train_reward_table.add_data(
+                    parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]
+                )
+                train_metrics["speed"].append(float(parts[3]))
+                if int(parts[6]) == 1:
+                    iter_metrics["train"]["steps"].append(float(parts[0]))
+                    iter_metrics["train"]["progress"].append(float(parts[2]))
+                    iter_metrics["train"]["speed"].append(
+                        np.mean(train_metrics["speed"])
+                    )
+                    train_metrics["speed"] = []
+
+    elif "Training>" in line and "[SAGE]" in line:
         # Capture training episode metrics
         metrics = line.split(",")
         last_episode = int(metrics[2].split("=")[1])
         reward = float(metrics[3].split("=")[1])
-        # steps = int(metrics[4].split("=")[1])
-        # iter = int(metrics[5].split("=")[1])
+        if not isinstance(iter_metrics["train"]["reward"], list):
+            iter_metrics = reset_iter_metrics()
         iter_metrics["train"]["reward"].append(reward)
     elif "Policy training>" in line:
         metrics = line.split(",")
@@ -158,11 +188,14 @@ def process_line(line):
     elif "[BestModelSelection] Evaluation episode reward mean:" in line:
         test_reward = get_float(line.split(":")[1].strip())
         if not test_reward is None:
+            checkpoint = round((last_episode / 10) - 1)
             # Calculate means and log everything here!!
             iter_metrics["test"]["reward"] = float(test_reward)
             iter_metrics["test"]["speed"] = np.mean(iter_metrics["test"]["speed"])
             iter_metrics["test"]["progress"] = np.mean(iter_metrics["test"]["progress"])
+            iter_metrics["test"]["steps"] = np.mean(iter_metrics["test"]["steps"])
             iter_metrics["train"]["reward"] = np.mean(iter_metrics["train"]["reward"])
+            iter_metrics["train"]["steps"] = np.mean(iter_metrics["train"]["steps"])
             iter_metrics["train"]["progress"] = np.mean(
                 iter_metrics["train"]["progress"]
             )
@@ -171,16 +204,30 @@ def process_line(line):
             iter_metrics["learn"]["KL_div"] = np.mean(iter_metrics["learn"]["KL_div"])
             iter_metrics["learn"]["entropy"] = np.mean(iter_metrics["learn"]["entropy"])
             # Update best metrics for summary
-            if iter_metrics["test"]["reward"] > best_metrics["reward"]:
+            if iter_metrics["test"]["reward"] > best_metrics["reward"] or (
+                iter_metrics["test"]["progress"] >= 100.0
+                and iter_metrics["test"]["speed"] > best_metrics["speed"]
+            ):
                 best_metrics["reward"] = iter_metrics["test"]["reward"]
                 best_metrics["speed"] = iter_metrics["test"]["speed"]
+                best_metrics["steps"] = iter_metrics["test"]["steps"]
                 best_metrics["progress"] = iter_metrics["test"]["progress"]
+                print(f"{timestamp} Checkpoint {checkpoint} is the new best model")
+                print(
+                    f"{timestamp} Uploading checkpoint {checkpoint} with speed {best_metrics['speed']}@{best_metrics['progres']}% progress and reward {best_metrics['reward']} over {best_metrics['steps']} steps"
+                )
+                wandb.config["world_name"] = update_run_env(
+                    wandb.run.name, checkpoint
+                ).replace("\n", "")
+                # FIXME: Get the model reference and log it to W&B
+                subprocess.run(f"./upload.sh", shell=True)
             if DEBUG:
                 print(f"{timestamp} {iter_metrics}")
             else:
                 wandb.log(
                     {
                         "train/reward": iter_metrics["train"]["reward"],
+                        "train/steps": iter_metrics["train"]["steps"],
                         "train/progress": iter_metrics["train"]["progress"],
                         "train/speed": iter_metrics["train"]["speed"],
                         "learn/loss": iter_metrics["learn"]["loss"],
@@ -188,14 +235,16 @@ def process_line(line):
                         "learn/entropy": iter_metrics["learn"]["entropy"],
                         "test/reward": iter_metrics["test"]["reward"],
                         "test/speed": iter_metrics["test"]["speed"],
+                        "test/steps": iter_metrics["test"]["steps"],
                         "test/progress": iter_metrics["test"]["progress"],
-                        f"train_table_{last_episode}": train_reward_table,
-                        f"test_table_{last_episode}": test_reward_table,
+                        f"train_table_{checkpoint}": train_reward_table,
+                        f"test_table_{checkpoint}": test_reward_table,
                     }
                 )
                 # Update test metrics summary
                 wandb.run.summary["test/reward"] = best_metrics["reward"]
                 wandb.run.summary["test/speed"] = best_metrics["speed"]
+                wandb.run.summary["test/steps"] = best_metrics["steps"]
                 wandb.run.summary["test/progress"] = best_metrics["progress"]
                 # Log and reset tables
                 train_reward_table = wandb.Table(
@@ -219,56 +268,9 @@ def process_line(line):
                     ]
                 )
 
-            # Reset metrics
-            iter_metrics = {
-                "test": {"reward": None, "progress": [], "speed": []},
-                "train": {"reward": [], "progress": [], "speed": []},
-                "learn": {"loss": [], "KL_div": [], "entropy": []},
-            }
         is_testing = False
-    elif "[BestModelSelection] Updating the best checkpoint" in line:
-        name = line.split('"')[1]
-        name = name.split(".")[0]
-        print(f"{timestamp} Best checkpoint: {name} at episode {last_episode}")
-        if best_metrics["progress"] >= 100:
-            checkpoint = name.split("_")[0]
-            print(
-                f'{timestamp} Uploading checkpoint {checkpoint} with speed {best_metrics["speed"]:0.4f}@{best_metrics["progress"]}% progress'
-            )
-            wandb.config["world_name"] = update_run_env(
-                wandb.run.name, checkpoint
-            ).replace("\n", "")
-            # FIXME: Get the model reference and log it to W&B
-            subprocess.run(f"./upload.sh", shell=True)
     elif "Starting evaluation phase" in line:
         is_testing = True
-    elif "MY_TRACE_LOG" in line:
-        if DEBUG:
-            print(f"{timestamp} {line}")
-        else:
-            parts = (
-                line.split("MY_TRACE_LOG:")[1].split("\t")[0].split("\n")[0].split(",")
-            )
-            if is_testing:
-                test_reward_table.add_data(
-                    parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]
-                )
-                test_metrics["progress"] = float(parts[2])
-                test_metrics["speed"].append(float(parts[3]))
-                if int(parts[6]) == 1:
-                    iter_metrics["test"]["progress"].append(test_metrics["progress"])
-                    iter_metrics["test"]["speed"].append(np.mean(test_metrics["speed"]))
-            else:
-                train_reward_table.add_data(
-                    parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]
-                )
-                train_metrics["progress"] = float(parts[2])
-                train_metrics["speed"].append(float(parts[3]))
-                if int(parts[6]) == 1:
-                    iter_metrics["train"]["progress"].append(train_metrics["progress"])
-                    iter_metrics["train"]["speed"].append(
-                        np.mean(train_metrics["speed"])
-                    )
     else:
         if DEBUG:
             print(f"{timestamp} {line}")
@@ -329,15 +331,6 @@ while not model_found:
             print(f"{datetime.now()} Model retrieved")
 
 
-# FIXME: Upload to bucket, then reference instead of uploading to W&B
 if not DEBUG:
-    # resume_job(jobs["train"])
-    # model = wandb.Artifact(f"{os.environ['WANDB_RUN_GROUP']}-qualifier", type="model")
-    # model.add_file("./model.tar.gz", "model.tar.gz")
-    # wandb.log_artifact(model)
-    # print(f"{datetime.now()} Model logged")
     print(f"{datetime.now()} Finishing...")
     wandb.finish()
-
-# Upload model
-# subprocess.run(f"./upload.sh", shell=True)
