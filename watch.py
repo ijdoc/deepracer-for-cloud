@@ -137,9 +137,10 @@ def process_line(line):
         # f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{speed},{difficulty},{reward},{is_finished}"
         parts = line.split("MY_TRACE_LOG:")[1].split("\t")[0].split("\n")[0].split(",")
         if is_testing:
-            test_reward_table.add_data(
-                parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]
-            )
+            if not DEBUG:
+                test_reward_table.add_data(
+                    parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]
+                )
             test_metrics["speed"].append(float(parts[3]))
             if int(parts[6]) == 1:
                 iter_metrics["test"]["steps"].append(float(parts[0]))
@@ -147,11 +148,14 @@ def process_line(line):
                 iter_metrics["test"]["speed"].append(np.mean(test_metrics["speed"]))
                 test_metrics["speed"] = []
         else:
-            train_reward_table.add_data(
-                parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]
-            )
+            if not DEBUG:
+                train_reward_table.add_data(
+                    parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]
+                )
             train_metrics["speed"].append(float(parts[3]))
             if int(parts[6]) == 1:
+                if not isinstance(iter_metrics["train"]["steps"], list):
+                    iter_metrics = reset_iter_metrics()
                 iter_metrics["train"]["steps"].append(float(parts[0]))
                 iter_metrics["train"]["progress"].append(float(parts[2]))
                 iter_metrics["train"]["speed"].append(np.mean(train_metrics["speed"]))
@@ -209,14 +213,17 @@ def process_line(line):
                 best_metrics["steps"] = iter_metrics["test"]["steps"]
                 best_metrics["progress"] = iter_metrics["test"]["progress"]
                 print(f"{timestamp} Checkpoint {checkpoint} is the new best model")
-                print(
-                    f"{timestamp} Uploading checkpoint {checkpoint} with speed {best_metrics['speed']}@{best_metrics['progress']}% progress and reward {best_metrics['reward']} over {best_metrics['steps']} steps"
-                )
-                wandb.config["world_name"] = update_run_env(
-                    wandb.run.name, checkpoint
-                ).replace("\n", "")
-                # FIXME: Get the model reference and log it to W&B
-                subprocess.run(f"./upload.sh", shell=True)
+                if not DEBUG and best_metrics["progress"] >= 100.0:
+                    print(
+                        f"{timestamp} Uploading checkpoint {checkpoint} with speed {best_metrics['speed']:0.3f}@{best_metrics['progress']:0.2f}% progress and reward {best_metrics['reward']:0.3f} over {best_metrics['steps']:0.2f} steps"
+                    )
+                    wandb.config["world_name"] = update_run_env(
+                        wandb.run.name, checkpoint
+                    ).replace("\n", "")
+                    # FIXME: Get the model reference and log it to W&B
+                    subprocess.run(f"./upload.sh", shell=True)
+            else:
+                print(f"{timestamp} Checkpoint {checkpoint} is not a better model")
             if DEBUG:
                 print(f"{timestamp} {iter_metrics}")
             else:
@@ -263,7 +270,7 @@ def process_line(line):
                         "reward",
                     ]
                 )
-
+            iter_metrics = reset_iter_metrics()
         is_testing = False
     elif "Starting evaluation phase" in line:
         is_testing = True
