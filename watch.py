@@ -46,6 +46,15 @@ os.environ["WANDB_SILENT"] = "true"
 # Make sure it is possible to resume & auto-create runs
 os.environ["WANDB_RESUME"] = "allow"
 
+
+def reset_iter_metrics():
+    return {
+        "test": {"reward": None, "steps": [], "progress": [], "speed": []},
+        "train": {"reward": [], "steps": [], "progress": [], "speed": []},
+        "learn": {"loss": [], "KL_div": [], "entropy": []},
+    }
+
+
 iter_metrics = reset_iter_metrics()
 best_metrics = {"reward": -1.0, "progress": 0.0, "speed": 0.0, "steps": 0.0}
 is_testing = False
@@ -112,14 +121,6 @@ def get_float(string):
         return x
     except ValueError:
         return None
-
-
-def reset_iter_metrics():
-    return {
-        "test": {"reward": None, "steps": [], "progress": [], "speed": []},
-        "train": {"reward": [], "steps": [], "progress": [], "speed": []},
-        "learn": {"loss": [], "KL_div": [], "entropy": []},
-    }
 
 
 def process_line(line):
