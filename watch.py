@@ -205,10 +205,13 @@ def process_line(line):
                 100.0 * np.mean(iter_metrics["test"]["steps"])
             ) / step_metrics["test"]["progress"]
             step_metrics["train"]["reward"] = np.mean(iter_metrics["train"]["reward"])
-            step_metrics["train"]["steps"] = np.mean(iter_metrics["train"]["steps"])
             step_metrics["train"]["progress"] = np.mean(
                 iter_metrics["train"]["progress"]
             )
+            # Projected steps to completion
+            step_metrics["train"]["steps"] = (
+                100.00 * np.mean(iter_metrics["train"]["steps"])
+            ) / step_metrics["train"]["progress"]
             step_metrics["train"]["speed"] = np.mean(iter_metrics["train"]["speed"])
             step_metrics["learn"]["loss"] = np.mean(iter_metrics["learn"]["loss"])
             step_metrics["learn"]["KL_div"] = np.mean(iter_metrics["learn"]["KL_div"])
