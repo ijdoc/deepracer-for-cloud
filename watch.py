@@ -55,6 +55,11 @@ def reset_iter_metrics():
     }
 
 
+step_metrics = {
+    "test": {"reward": None, "steps": None, "progress": None, "speed": None},
+    "train": {"reward": None, "steps": None, "progress": None, "speed": None},
+    "learn": {"loss": None, "KL_div": None, "entropy": None},
+}
 iter_metrics = reset_iter_metrics()
 best_metrics = {"reward": -1.0, "progress": 0.0, "speed": 0.0, "steps": 0.0}
 is_testing = False
@@ -126,6 +131,7 @@ def get_float(string):
 def process_line(line):
     # Process training episodes and policy training
     global iter_metrics
+    global step_metrics
     global is_testing
     global best_metrics
     global last_episode
@@ -154,8 +160,6 @@ def process_line(line):
                 )
             train_metrics["speed"].append(float(parts[3]))
             if int(parts[6]) == 1:
-                if not isinstance(iter_metrics["train"]["steps"], list):
-                    iter_metrics = reset_iter_metrics()
                 iter_metrics["train"]["steps"].append(float(parts[0]))
                 iter_metrics["train"]["progress"].append(float(parts[2]))
                 iter_metrics["train"]["speed"].append(np.mean(train_metrics["speed"]))
@@ -168,8 +172,6 @@ def process_line(line):
         metrics = line.split(",")
         last_episode = int(metrics[2].split("=")[1])
         reward = float(metrics[3].split("=")[1])
-        if not isinstance(iter_metrics["train"]["reward"], list):
-            iter_metrics = reset_iter_metrics()
         iter_metrics["train"]["reward"].append(reward)
     elif "Policy training>" in line:
         metrics = line.split(",")
@@ -190,28 +192,30 @@ def process_line(line):
         if not test_reward is None:
             checkpoint = round((last_episode / 10) - 1)
             # Calculate means and log everything here!!
-            iter_metrics["test"]["reward"] = float(test_reward)
-            iter_metrics["test"]["speed"] = np.mean(iter_metrics["test"]["speed"])
-            iter_metrics["test"]["progress"] = np.mean(iter_metrics["test"]["progress"])
-            iter_metrics["test"]["steps"] = np.mean(iter_metrics["test"]["steps"])
-            iter_metrics["train"]["reward"] = np.mean(iter_metrics["train"]["reward"])
-            iter_metrics["train"]["steps"] = np.mean(iter_metrics["train"]["steps"])
-            iter_metrics["train"]["progress"] = np.mean(
+            step_metrics["test"]["reward"] = float(test_reward)
+            step_metrics["test"]["speed"] = np.mean(iter_metrics["test"]["speed"])
+            step_metrics["test"]["progress"] = np.mean(iter_metrics["test"]["progress"])
+            step_metrics["test"]["steps"] = np.mean(iter_metrics["test"]["steps"])
+            step_metrics["train"]["reward"] = np.mean(iter_metrics["train"]["reward"])
+            step_metrics["train"]["steps"] = np.mean(iter_metrics["train"]["steps"])
+            step_metrics["train"]["progress"] = np.mean(
                 iter_metrics["train"]["progress"]
             )
-            iter_metrics["train"]["speed"] = np.mean(iter_metrics["train"]["speed"])
-            iter_metrics["learn"]["loss"] = np.mean(iter_metrics["learn"]["loss"])
-            iter_metrics["learn"]["KL_div"] = np.mean(iter_metrics["learn"]["KL_div"])
-            iter_metrics["learn"]["entropy"] = np.mean(iter_metrics["learn"]["entropy"])
+            step_metrics["train"]["speed"] = np.mean(iter_metrics["train"]["speed"])
+            step_metrics["learn"]["loss"] = np.mean(iter_metrics["learn"]["loss"])
+            step_metrics["learn"]["KL_div"] = np.mean(iter_metrics["learn"]["KL_div"])
+            step_metrics["learn"]["entropy"] = np.mean(iter_metrics["learn"]["entropy"])
+            # Reset immediately to free up while things continue logging
+            iter_metrics = reset_iter_metrics()
             # Update best metrics for summary
-            if iter_metrics["test"]["reward"] > best_metrics["reward"] or (
-                iter_metrics["test"]["progress"] >= 100.0
-                and iter_metrics["test"]["speed"] > best_metrics["speed"]
+            if step_metrics["test"]["reward"] > best_metrics["reward"] or (
+                step_metrics["test"]["progress"] >= 100.0
+                and step_metrics["test"]["speed"] > best_metrics["speed"]
             ):
-                best_metrics["reward"] = iter_metrics["test"]["reward"]
-                best_metrics["speed"] = iter_metrics["test"]["speed"]
-                best_metrics["steps"] = iter_metrics["test"]["steps"]
-                best_metrics["progress"] = iter_metrics["test"]["progress"]
+                best_metrics["reward"] = step_metrics["test"]["reward"]
+                best_metrics["speed"] = step_metrics["test"]["speed"]
+                best_metrics["steps"] = step_metrics["test"]["steps"]
+                best_metrics["progress"] = step_metrics["test"]["progress"]
                 print(f"{timestamp} Checkpoint {checkpoint} is the new best model")
                 if not DEBUG and best_metrics["progress"] >= 100.0:
                     print(
@@ -223,23 +227,23 @@ def process_line(line):
                     # FIXME: Get the model reference and log it to W&B
                     subprocess.run(f"./upload.sh", shell=True)
             else:
-                print(f"{timestamp} Checkpoint {checkpoint} is not a better model")
+                print(f"{timestamp} Checkpoint {checkpoint} underperformed")
             if DEBUG:
-                print(f"{timestamp} {iter_metrics}")
+                print(f"{timestamp} {step_metrics}")
             else:
                 wandb.log(
                     {
-                        "train/reward": iter_metrics["train"]["reward"],
-                        "train/steps": iter_metrics["train"]["steps"],
-                        "train/progress": iter_metrics["train"]["progress"],
-                        "train/speed": iter_metrics["train"]["speed"],
-                        "learn/loss": iter_metrics["learn"]["loss"],
-                        "learn/KL_div": iter_metrics["learn"]["KL_div"],
-                        "learn/entropy": iter_metrics["learn"]["entropy"],
-                        "test/reward": iter_metrics["test"]["reward"],
-                        "test/speed": iter_metrics["test"]["speed"],
-                        "test/steps": iter_metrics["test"]["steps"],
-                        "test/progress": iter_metrics["test"]["progress"],
+                        "train/reward": step_metrics["train"]["reward"],
+                        "train/steps": step_metrics["train"]["steps"],
+                        "train/progress": step_metrics["train"]["progress"],
+                        "train/speed": step_metrics["train"]["speed"],
+                        "learn/loss": step_metrics["learn"]["loss"],
+                        "learn/KL_div": step_metrics["learn"]["KL_div"],
+                        "learn/entropy": step_metrics["learn"]["entropy"],
+                        "test/reward": step_metrics["test"]["reward"],
+                        "test/speed": step_metrics["test"]["speed"],
+                        "test/steps": step_metrics["test"]["steps"],
+                        "test/progress": step_metrics["test"]["progress"],
                         f"train_table_{checkpoint}": train_reward_table,
                         f"test_table_{checkpoint}": test_reward_table,
                     }
@@ -270,6 +274,8 @@ def process_line(line):
                         "reward",
                     ]
                 )
+        else:
+            # Resetting inside else for completion (need this pattern to ensure proper reset)
             iter_metrics = reset_iter_metrics()
         is_testing = False
     elif "Starting evaluation phase" in line:
