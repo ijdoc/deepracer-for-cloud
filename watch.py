@@ -210,7 +210,7 @@ def process_line(line):
             # Update best metrics for summary
             if step_metrics["test"]["reward"] > best_metrics["reward"] or (
                 step_metrics["test"]["progress"] >= 100.0
-                and step_metrics["test"]["speed"] > best_metrics["speed"]
+                and step_metrics["test"]["steps"] < best_metrics["steps"]
             ):
                 best_metrics["reward"] = step_metrics["test"]["reward"]
                 best_metrics["speed"] = step_metrics["test"]["speed"]
@@ -219,7 +219,7 @@ def process_line(line):
                 print(f"{timestamp} Checkpoint {checkpoint} is the new best model")
                 if not DEBUG and best_metrics["progress"] >= 100.0:
                     print(
-                        f"{timestamp} Uploading checkpoint {checkpoint} with speed {best_metrics['speed']:0.3f}@{best_metrics['progress']:0.2f}% progress and reward {best_metrics['reward']:0.3f} over {best_metrics['steps']:0.2f} steps"
+                        f"{timestamp} Uploading full progress checkpoint {checkpoint} with reward={best_metrics['reward']:0.3f} @ speed {best_metrics['speed']:0.3f} over {best_metrics['steps']:0.2f} steps"
                     )
                     wandb.config["world_name"] = update_run_env(
                         wandb.run.name, checkpoint
