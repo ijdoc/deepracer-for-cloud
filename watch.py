@@ -55,6 +55,17 @@ def reset_iter_metrics():
     }
 
 
+def reset_tables():
+    return {
+        "test": wandb.Table(
+            columns=["step", "waypoint", "progress", "speed", "difficulty", "reward"]
+        ),
+        "train": wandb.Table(
+            columns=["step", "waypoint", "progress", "speed", "difficulty", "reward"]
+        ),
+    }
+
+
 step_metrics = {
     "test": {"reward": None, "steps": None, "progress": None, "speed": None},
     "train": {"reward": None, "steps": None, "progress": None, "speed": None},
@@ -111,13 +122,7 @@ if not DEBUG:
     env_files.add_file("./system.env")
     wandb.use_artifact(config_files)
     wandb.use_artifact(env_files)
-    # Setup reward tables
-    test_reward_table = wandb.Table(
-        columns=["step", "waypoint", "progress", "speed", "difficulty", "reward"]
-    )
-    train_reward_table = wandb.Table(
-        columns=["step", "waypoint", "progress", "speed", "difficulty", "reward"]
-    )
+    tables = reset_tables()
 
 
 def get_float(string):
@@ -135,8 +140,7 @@ def process_line(line):
     global is_testing
     global best_metrics
     global last_episode
-    global train_reward_table
-    global test_reward_table
+    global tables
 
     timestamp = datetime.now()
     if "MY_TRACE_LOG" in line:
@@ -144,7 +148,7 @@ def process_line(line):
         parts = line.split("MY_TRACE_LOG:")[1].split("\t")[0].split("\n")[0].split(",")
         if is_testing:
             if not DEBUG:
-                test_reward_table.add_data(
+                tables["test"].add_data(
                     parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]
                 )
             test_metrics["speed"].append(float(parts[3]))
@@ -155,7 +159,7 @@ def process_line(line):
                 test_metrics["speed"] = []
         else:
             if not DEBUG:
-                train_reward_table.add_data(
+                tables["train"].add_data(
                     parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]
                 )
             train_metrics["speed"].append(float(parts[3]))
@@ -195,7 +199,10 @@ def process_line(line):
             step_metrics["test"]["reward"] = float(test_reward)
             step_metrics["test"]["speed"] = np.mean(iter_metrics["test"]["speed"])
             step_metrics["test"]["progress"] = np.mean(iter_metrics["test"]["progress"])
-            step_metrics["test"]["steps"] = np.mean(iter_metrics["test"]["steps"])
+            # Projected steps to completion
+            step_metrics["test"]["steps"] = (
+                100.0 * np.mean(iter_metrics["test"]["steps"])
+            ) / step_metrics["test"]["progress"]
             step_metrics["train"]["reward"] = np.mean(iter_metrics["train"]["reward"])
             step_metrics["train"]["steps"] = np.mean(iter_metrics["train"]["steps"])
             step_metrics["train"]["progress"] = np.mean(
@@ -244,8 +251,8 @@ def process_line(line):
                         "test/speed": step_metrics["test"]["speed"],
                         "test/steps": step_metrics["test"]["steps"],
                         "test/progress": step_metrics["test"]["progress"],
-                        f"train_table_{checkpoint}": train_reward_table,
-                        f"test_table_{checkpoint}": test_reward_table,
+                        f"train_table_{checkpoint}": tables["train"],
+                        f"test_table_{checkpoint}": tables["test"],
                     }
                 )
                 # Update test metrics summary
@@ -253,27 +260,8 @@ def process_line(line):
                 wandb.run.summary["test/speed"] = best_metrics["speed"]
                 wandb.run.summary["test/steps"] = best_metrics["steps"]
                 wandb.run.summary["test/progress"] = best_metrics["progress"]
-                # Log and reset tables
-                train_reward_table = wandb.Table(
-                    columns=[
-                        "step",
-                        "waypoint",
-                        "progress",
-                        "speed",
-                        "difficulty",
-                        "reward",
-                    ]
-                )
-                test_reward_table = wandb.Table(
-                    columns=[
-                        "step",
-                        "waypoint",
-                        "progress",
-                        "speed",
-                        "difficulty",
-                        "reward",
-                    ]
-                )
+                # Reset tables
+                tables = reset_tables()
         else:
             # Resetting inside else for completion (need this pattern to ensure proper reset)
             iter_metrics = reset_iter_metrics()
