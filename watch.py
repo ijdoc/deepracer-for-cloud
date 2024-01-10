@@ -147,21 +147,25 @@ def process_line(line):
     if "MY_TRACE_LOG" in line:
         # f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{speed},{difficulty},{reward},{is_finished}"
         parts = line.split("MY_TRACE_LOG:")[1].split("\t")[0].split("\n")[0].split(",")
-        steps = int(parts[0])
+        steps = int(float(parts[0]))
+        waypoint = int(float(parts[1]))
         progress = float(parts[2])
         speed = float(parts[3])
+        difficulty = float(parts[4])
+        reward = float(parts[5])
+        is_finished = int(parts[6])
         if is_testing:
             if not DEBUG:
                 tables["test"].add_data(
                     steps,
-                    int(parts[1]),
+                    waypoint,
                     progress,
                     speed,
-                    float(parts[4]),
-                    float(parts[5]),
+                    difficulty,
+                    reward,
                 )
             test_metrics["speed"].append(speed)
-            if int(parts[6]) == 1:
+            if is_finished == 1:
                 iter_metrics["test"]["steps"].append(steps)
                 iter_metrics["test"]["progress"].append(progress)
                 iter_metrics["test"]["speed"].append(np.mean(test_metrics["speed"]))
@@ -169,10 +173,15 @@ def process_line(line):
         else:
             if not DEBUG:
                 tables["train"].add_data(
-                    steps, parts[1], parts[2], parts[3], parts[4], parts[5]
+                    steps,
+                    waypoint,
+                    progress,
+                    speed,
+                    difficulty,
+                    reward,
                 )
             train_metrics["speed"].append(speed)
-            if int(parts[6]) == 1:
+            if is_finished == 1:
                 iter_metrics["train"]["steps"].append(steps)
                 iter_metrics["train"]["progress"].append(progress)
                 iter_metrics["train"]["speed"].append(np.mean(train_metrics["speed"]))

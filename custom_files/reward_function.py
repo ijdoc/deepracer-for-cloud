@@ -69,36 +69,39 @@ def reward_function(params):
     if params["steps"] <= 2:
         LAST_PROGRESS = 0.0
 
-    # Get difficulty as a number from 0.0 to 1.0
+    # Get difficulty as a number from 0.0 to 1.0 with an
+    # added offset to avoid null scores when driving straight
     this_waypoint = params["closest_waypoints"][0]
     difficulty = (
         abs(get_direction_change(this_waypoint, params["waypoints"]))
         / TRACKS["caecer_loop"]["max_angle"]
-    )
+    ) + 0.1
 
     step_progress = params["progress"] - LAST_PROGRESS
     LAST_PROGRESS = params["progress"]
-    # Step speed is a function of step_progress
-    speed = step_progress
+    # Step speed is step_progress normalized by
+    # approximate target_steps/100
+    speed = step_progress * 2.0
 
     # Bonus reward for completing the track
     bonus = 0.0
     if params["progress"] == 100.0:
-        bonus = 1e11 / (2 * (params["steps"] ** 4))
+        bonus = 1e11 / (params["steps"] ** 4)
 
     # Encourage good behavior at the tightest curve
-    factor = 1.0
-    if this_waypoint >= 40 and this_waypoint <= 42:
-        if not params["is_left_of_center"]:  # correct side of track
-            factor += 0.25
-    if this_waypoint >= 41 and this_waypoint <= 45:
-        if params["speed"] <= 1.0:  # breaking before & start of curve
-            factor += 0.25
-    if this_waypoint >= 41 and this_waypoint <= 43:
-        if params["steering_angle"] == 0.0:  # not turning
-            factor += 0.25
+    # factor = 1.0
+    # if this_waypoint >= 40 and this_waypoint <= 42:
+    #     if not params["is_left_of_center"]:  # correct side of track
+    #         factor += 0.25
+    # if this_waypoint >= 41 and this_waypoint <= 45:
+    #     if params["speed"] <= 1.0:  # breaking before & start of curve
+    #         factor += 0.25
+    # if this_waypoint >= 41 and this_waypoint <= 43:
+    #     if params["steering_angle"] == 0.0:  # not turning
+    #         factor += 0.25
 
-    reward = float((difficulty * speed * factor) + bonus)
+    # reward = float((difficulty * speed * factor) + bonus)
+    reward = float((difficulty * speed) + bonus)
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:
