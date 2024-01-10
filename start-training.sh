@@ -66,7 +66,7 @@ if [ $pretrained_flag -eq 1 ]; then
     test_command_outcome "[$0] Upload custom files"
     dr-increment-training
     test_command_outcome "[$0] Increment training"
-    dr-start-training -va
+    dr-start-training -wva
 else
     # 'w' for overwrite, 'v' for start viewer, 'a' for follow all logs
     dr-start-training -wva
