@@ -147,26 +147,39 @@ def process_line(line):
     if "MY_TRACE_LOG" in line:
         # f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{speed},{difficulty},{reward},{is_finished}"
         parts = line.split("MY_TRACE_LOG:")[1].split("\t")[0].split("\n")[0].split(",")
+        steps = int(parts[0])
+        progress = float(parts[2])
+        speed = float(parts[3])
         if is_testing:
             if not DEBUG:
                 tables["test"].add_data(
-                    parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]
+                    steps,
+                    int(parts[1]),
+                    progress,
+                    speed,
+                    float(parts[4]),
+                    float(parts[5]),
                 )
-            test_metrics["speed"].append(float(parts[3]))
+            test_metrics["speed"].append(speed)
             if int(parts[6]) == 1:
-                iter_metrics["test"]["steps"].append(float(parts[0]))
-                iter_metrics["test"]["progress"].append(float(parts[2]))
+                iter_metrics["test"]["steps"].append(steps)
+                iter_metrics["test"]["progress"].append(progress)
                 iter_metrics["test"]["speed"].append(np.mean(test_metrics["speed"]))
                 test_metrics["speed"] = []
         else:
             if not DEBUG:
                 tables["train"].add_data(
-                    parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]
+                    steps,
+                    int(parts[1]),
+                    progress,
+                    speed,
+                    float(parts[4]),
+                    float(parts[5]),
                 )
-            train_metrics["speed"].append(float(parts[3]))
+            train_metrics["speed"].append(speed)
             if int(parts[6]) == 1:
-                iter_metrics["train"]["steps"].append(float(parts[0]))
-                iter_metrics["train"]["progress"].append(float(parts[2]))
+                iter_metrics["train"]["steps"].append(steps)
+                iter_metrics["train"]["progress"].append(progress)
                 iter_metrics["train"]["speed"].append(np.mean(train_metrics["speed"]))
                 train_metrics["speed"] = []
         if DEBUG:
