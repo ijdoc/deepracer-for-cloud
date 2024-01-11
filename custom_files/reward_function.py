@@ -77,29 +77,27 @@ def reward_function(params):
         / TRACKS["caecer_loop"]["max_angle"]
     ) + 0.1
 
+    # Get the step progress
     step_progress = params["progress"] - LAST_PROGRESS
     LAST_PROGRESS = params["progress"]
 
-    # Bonus reward for completing the track
-    bonus = 0.0
-    if params["progress"] == 100.0:
-        bonus = 1e11 / (params["steps"] ** 4)
+    # Weight step progress to favour faster speeds
+    weighted_progress = 16 * (step_progress**3)
 
-    # Encourage good behavior at the tightest curve
-    factor = 1.0
-    if this_waypoint >= 40 and this_waypoint <= 45:
+    # Encourage good technique at the tightest curve
+    expertise = 1.0
+    if this_waypoint >= 40 and this_waypoint <= 42:
         if not params["is_left_of_center"]:  # correct side of track
-            factor *= 2.5
-    if this_waypoint >= 40 and this_waypoint <= 44:
+            expertise += 1
         if params["speed"] < 1.0:  # breaking ahead of curve
-            factor *= 2.5
-    if this_waypoint >= 40 and this_waypoint <= 43:
+            expertise += 1
         if params["steering_angle"] == 0.0:  # not turning too early
-            factor *= 2.5
-
-    # step_progress is multiplied by a factor of approximately target_steps/100
-    reward = float((difficulty * step_progress * 2.0 * factor) + bonus)
-    # reward = float((difficulty * speed) + bonus)
+            expertise += 1
+        reward = float(weighted_progress * expertise)
+    elif this_waypoint >= 43 and this_waypoint <= 64:
+        reward = float(difficulty)  # Don't care about progress/speed
+    else:
+        reward = float(difficulty * weighted_progress)
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:
