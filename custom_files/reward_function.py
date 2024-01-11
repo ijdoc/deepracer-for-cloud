@@ -90,15 +90,15 @@ def reward_function(params):
 
     # Encourage good behavior at the tightest curve
     factor = 1.0
-    if this_waypoint >= 40 and this_waypoint <= 42:
+    if this_waypoint >= 40 and this_waypoint <= 45:
         if not params["is_left_of_center"]:  # correct side of track
-            factor += 1.0
-    if this_waypoint >= 41 and this_waypoint <= 43:
-        if params["speed"] <= 1.0:  # breaking ahead of curve
-            factor += 1.0
-    if this_waypoint >= 41 and this_waypoint <= 43:
+            factor *= 2.5
+    if this_waypoint >= 40 and this_waypoint <= 44:
+        if params["speed"] < 1.0:  # breaking ahead of curve
+            factor *= 2.5
+    if this_waypoint >= 40 and this_waypoint <= 43:
         if params["steering_angle"] == 0.0:  # not turning too early
-            factor += 1.0
+            factor *= 2.5
 
     reward = float((difficulty * speed * factor) + bonus)
     # reward = float((difficulty * speed) + bonus)

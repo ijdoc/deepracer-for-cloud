@@ -2,7 +2,7 @@
     "action_space": [
       {
         "steering_angle": 0,
-        "speed": 1.0
+        "speed": 0.95
       },
       {
         "steering_angle": -15,
