@@ -79,9 +79,6 @@ def reward_function(params):
 
     step_progress = params["progress"] - LAST_PROGRESS
     LAST_PROGRESS = params["progress"]
-    # Step speed is step_progress normalized by
-    # approximate target_steps/100
-    speed = step_progress * 2.0
 
     # Bonus reward for completing the track
     bonus = 0.0
@@ -100,7 +97,8 @@ def reward_function(params):
         if params["steering_angle"] == 0.0:  # not turning too early
             factor *= 2.5
 
-    reward = float((difficulty * speed * factor) + bonus)
+    # step_progress is multiplied by a factor of approximately target_steps/100
+    reward = float((difficulty * step_progress * 2.0 * factor) + bonus)
     # reward = float((difficulty * speed) + bonus)
 
     is_finished = 0
@@ -109,7 +107,7 @@ def reward_function(params):
 
     # This trace is needed for test logging
     print(
-        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{speed},{difficulty},{reward},{is_finished}"
+        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{step_progress},{difficulty},{reward},{is_finished}"
     )
 
     return reward
