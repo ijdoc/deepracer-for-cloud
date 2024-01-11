@@ -86,12 +86,12 @@ def reward_function(params):
         bonus = 0.0
         if this_waypoint <= 56:
             if params["speed"] <= 1.1:  # go slow
-                factor += 1.0
+                bonus += 1.0
             if params["steering_angle"] != 0.0:  # not straight
-                factor += 1.0
+                bonus += 1.0
         if this_waypoint >= 49:
             if params["is_left_of_center"]:  # keep left
-                factor += 1.0
+                bonus += 1.0
         reward = difficulty + bonus
     else:
         # Weight step progress to favour faster speeds
