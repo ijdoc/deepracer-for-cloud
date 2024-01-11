@@ -81,22 +81,21 @@ def reward_function(params):
     step_progress = params["progress"] - LAST_PROGRESS
     LAST_PROGRESS = params["progress"]
 
-    # Weight step progress to favour faster speeds
-    weighted_progress = 16 * (step_progress**3)
-
     # Encourage good technique at the tightest curve
-    expertise = 1.0
+    coach = 1.0
     if this_waypoint >= 40 and this_waypoint <= 42:
         if not params["is_left_of_center"]:  # correct side of track
-            expertise += 1
+            coach *= 2
         if params["speed"] < 1.0:  # breaking ahead of curve
-            expertise += 1
+            coach *= 2
         if params["steering_angle"] == 0.0:  # not turning too early
-            expertise += 1
-        reward = float(weighted_progress * expertise)
-    elif this_waypoint >= 43 and this_waypoint <= 64:
-        reward = float(difficulty)  # Don't care about progress/speed
+            coach *= 2
+        reward = float(step_progress * coach)
+    elif this_waypoint >= 43 and this_waypoint <= 63:
+        reward = float(2.0 * difficulty)  # Don't care about progress/speed
     else:
+        # Weight step progress to favour faster speeds
+        weighted_progress = 16 * (step_progress**3)
         reward = float(difficulty * weighted_progress)
 
     is_finished = 0
