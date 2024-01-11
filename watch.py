@@ -12,7 +12,7 @@ import argparse
 
 # FIXME: Define from command line arguments in parent script
 os.environ["WANDB_RUN_GROUP"] = "2402"
-GLOBAL_MIN_STEPS = 206.0
+GLOBAL_MIN_STEPS = 192.0
 
 # Create ArgumentParser
 parser = argparse.ArgumentParser(description="Log testing metrics")
@@ -245,14 +245,16 @@ def process_line(line):
                 best_metrics["speed"] = step_metrics["test"]["speed"]
                 best_metrics["steps"] = step_metrics["test"]["steps"]
                 best_metrics["progress"] = step_metrics["test"]["progress"]
-                print(f"{timestamp} Checkpoint {checkpoint} is the new best model")
+                print(
+                    f"{timestamp} Checkpoint {checkpoint} may be the new best model ({best_metrics['steps']}@{best_metrics['progress']})"
+                )
                 if (
                     not DEBUG
                     and best_metrics["progress"] >= 100.0
                     and step_metrics["test"]["steps"] < GLOBAL_MIN_STEPS
                 ):
                     print(
-                        f"{timestamp} Uploading full progress checkpoint {checkpoint} with reward={best_metrics['reward']:0.3f} @ speed {best_metrics['speed']:0.3f} over {best_metrics['steps']:0.2f} steps"
+                        f"{timestamp} Uploading full progress checkpoint {checkpoint} with {best_metrics['steps']} steps)"
                     )
                     wandb.config["world_name"] = update_run_env(
                         wandb.run.name, checkpoint
@@ -260,7 +262,9 @@ def process_line(line):
                     # FIXME: Get the model reference and log it to W&B
                     subprocess.run(f"./upload.sh", shell=True)
             else:
-                print(f"{timestamp} Checkpoint {checkpoint} underperformed")
+                print(
+                    f"{timestamp} Checkpoint {checkpoint} underperformed ({step_metrics['test']['steps']}@{step_metrics['test']['progress']})"
+                )
             if DEBUG:
                 print(f"{timestamp} {step_metrics}")
             else:

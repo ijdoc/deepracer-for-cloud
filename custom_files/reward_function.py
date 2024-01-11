@@ -82,20 +82,17 @@ def reward_function(params):
     LAST_PROGRESS = params["progress"]
 
     # Encourage good technique at the tightest curve
-    if this_waypoint >= 42 and this_waypoint <= 44:
-        reward = 1e-5
-        if params["steering_angle"] == 0.0:  # go straight
-            reward += 1.0
-    elif this_waypoint >= 45 and this_waypoint <= 64:
-        reward = 1e-5
+    if this_waypoint >= 45 and this_waypoint <= 63:
+        bonus = 0.0
         if this_waypoint <= 56:
             if params["speed"] <= 1.1:  # go slow
-                reward += 1.0
+                factor += 1.0
             if params["steering_angle"] != 0.0:  # not straight
-                reward += 1.0
+                factor += 1.0
         if this_waypoint >= 49:
-            if params["is_left_of_center"]:
-                reward += 1.0
+            if params["is_left_of_center"]:  # keep left
+                factor += 1.0
+        reward = difficulty + bonus
     else:
         # Weight step progress to favour faster speeds
         weighted_progress = 16 * (step_progress**3)
