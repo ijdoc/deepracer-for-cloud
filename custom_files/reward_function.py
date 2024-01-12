@@ -107,9 +107,27 @@ def reward_function(params):
     if params["is_offtrack"] or params["progress"] == 100.0:
         is_finished = 1
 
+    action = -1
+    if params["steering_angle"] == -20 and params["speed"] == 2.2:
+        action = 0
+    elif params["steering_angle"] == -7.5 and params["speed"] == 2.7:
+        action = 1
+    elif params["steering_angle"] == 0.0 and params["speed"] == 3.0:
+        action = 2
+    elif params["steering_angle"] == 7.5 and params["speed"] == 2.7:
+        action = 3
+    elif params["steering_angle"] == 15 and params["speed"] == 2.4:
+        action = 4
+    elif params["steering_angle"] == 5 and params["speed"] == 1.1:
+        action = 5
+    elif params["steering_angle"] == 15 and params["speed"] == 1.0:
+        action = 6
+    elif params["steering_angle"] == 25 and params["speed"] == 0.9:
+        action = 7
+
     # This trace is needed for test logging
     print(
-        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{step_progress},{difficulty},{reward},{is_finished}"
+        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{step_progress},{difficulty},{reward},{is_finished},{action}"
     )
 
     return reward

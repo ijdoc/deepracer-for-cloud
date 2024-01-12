@@ -62,10 +62,26 @@ def reset_iter_metrics():
 def reset_tables():
     return {
         "test": wandb.Table(
-            columns=["step", "waypoint", "progress", "speed", "difficulty", "reward"]
+            columns=[
+                "step",
+                "waypoint",
+                "progress",
+                "step_progress",
+                "difficulty",
+                "reward",
+                "action",
+            ]
         ),
         "train": wandb.Table(
-            columns=["step", "waypoint", "progress", "speed", "difficulty", "reward"]
+            columns=[
+                "step",
+                "waypoint",
+                "progress",
+                "step_progress",
+                "difficulty",
+                "reward",
+                "action",
+            ]
         ),
     }
 
@@ -154,6 +170,7 @@ def process_line(line):
         difficulty = float(parts[4])
         reward = float(parts[5])
         is_finished = int(parts[6])
+        action = int(parts[7])
         if is_testing:
             if not DEBUG:
                 tables["test"].add_data(
@@ -163,6 +180,7 @@ def process_line(line):
                     speed,
                     difficulty,
                     reward,
+                    action,
                 )
             test_metrics["speed"].append(speed)
             if is_finished == 1:
@@ -179,6 +197,7 @@ def process_line(line):
                     speed,
                     difficulty,
                     reward,
+                    action,
                 )
             train_metrics["speed"].append(speed)
             if is_finished == 1:
