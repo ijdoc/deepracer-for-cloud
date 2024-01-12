@@ -81,31 +81,34 @@ def reward_function(params):
     step_progress = params["progress"] - LAST_PROGRESS
     LAST_PROGRESS = params["progress"]
 
-    # Encourage good technique at the tightest curve
-    if this_waypoint >= 42 and this_waypoint <= 44:
+    if params["is_offtrack"]:
         reward = 1e-5
-        if params["steering_angle"] == 0.0:  # go straight
-            reward += 1.0
-    elif this_waypoint >= 45 and this_waypoint <= 63:
-        reward = 1e-5
-        if this_waypoint <= 56:
-            if params["speed"] <= 1.1:  # go slow
-                reward += 1.0
-            if params["steering_angle"] != 0.0:  # not straight
-                reward += 1.0
-        if this_waypoint >= 49:
-            if params["is_left_of_center"]:  # keep left
-                reward += 1.0
     else:
-        # Weight step progress to favour faster speeds
-        weighted_progress = 16 * (step_progress**3)
-        reward = difficulty * weighted_progress
-
-    reward = float(reward)
+        # Encourage good technique at the tightest curve
+        if this_waypoint >= 42 and this_waypoint <= 44:
+            reward = 1e-5
+            if params["steering_angle"] == 0.0:  # go straight
+                reward += 1.0
+        elif this_waypoint >= 45 and this_waypoint <= 63:
+            reward = 1e-5
+            if this_waypoint <= 56:
+                if params["speed"] <= 1.1:  # go slow
+                    reward += 1.0
+                if params["steering_angle"] != 0.0:  # not straight
+                    reward += 1.0
+            if this_waypoint >= 49:
+                if params["is_left_of_center"]:  # keep left
+                    reward += 1.0
+        else:
+            # Weight step progress to favour faster speeds
+            weighted_progress = 16 * (step_progress**3)
+            reward = difficulty * weighted_progress
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:
         is_finished = 1
+
+    reward = float(reward)
 
     action = -1
     if params["steering_angle"] == -20 and params["speed"] == 2.2:
