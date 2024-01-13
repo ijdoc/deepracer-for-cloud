@@ -1,6 +1,10 @@
 import math
 import time
 
+# Reference steps should be at most 10% more than the number of expected steps
+# for a given track. This is so that rewards continue to increase on faster
+# episodes even when the car consistently finishes the track
+REFERENCE_STEPS = 220
 LAST_PROGRESS = 0.0
 TRACKS = {
     "caecer_loop": {"length": 39.12, "min_angle": 0.0, "max_angle": 0.18297208942448917}
@@ -81,7 +85,12 @@ def reward_function(params):
     step_progress = params["progress"] - LAST_PROGRESS
     LAST_PROGRESS = params["progress"]
 
+    # This factor will normalize rewards to the number of expected steps
+    step_factor = 0.01 * REFERENCE_STEPS * (params["progress"] / params["steps"])
+
+    is_finished = 0
     if params["is_offtrack"]:
+        is_finished = 1
         reward = 1e-5
     else:
         # Encourage good technique at the tightest curve
@@ -101,32 +110,30 @@ def reward_function(params):
                     reward += 1.0
         else:
             # Weight step progress to favour faster speeds
-            weighted_progress = 16 * (step_progress**3)
-            reward = difficulty * weighted_progress
+            # weighted_progress = 16 * (step_progress**3)
+            # reward = difficulty * weighted_progress
+            reward = difficulty * step_progress
 
-    is_finished = 0
-    if params["is_offtrack"] or params["progress"] == 100.0:
+    bonus = 0.0
+    if params["progress"] == 100.0:
         is_finished = 1
+        bonus = 1000 / ((params["steps"] / 100) ** 4)
 
-    reward = float(reward)
+    reward = float((reward * step_factor) + bonus)
 
     action = -1
-    if params["steering_angle"] == -20 and params["speed"] == 2.2:
-        action = 0
     elif params["steering_angle"] == -7.5 and params["speed"] == 2.7:
-        action = 1
+        action = 0
     elif params["steering_angle"] == 0.0 and params["speed"] == 3.0:
-        action = 2
+        action = 1
     elif params["steering_angle"] == 7.5 and params["speed"] == 2.7:
-        action = 3
+        action = 2
     elif params["steering_angle"] == 15 and params["speed"] == 2.4:
-        action = 4
-    elif params["steering_angle"] == 5 and params["speed"] == 1.1:
-        action = 5
+        action = 3
     elif params["steering_angle"] == 15 and params["speed"] == 1.0:
-        action = 6
+        action = 4
     elif params["steering_angle"] == 25 and params["speed"] == 0.9:
-        action = 7
+        action = 5
 
     # This trace is needed for test logging
     print(
