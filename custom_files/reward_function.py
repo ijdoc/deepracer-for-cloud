@@ -122,7 +122,7 @@ def reward_function(params):
     reward = float((reward * step_factor) + bonus)
 
     action = -1
-    elif params["steering_angle"] == -7.5 and params["speed"] == 2.7:
+    if params["steering_angle"] == -7.5 and params["speed"] == 2.7:
         action = 0
     elif params["steering_angle"] == 0.0 and params["speed"] == 3.0:
         action = 1
