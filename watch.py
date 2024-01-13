@@ -265,7 +265,7 @@ def process_line(line):
                 best_metrics["steps"] = step_metrics["test"]["steps"]
                 best_metrics["progress"] = step_metrics["test"]["progress"]
                 print(
-                    f"{timestamp} Checkpoint {checkpoint} is a top model ({best_metrics['steps']:0.3f}@{best_metrics['progress']:0.1f}%)"
+                    f"{timestamp} Checkpoint {checkpoint} improved at {best_metrics['progress']:0.1f}% completion, expecting {best_metrics['steps']:0.3f} steps"
                 )
                 if (
                     not DEBUG
@@ -273,7 +273,7 @@ def process_line(line):
                     and step_metrics["test"]["steps"] < GLOBAL_MIN_STEPS
                 ):
                     print(
-                        f"{timestamp} 🚀 Uploading full progress checkpoint {checkpoint} with {best_metrics['steps']:0.3f} steps)"
+                        f"{timestamp} 🚀 Uploading full progress checkpoint {checkpoint} expecting {best_metrics['steps']:0.3f} steps)"
                     )
                     wandb.config["world_name"] = update_run_env(
                         wandb.run.name, checkpoint
@@ -282,7 +282,7 @@ def process_line(line):
                     subprocess.run(f"./upload.sh", shell=True)
             else:
                 print(
-                    f"{timestamp} Checkpoint {checkpoint} underperformed ({step_metrics['test']['steps']:0.3f}@{step_metrics['test']['progress']:0.1f}%)"
+                    f"{timestamp} Checkpoint {checkpoint} underperformed ({step_metrics['test']['progress']:0.1f}%, {step_metrics['test']['steps']:0.3f} steps)"
                 )
             if DEBUG:
                 print(f"{timestamp} {step_metrics}")
