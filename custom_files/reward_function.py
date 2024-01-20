@@ -128,9 +128,9 @@ def reward_function(params):
         action = 1
     elif params["steering_angle"] == 7.5:
         action = 2
-    elif params["steering_angle"] == 15 and params["speed"] == 2.5:
+    elif params["steering_angle"] == 15 and params["speed"] == 2.6:
         action = 3
-    elif params["steering_angle"] == 15 and params["speed"] == 1.2:
+    elif params["steering_angle"] == 15 and params["speed"] == 1.3:
         action = 4
     elif params["steering_angle"] == 25:
         action = 5
