@@ -255,9 +255,8 @@ def process_line(line):
             # Reset immediately to free up while things continue logging
             iter_metrics = reset_iter_metrics()
             # Update best metrics for summary
-            if step_metrics["test"]["reward"] > best_metrics["reward"] or (
-                step_metrics["test"]["progress"] >= 100.0
-                and step_metrics["test"]["steps"] < GLOBAL_MIN_STEPS
+            if (
+                step_metrics["test"]["progress"] >= best_metrics["progress"]
                 and step_metrics["test"]["steps"] < best_metrics["steps"]
             ):
                 best_metrics["reward"] = step_metrics["test"]["reward"]
@@ -265,7 +264,7 @@ def process_line(line):
                 best_metrics["steps"] = step_metrics["test"]["steps"]
                 best_metrics["progress"] = step_metrics["test"]["progress"]
                 print(
-                    f"{timestamp} Checkpoint {checkpoint} improved at {best_metrics['progress']:0.1f}% completion, expecting {best_metrics['steps']:0.3f} steps"
+                    f"{timestamp} model {checkpoint}: {step_metrics['test']['reward']:0.2f}, {step_metrics['test']['progress']:0.2f}%, {step_metrics['test']['steps']:0.2f} steps (improved)"
                 )
                 if (
                     not DEBUG
@@ -273,7 +272,7 @@ def process_line(line):
                     and step_metrics["test"]["steps"] < GLOBAL_MIN_STEPS
                 ):
                     print(
-                        f"{timestamp} 🚀 Uploading full progress checkpoint {checkpoint} expecting {best_metrics['steps']:0.3f} steps)"
+                        f"{timestamp} 🚀 Uploading full progress checkpoint {checkpoint} expecting {best_metrics['steps']:0.2f} steps)"
                     )
                     wandb.config["world_name"] = update_run_env(
                         wandb.run.name, checkpoint
@@ -282,7 +281,7 @@ def process_line(line):
                     subprocess.run(f"./upload.sh", shell=True)
             else:
                 print(
-                    f"{timestamp} Checkpoint {checkpoint} underperformed ({step_metrics['test']['progress']:0.1f}%, {step_metrics['test']['steps']:0.3f} steps)"
+                    f"{timestamp} model {checkpoint}: {step_metrics['test']['reward']:0.2f}, {step_metrics['test']['progress']:0.2f}%, {step_metrics['test']['steps']:0.2f} steps"
                 )
             if DEBUG:
                 print(f"{timestamp} {step_metrics}")
@@ -300,8 +299,8 @@ def process_line(line):
                         "test/speed": step_metrics["test"]["speed"],
                         "test/steps": step_metrics["test"]["steps"],
                         "test/progress": step_metrics["test"]["progress"],
-                        f"train_table_{checkpoint}": tables["train"],
-                        f"test_table_{checkpoint}": tables["test"],
+                        f"train_trace": tables["train"],
+                        f"test_trace": tables["test"],
                     }
                 )
                 # Update test metrics summary
