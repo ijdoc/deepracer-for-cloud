@@ -255,7 +255,7 @@ def process_line(line):
             # Reset immediately to free up while things continue logging
             iter_metrics = reset_iter_metrics()
             # Update best metrics for summary
-            if (
+            if step_metrics["test"]["progress"] > best_metrics["progress"] or (
                 step_metrics["test"]["progress"] >= best_metrics["progress"]
                 and step_metrics["test"]["steps"] < best_metrics["steps"]
             ):

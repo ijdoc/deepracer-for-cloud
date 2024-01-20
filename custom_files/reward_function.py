@@ -86,7 +86,7 @@ def reward_function(params):
     LAST_PROGRESS = params["progress"]
 
     # This factor will normalize rewards to the number of expected steps
-    step_factor = 0.01 * REFERENCE_STEPS * (params["progress"] / params["steps"])
+    # step_factor = 0.01 * REFERENCE_STEPS * (params["progress"] / params["steps"])
 
     is_finished = 0
     if params["is_offtrack"]:
@@ -94,14 +94,16 @@ def reward_function(params):
         reward = 1e-5
     else:
         # Encourage good technique at the tightest curve
-        if this_waypoint >= 42 and this_waypoint <= 44:
-            reward = 1e-5
-            if params["steering_angle"] == 0.0:  # go straight
-                reward += 1.0
-        elif this_waypoint >= 45 and this_waypoint <= 63:
+        # if this_waypoint >= 42 and this_waypoint <= 44:
+        #     # TODO: Confirm that this doesn't have an effect
+        #     reward = 1e-5
+        #     if params["steering_angle"] == 0.0:  # go straight
+        #         reward += 1.0
+        if this_waypoint >= 45 and this_waypoint <= 63:
+            # TODO: Make sure these rewards are proportionate to the others
             reward = 1e-5
             if this_waypoint <= 56:
-                if params["speed"] <= 1.1:  # go slow
+                if params["speed"] <= 1.3:  # FIXME: 'slow' depends on model
                     reward += 1.0
                 if params["steering_angle"] != 0.0:  # not straight
                     reward += 1.0
@@ -109,17 +111,20 @@ def reward_function(params):
                 if params["is_left_of_center"]:  # keep left
                     reward += 1.0
         else:
+            # TODO: Make sure these rewards are proportionate to the others
             # Weight step progress to favour faster speeds
-            # weighted_progress = 16 * (step_progress**3)
-            # reward = difficulty * weighted_progress
-            reward = difficulty * step_progress
+            weighted_progress = 16 * (step_progress**3)
+            reward = difficulty * weighted_progress
+            # reward = difficulty * step_progress
 
+    # TODO: Make sure bonus is proportionate to rewards
     bonus = 0.0
     if params["progress"] == 100.0:
         is_finished = 1
-        bonus = 1000 / ((params["steps"] / 100) ** 4)
+        bonus = 100 / ((params["steps"] / 100) ** 4)
 
-    reward = float((reward * step_factor) + bonus)
+    # reward = float((reward * step_factor) + bonus)
+    reward = float(reward + bonus)
 
     action = -1
     if params["steering_angle"] == -7.5:
