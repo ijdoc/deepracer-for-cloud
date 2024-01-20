@@ -122,17 +122,17 @@ def reward_function(params):
     reward = float((reward * step_factor) + bonus)
 
     action = -1
-    if params["steering_angle"] == -7.5 and params["speed"] == 2.7:
+    if params["steering_angle"] == -7.5:
         action = 0
-    elif params["steering_angle"] == 0.0 and params["speed"] == 3.0:
+    elif params["steering_angle"] == 0.0:
         action = 1
-    elif params["steering_angle"] == 7.5 and params["speed"] == 2.7:
+    elif params["steering_angle"] == 7.5:
         action = 2
-    elif params["steering_angle"] == 15 and params["speed"] == 2.4:
+    elif params["steering_angle"] == 15 and params["speed"] == 2.5:
         action = 3
-    elif params["steering_angle"] == 15 and params["speed"] == 1.0:
+    elif params["steering_angle"] == 15 and params["speed"] == 1.2:
         action = 4
-    elif params["steering_angle"] == 25 and params["speed"] == 0.9:
+    elif params["steering_angle"] == 25:
         action = 5
 
     # This trace is needed for test logging
