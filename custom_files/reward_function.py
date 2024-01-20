@@ -113,7 +113,7 @@ def reward_function(params):
         else:
             # TODO: Make sure these rewards are proportionate to the others
             # Weight step progress to favour faster speeds
-            weighted_progress = 16 * (step_progress**3)
+            weighted_progress = 1.7 * (step_progress**2)
             reward = difficulty * weighted_progress
             # reward = difficulty * step_progress
 
