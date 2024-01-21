@@ -94,8 +94,7 @@ step_metrics = {
 iter_metrics = reset_iter_metrics()
 best_metrics = {"reward": -1.0, "progress": 0.0, "speed": 0.0, "steps": 100000.0}
 is_testing = False
-train_metrics = {"speed": []}
-test_metrics = {"speed": [], "reward": []}
+trial_metrics = {"train": {"speed": []}, "test": {"speed": [], "reward": []}}
 last_episode = 0
 
 
@@ -158,10 +157,11 @@ def process_line(line):
     global best_metrics
     global last_episode
     global tables
+    global trial_metrics
 
     timestamp = datetime.now()
     if "MY_TRACE_LOG" in line:
-        # f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{speed},{difficulty},{reward},{is_finished}"
+        # f'MY_TRACE_LOG:{params["steps"]},{this_waypoint},{params["progress"]},{speed},{difficulty},{reward},{is_finished}'
         parts = line.split("MY_TRACE_LOG:")[1].split("\t")[0].split("\n")[0].split(",")
         steps = int(float(parts[0]))
         waypoint = int(float(parts[1]))
@@ -182,16 +182,18 @@ def process_line(line):
                     reward,
                     action,
                 )
-            test_metrics["speed"].append(speed)
-            test_metrics["reward"].append(reward)
+            trial_metrics["test"]["speed"].append(speed)
+            trial_metrics["test"]["reward"].append(reward)
             if is_finished == 1:
                 print(
-                    f"{timestamp} Iter: {np.mean(test_metrics['reward'])}{iter_metrics['test']}"
+                    f'{timestamp} Iter: {np.mean(trial_metrics["test"]["reward"])}{iter_metrics["test"]}'
                 )
                 iter_metrics["test"]["steps"].append(steps)
                 iter_metrics["test"]["progress"].append(progress)
-                iter_metrics["test"]["speed"].append(np.mean(test_metrics["speed"]))
-                test_metrics = {"speed": [], "reward": []}
+                iter_metrics["test"]["speed"].append(
+                    np.mean(trial_metrics["test"]["speed"])
+                )
+                trial_metrics["test"] = {"speed": [], "reward": []}
         else:
             if not DEBUG:
                 tables["train"].add_data(
@@ -203,12 +205,14 @@ def process_line(line):
                     reward,
                     action,
                 )
-            train_metrics["speed"].append(speed)
+            trial_metrics["train"]["speed"].append(speed)
             if is_finished == 1:
                 iter_metrics["train"]["steps"].append(steps)
                 iter_metrics["train"]["progress"].append(progress)
-                iter_metrics["train"]["speed"].append(np.mean(train_metrics["speed"]))
-                train_metrics["speed"] = []
+                iter_metrics["train"]["speed"].append(
+                    np.mean(trial_metrics["train"]["speed"])
+                )
+                trial_metrics["train"]["speed"] = []
         if DEBUG:
             print(f"{timestamp} {line}")
 
@@ -266,7 +270,7 @@ def process_line(line):
                 best_metrics["steps"] = step_metrics["test"]["steps"]
                 best_metrics["progress"] = step_metrics["test"]["progress"]
                 print(
-                    f"{timestamp} ckpt {checkpoint}: {step_metrics['test']['reward']:0.2f}, {step_metrics['test']['progress']:0.2f}%, {step_metrics['test']['steps']:0.2f} steps (improved)"
+                    f'{timestamp} ckpt {checkpoint}: {step_metrics["test"]["reward"]:0.2f}, {step_metrics["test"]["progress"]:0.2f}%, {step_metrics["test"]["steps"]:0.2f} steps (improved)'
                 )
                 if (
                     not DEBUG
@@ -274,19 +278,19 @@ def process_line(line):
                     and step_metrics["test"]["steps"] < GLOBAL_MIN_STEPS
                 ):
                     print(
-                        f"{timestamp} 🚀 Uploading full progress checkpoint {checkpoint} expecting {best_metrics['steps']:0.2f} steps)"
+                        f'{timestamp} 🚀 Uploading full progress checkpoint {checkpoint} expecting {best_metrics["steps"]:0.2f} steps)'
                     )
                     wandb.config["world_name"] = update_run_env(
                         wandb.run.name, checkpoint
                     ).replace("\n", "")
-                    # subprocess.run(f"./upload.sh", shell=True)
+                    # subprocess.run("./upload.sh", shell=True)
                     subprocess.Popen(["./upload.sh"])  # Non-blocking!
                     print(
                         f"TODO: Create model reference to s3://jdoc-one-deepracer-data-b5pi7cdvar/{wandb.run.name}-{checkpoint}/"
                     )
             else:
                 print(
-                    f"{timestamp} ckpt {checkpoint}: {step_metrics['test']['reward']:0.2f}, {step_metrics['test']['progress']:0.2f}%, {step_metrics['test']['steps']:0.2f} steps"
+                    f'{timestamp} ckpt {checkpoint}: {step_metrics["test"]["reward"]:0.2f}, {step_metrics["test"]["progress"]:0.2f}%, {step_metrics["test"]["steps"]:0.2f} steps'
                 )
             if DEBUG:
                 print(f"{timestamp} {step_metrics}")
