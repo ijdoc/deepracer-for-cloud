@@ -86,7 +86,7 @@ def reset_tables():
     }
 
 
-step_metrics = {
+ckpt_metrics = {
     "test": {"reward": None, "steps": None, "progress": None, "speed": None},
     "train": {"reward": None, "steps": None, "progress": None, "speed": None},
     "learn": {"loss": None, "KL_div": None, "entropy": None},
@@ -152,7 +152,7 @@ def get_float(string):
 def process_line(line):
     # Process training episodes and policy training
     global iter_metrics
-    global step_metrics
+    global ckpt_metrics
     global is_testing
     global best_metrics
     global last_episode
@@ -243,41 +243,39 @@ def process_line(line):
         if not test_reward is None:
             checkpoint = round((last_episode / 10) - 1)
             # Calculate means and log everything here!!
-            step_metrics["test"]["reward"] = float(test_reward)
-            step_metrics["test"]["speed"] = np.mean(iter_metrics["test"]["speed"])
-            step_metrics["test"]["progress"] = np.mean(iter_metrics["test"]["progress"])
+            ckpt_metrics["test"]["reward"] = float(test_reward)
+            ckpt_metrics["test"]["speed"] = np.mean(iter_metrics["test"]["speed"])
+            ckpt_metrics["test"]["progress"] = np.mean(iter_metrics["test"]["progress"])
             # Projected steps to completion
-            step_metrics["test"]["steps"] = (
-                100.0 * np.mean(iter_metrics["test"]["steps"])
-            ) / step_metrics["test"]["progress"]
-            step_metrics["train"]["reward"] = np.mean(iter_metrics["train"]["reward"])
-            step_metrics["train"]["progress"] = np.mean(
+            ckpt_metrics["test"]["steps"] = np.mean(iter_metrics["test"]["steps"])
+            ckpt_metrics["train"]["reward"] = np.mean(iter_metrics["train"]["reward"])
+            ckpt_metrics["train"]["progress"] = np.mean(
                 iter_metrics["train"]["progress"]
             )
             # Projected steps to completion
-            step_metrics["train"]["steps"] = (
+            ckpt_metrics["train"]["steps"] = (
                 100.00 * np.mean(iter_metrics["train"]["steps"])
-            ) / step_metrics["train"]["progress"]
-            step_metrics["train"]["speed"] = np.mean(iter_metrics["train"]["speed"])
-            step_metrics["learn"]["loss"] = np.mean(iter_metrics["learn"]["loss"])
-            step_metrics["learn"]["KL_div"] = np.mean(iter_metrics["learn"]["KL_div"])
-            step_metrics["learn"]["entropy"] = np.mean(iter_metrics["learn"]["entropy"])
+            ) / ckpt_metrics["train"]["progress"]
+            ckpt_metrics["train"]["speed"] = np.mean(iter_metrics["train"]["speed"])
+            ckpt_metrics["learn"]["loss"] = np.mean(iter_metrics["learn"]["loss"])
+            ckpt_metrics["learn"]["KL_div"] = np.mean(iter_metrics["learn"]["KL_div"])
+            ckpt_metrics["learn"]["entropy"] = np.mean(iter_metrics["learn"]["entropy"])
             # Update best metrics for summary
-            if step_metrics["test"]["progress"] > best_metrics["progress"] or (
-                step_metrics["test"]["progress"] >= best_metrics["progress"]
-                and step_metrics["test"]["steps"] < best_metrics["steps"]
+            if ckpt_metrics["test"]["progress"] > best_metrics["progress"] or (
+                ckpt_metrics["test"]["progress"] >= best_metrics["progress"]
+                and ckpt_metrics["test"]["steps"] < best_metrics["steps"]
             ):
-                best_metrics["reward"] = step_metrics["test"]["reward"]
-                best_metrics["speed"] = step_metrics["test"]["speed"]
-                best_metrics["steps"] = step_metrics["test"]["steps"]
-                best_metrics["progress"] = step_metrics["test"]["progress"]
+                best_metrics["reward"] = ckpt_metrics["test"]["reward"]
+                best_metrics["speed"] = ckpt_metrics["test"]["speed"]
+                best_metrics["steps"] = ckpt_metrics["test"]["steps"]
+                best_metrics["progress"] = ckpt_metrics["test"]["progress"]
                 print(
-                    f'{timestamp} ckpt {checkpoint}: {step_metrics["test"]["reward"]:0.2f}, {step_metrics["test"]["progress"]:0.2f}%, {step_metrics["test"]["steps"]:0.2f} steps (improved)'
+                    f'{timestamp} ckpt {checkpoint}: {ckpt_metrics["test"]["reward"]:0.2f}, {ckpt_metrics["test"]["progress"]:0.2f}%, {ckpt_metrics["test"]["steps"]:0.2f} steps (improved)'
                 )
                 if (
                     not DEBUG
                     and best_metrics["progress"] >= 100.0
-                    and step_metrics["test"]["steps"] < GLOBAL_MIN_STEPS
+                    and ckpt_metrics["test"]["steps"] < GLOBAL_MIN_STEPS
                 ):
                     print(
                         f'{timestamp} 🚀 Uploading full progress checkpoint {checkpoint} expecting {best_metrics["steps"]:0.2f} steps)'
@@ -292,24 +290,24 @@ def process_line(line):
                     )
             else:
                 print(
-                    f'{timestamp} ckpt {checkpoint}: {step_metrics["test"]["reward"]:0.2f}, {step_metrics["test"]["progress"]:0.2f}%, {step_metrics["test"]["steps"]:0.2f} steps'
+                    f'{timestamp} ckpt {checkpoint}: {ckpt_metrics["test"]["reward"]:0.2f}, {ckpt_metrics["test"]["progress"]:0.2f}%, {ckpt_metrics["test"]["steps"]:0.2f} steps'
                 )
             if DEBUG:
-                print(f"{timestamp} {step_metrics}")
+                print(f"{timestamp} {ckpt_metrics}")
             else:
                 wandb.log(
                     {
-                        "train/reward": step_metrics["train"]["reward"],
-                        "train/steps": step_metrics["train"]["steps"],
-                        "train/progress": step_metrics["train"]["progress"],
-                        "train/speed": step_metrics["train"]["speed"],
-                        "learn/loss": step_metrics["learn"]["loss"],
-                        "learn/KL_div": step_metrics["learn"]["KL_div"],
-                        "learn/entropy": step_metrics["learn"]["entropy"],
-                        "test/reward": step_metrics["test"]["reward"],
-                        "test/speed": step_metrics["test"]["speed"],
-                        "test/steps": step_metrics["test"]["steps"],
-                        "test/progress": step_metrics["test"]["progress"],
+                        "train/reward": ckpt_metrics["train"]["reward"],
+                        "train/steps": ckpt_metrics["train"]["steps"],
+                        "train/progress": ckpt_metrics["train"]["progress"],
+                        "train/speed": ckpt_metrics["train"]["speed"],
+                        "learn/loss": ckpt_metrics["learn"]["loss"],
+                        "learn/KL_div": ckpt_metrics["learn"]["KL_div"],
+                        "learn/entropy": ckpt_metrics["learn"]["entropy"],
+                        "test/reward": ckpt_metrics["test"]["reward"],
+                        "test/speed": ckpt_metrics["test"]["speed"],
+                        "test/steps": ckpt_metrics["test"]["steps"],
+                        "test/progress": ckpt_metrics["test"]["progress"],
                         "train_trace": tables["train"],
                         "test_trace": tables["test"],
                     }
