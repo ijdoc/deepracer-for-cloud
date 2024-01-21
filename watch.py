@@ -94,8 +94,8 @@ step_metrics = {
 iter_metrics = reset_iter_metrics()
 best_metrics = {"reward": -1.0, "progress": 0.0, "speed": 0.0, "steps": 100000.0}
 is_testing = False
-train_metrics = {"speed": [], "progress": None, "steps": None}
-test_metrics = {"speed": [], "progress": None, "steps": None}
+train_metrics = {"speed": []}
+test_metrics = {"speed": [], "reward": []}
 last_episode = 0
 
 
@@ -183,11 +183,15 @@ def process_line(line):
                     action,
                 )
             test_metrics["speed"].append(speed)
+            test_metrics["reward"].append(reward)
             if is_finished == 1:
+                print(
+                    f"{timestamp} Iter: {np.mean(test_metrics['reward'])}{iter_metrics['test']}"
+                )
                 iter_metrics["test"]["steps"].append(steps)
                 iter_metrics["test"]["progress"].append(progress)
                 iter_metrics["test"]["speed"].append(np.mean(test_metrics["speed"]))
-                test_metrics["speed"] = []
+                test_metrics = {"speed": [], "reward": []}
         else:
             if not DEBUG:
                 tables["train"].add_data(
@@ -252,9 +256,6 @@ def process_line(line):
             step_metrics["learn"]["loss"] = np.mean(iter_metrics["learn"]["loss"])
             step_metrics["learn"]["KL_div"] = np.mean(iter_metrics["learn"]["KL_div"])
             step_metrics["learn"]["entropy"] = np.mean(iter_metrics["learn"]["entropy"])
-            print(f"{timestamp} Checkpoint data:")
-            print(f"{timestamp} Trials:  {iter_metrics}")
-            print(f"{timestamp} Summary: {step_metrics}")
             # Update best metrics for summary
             if step_metrics["test"]["progress"] > best_metrics["progress"] or (
                 step_metrics["test"]["progress"] >= best_metrics["progress"]
@@ -265,7 +266,7 @@ def process_line(line):
                 best_metrics["steps"] = step_metrics["test"]["steps"]
                 best_metrics["progress"] = step_metrics["test"]["progress"]
                 print(
-                    f"{timestamp} model {checkpoint}: {step_metrics['test']['reward']:0.2f}, {step_metrics['test']['progress']:0.2f}%, {step_metrics['test']['steps']:0.2f} steps (improved)"
+                    f"{timestamp} ckpt {checkpoint}: {step_metrics['test']['reward']:0.2f}, {step_metrics['test']['progress']:0.2f}%, {step_metrics['test']['steps']:0.2f} steps (improved)"
                 )
                 if (
                     not DEBUG
@@ -285,7 +286,7 @@ def process_line(line):
                     )
             else:
                 print(
-                    f"{timestamp} model {checkpoint}: {step_metrics['test']['reward']:0.2f}, {step_metrics['test']['progress']:0.2f}%, {step_metrics['test']['steps']:0.2f} steps"
+                    f"{timestamp} ckpt {checkpoint}: {step_metrics['test']['reward']:0.2f}, {step_metrics['test']['progress']:0.2f}%, {step_metrics['test']['steps']:0.2f} steps"
                 )
             if DEBUG:
                 print(f"{timestamp} {step_metrics}")
@@ -316,9 +317,6 @@ def process_line(line):
         iter_metrics = reset_iter_metrics()
         tables = reset_tables()
         is_testing = False
-        print(f"{timestamp} Tracker variables reset:")
-        print(f"{timestamp} Trials:  {iter_metrics}")
-        print(f"{timestamp} Summary: {step_metrics}")
 
     elif "Starting evaluation phase" in line:
         is_testing = True

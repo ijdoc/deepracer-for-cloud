@@ -73,13 +73,13 @@ def reward_function(params):
     if params["steps"] <= 2:
         LAST_PROGRESS = 0.0
 
-    # Max difficulty is 3.0 and about 4x the min difficulty
+    # Max difficulty is 2.5 and about 5x the min difficulty
     this_waypoint = params["closest_waypoints"][0]
     difficulty = (
-        2.25
+        2.0
         * abs(get_direction_change(this_waypoint, params["waypoints"]))
         / TRACKS["caecer_loop"]["max_angle"]
-    ) + 0.75
+    ) + 0.5
 
     # Get the step progress
     step_progress = params["progress"] - LAST_PROGRESS
@@ -119,8 +119,8 @@ def reward_function(params):
 
     # TODO: Make sure bonus is proportionate to rewards
     # bonus = 0.0
-    # if params["progress"] == 100.0:
-    #     is_finished = 1
+    if params["progress"] == 100.0:
+        is_finished = 1
     #     bonus = 100 / ((params["steps"] / 100) ** 4)
 
     # reward = float((reward * step_factor) + bonus)
