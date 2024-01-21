@@ -53,7 +53,7 @@ os.environ["WANDB_RESUME"] = "allow"
 
 def reset_iter_metrics():
     return {
-        "test": {"reward": None, "steps": [], "progress": [], "speed": []},
+        "test": {"reward": [], "steps": [], "progress": [], "speed": []},
         "train": {"reward": [], "steps": [], "progress": [], "speed": []},
         "learn": {"loss": [], "KL_div": [], "entropy": []},
     }
@@ -185,13 +185,14 @@ def process_line(line):
             trial_metrics["test"]["speed"].append(speed)
             trial_metrics["test"]["reward"].append(reward)
             if is_finished == 1:
-                print(
-                    f'{timestamp} Iter: {np.mean(trial_metrics["test"]["reward"])}{iter_metrics["test"]}'
-                )
+                reward = np.sum(trial_metrics["test"]["reward"])
+                speed = np.mean(trial_metrics["test"]["speed"])
+                iter_metrics["test"]["reward"].append(reward)
                 iter_metrics["test"]["steps"].append(steps)
                 iter_metrics["test"]["progress"].append(progress)
-                iter_metrics["test"]["speed"].append(
-                    np.mean(trial_metrics["test"]["speed"])
+                iter_metrics["test"]["speed"].append(speed)
+                print(
+                    f"{timestamp} Iter: {reward:0.2f}, {progress:0.2f}%, {steps:0.2f} steps"
                 )
                 trial_metrics["test"] = {"speed": [], "reward": []}
         else:
