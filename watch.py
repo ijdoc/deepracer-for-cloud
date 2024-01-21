@@ -187,6 +187,7 @@ def process_line(line):
             if is_finished == 1:
                 reward = np.sum(trial_metrics["test"]["reward"])
                 speed = np.mean(trial_metrics["test"]["speed"])
+                steps = 100.0 * steps / progress
                 iter_metrics["test"]["reward"].append(reward)
                 iter_metrics["test"]["steps"].append(steps)
                 iter_metrics["test"]["progress"].append(progress)
