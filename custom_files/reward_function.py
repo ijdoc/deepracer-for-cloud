@@ -73,13 +73,13 @@ def reward_function(params):
     if params["steps"] <= 2:
         LAST_PROGRESS = 0.0
 
-    # Get difficulty as a number from 0.0 to 1.0 with an
-    # added offset to avoid null scores when driving straight
+    # Max difficulty is 3.0 and about 4x the min difficulty
     this_waypoint = params["closest_waypoints"][0]
     difficulty = (
-        abs(get_direction_change(this_waypoint, params["waypoints"]))
+        2.25
+        * abs(get_direction_change(this_waypoint, params["waypoints"]))
         / TRACKS["caecer_loop"]["max_angle"]
-    ) + 0.1
+    ) + 0.75
 
     # Get the step progress
     step_progress = params["progress"] - LAST_PROGRESS
@@ -118,13 +118,14 @@ def reward_function(params):
             # reward = difficulty * step_progress
 
     # TODO: Make sure bonus is proportionate to rewards
-    bonus = 0.0
-    if params["progress"] == 100.0:
-        is_finished = 1
-        bonus = 100 / ((params["steps"] / 100) ** 4)
+    # bonus = 0.0
+    # if params["progress"] == 100.0:
+    #     is_finished = 1
+    #     bonus = 100 / ((params["steps"] / 100) ** 4)
 
     # reward = float((reward * step_factor) + bonus)
-    reward = float(reward + bonus)
+    # reward = float(reward + bonus)
+    reward = float(reward)
 
     action = -1
     if params["steering_angle"] == -7.5:
