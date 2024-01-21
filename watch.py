@@ -252,8 +252,9 @@ def process_line(line):
             step_metrics["learn"]["loss"] = np.mean(iter_metrics["learn"]["loss"])
             step_metrics["learn"]["KL_div"] = np.mean(iter_metrics["learn"]["KL_div"])
             step_metrics["learn"]["entropy"] = np.mean(iter_metrics["learn"]["entropy"])
-            # Reset immediately to free up while things continue logging
-            iter_metrics = reset_iter_metrics()
+            print(f"{timestamp} Checkpoint data:")
+            print(f"{timestamp} Trials:  {iter_metrics}")
+            print(f"{timestamp} Summary: {step_metrics}")
             # Update best metrics for summary
             if step_metrics["test"]["progress"] > best_metrics["progress"] or (
                 step_metrics["test"]["progress"] >= best_metrics["progress"]
@@ -277,8 +278,11 @@ def process_line(line):
                     wandb.config["world_name"] = update_run_env(
                         wandb.run.name, checkpoint
                     ).replace("\n", "")
-                    # FIXME: Get the model reference and log it to W&B
-                    subprocess.run(f"./upload.sh", shell=True)
+                    # subprocess.run(f"./upload.sh", shell=True)
+                    subprocess.Popen(["./upload.sh"])  # Non-blocking!
+                    print(
+                        f"TODO: Create model reference to s3://jdoc-one-deepracer-data-b5pi7cdvar/{wandb.run.name}-{checkpoint}/"
+                    )
             else:
                 print(
                     f"{timestamp} model {checkpoint}: {step_metrics['test']['reward']:0.2f}, {step_metrics['test']['progress']:0.2f}%, {step_metrics['test']['steps']:0.2f} steps"
@@ -299,8 +303,8 @@ def process_line(line):
                         "test/speed": step_metrics["test"]["speed"],
                         "test/steps": step_metrics["test"]["steps"],
                         "test/progress": step_metrics["test"]["progress"],
-                        f"train_trace": tables["train"],
-                        f"test_trace": tables["test"],
+                        "train_trace": tables["train"],
+                        "test_trace": tables["test"],
                     }
                 )
                 # Update test metrics summary
@@ -308,12 +312,14 @@ def process_line(line):
                 wandb.run.summary["test/speed"] = best_metrics["speed"]
                 wandb.run.summary["test/steps"] = best_metrics["steps"]
                 wandb.run.summary["test/progress"] = best_metrics["progress"]
-                # Reset tables
-                tables = reset_tables()
-        else:
-            # Resetting inside else for completion (need this pattern to ensure proper reset)
-            iter_metrics = reset_iter_metrics()
+        # Resetting tracker variables
+        iter_metrics = reset_iter_metrics()
+        tables = reset_tables()
         is_testing = False
+        print(f"{timestamp} Tracker variables reset:")
+        print(f"{timestamp} Trials:  {iter_metrics}")
+        print(f"{timestamp} Summary: {step_metrics}")
+
     elif "Starting evaluation phase" in line:
         is_testing = True
     else:
