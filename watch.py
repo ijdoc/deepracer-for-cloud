@@ -193,7 +193,7 @@ def process_line(line):
                 iter_metrics["test"]["progress"].append(progress)
                 iter_metrics["test"]["speed"].append(speed)
                 print(
-                    f"{timestamp} Iter: {reward:0.2f}, {progress:0.2f}%, {steps:0.2f} steps"
+                    f"{timestamp} iter: {reward:0.2f}, {progress:0.2f}%, {steps:0.2f} steps"
                 )
                 trial_metrics["test"] = {"speed": [], "reward": []}
         else:

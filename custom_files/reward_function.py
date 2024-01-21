@@ -1,10 +1,6 @@
 import math
 import time
 
-# Reference steps should be at most 10% more than the number of expected steps
-# for a given track. This is so that rewards continue to increase on faster
-# episodes even when the car consistently finishes the track
-REFERENCE_STEPS = 220
 LAST_PROGRESS = 0.0
 TRACKS = {
     "caecer_loop": {"length": 39.12, "min_angle": 0.0, "max_angle": 0.18297208942448917}
@@ -73,58 +69,42 @@ def reward_function(params):
     if params["steps"] <= 2:
         LAST_PROGRESS = 0.0
 
-    # Max difficulty is 2.5 and about 5x the min difficulty
+    # Max difficulty is 2.2 and about 8x the min difficulty
     this_waypoint = params["closest_waypoints"][0]
     difficulty = (
-        2.0
+        1.925
         * abs(get_direction_change(this_waypoint, params["waypoints"]))
         / TRACKS["caecer_loop"]["max_angle"]
-    ) + 0.5
+    ) + 0.275
 
     # Get the step progress
     step_progress = params["progress"] - LAST_PROGRESS
     LAST_PROGRESS = params["progress"]
-
-    # This factor will normalize rewards to the number of expected steps
-    # step_factor = 0.01 * REFERENCE_STEPS * (params["progress"] / params["steps"])
+    # Weight step progress to favour faster speeds
+    # weighted_progress = 1.7 * (step_progress**2)
+    weighted_progress = 10.0 * (1 - (1 / math.sqrt(1 + (0.5 * (step_progress**2)))))
 
     is_finished = 0
     if params["is_offtrack"]:
         is_finished = 1
         reward = 1e-5
     else:
-        # Encourage good technique at the tightest curve
-        # if this_waypoint >= 42 and this_waypoint <= 44:
-        #     # TODO: Confirm that this doesn't have an effect
-        #     reward = 1e-5
-        #     if params["steering_angle"] == 0.0:  # go straight
-        #         reward += 1.0
-        if this_waypoint >= 45 and this_waypoint <= 63:
-            # TODO: Make sure these rewards are proportionate to the others
+        if this_waypoint >= 46 and this_waypoint <= 64:
             reward = 1e-5
-            if this_waypoint <= 56:
+            if this_waypoint <= 50:
                 if params["speed"] <= 1.3:  # FIXME: 'slow' depends on model
                     reward += 1.0
                 if params["steering_angle"] != 0.0:  # not straight
                     reward += 1.0
-            if this_waypoint >= 49:
+            else:
                 if params["is_left_of_center"]:  # keep left
-                    reward += 1.0
+                    reward = difficulty * weighted_progress
         else:
-            # TODO: Make sure these rewards are proportionate to the others
-            # Weight step progress to favour faster speeds
-            weighted_progress = 1.7 * (step_progress**2)
             reward = difficulty * weighted_progress
-            # reward = difficulty * step_progress
 
-    # TODO: Make sure bonus is proportionate to rewards
-    # bonus = 0.0
     if params["progress"] == 100.0:
         is_finished = 1
-    #     bonus = 100 / ((params["steps"] / 100) ** 4)
 
-    # reward = float((reward * step_factor) + bonus)
-    # reward = float(reward + bonus)
     reward = float(reward)
 
     action = -1
@@ -138,8 +118,6 @@ def reward_function(params):
         action = 3
     elif params["steering_angle"] == 15 and params["speed"] == 1.3:
         action = 4
-    elif params["steering_angle"] == 25:
-        action = 5
 
     # This trace is needed for test logging
     print(
