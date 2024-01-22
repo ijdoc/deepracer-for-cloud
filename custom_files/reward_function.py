@@ -93,13 +93,16 @@ def reward_function(params):
         reward = difficulty * weighted_progress
         if this_waypoint >= 45 and this_waypoint <= 63:
             if this_waypoint <= 56:
-                if params["speed"] <= 1.3:  # go slow FIXME (depends on model)
-                    coach_factor += 1.0
-                if params["steering_angle"] != 0.0:  # turn
-                    coach_factor += 1.0
+                # don't go fast FIXME (depends on model)
+                if params["speed"] > 2.0:
+                    coach_factor -= 0.2
+                # don't go straight FIXME (depends on model)
+                if abs(params["steering_angle"]) < 10:
+                    coach_factor -= 0.2
             if this_waypoint >= 49:
-                if params["is_left_of_center"]:  # keep left
-                    coach_factor += 2.0
+                # don't keep right
+                if not params["is_left_of_center"]:
+                    coach_factor -= 0.4
 
     reward = float(reward * coach_factor)
 
