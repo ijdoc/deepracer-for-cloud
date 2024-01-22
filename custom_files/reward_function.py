@@ -69,13 +69,13 @@ def reward_function(params):
     if params["steps"] <= 2:
         LAST_PROGRESS = 0.0
 
-    # Max difficulty is 2.2 and about 8x the min difficulty
+    # Max difficulty is 2.5 and about 5x the min difficulty
     this_waypoint = params["closest_waypoints"][0]
     difficulty = (
-        1.925
+        2.0
         * abs(get_direction_change(this_waypoint, params["waypoints"]))
         / TRACKS["caecer_loop"]["max_angle"]
-    ) + 0.275
+    ) + 0.5
 
     # Get the step progress
     step_progress = params["progress"] - LAST_PROGRESS
@@ -84,31 +84,27 @@ def reward_function(params):
     # weighted_progress = 1.7 * (step_progress**2)
     weighted_progress = 10.0 * (1 - (1 / math.sqrt(1 + (0.5 * (step_progress**2)))))
 
+    coach_factor = 1.0
     is_finished = 0
     if params["is_offtrack"]:
         is_finished = 1
         reward = 1e-5
     else:
-        if this_waypoint >= 46 and this_waypoint <= 64:
-            reward = 1e-5
-            if this_waypoint <= 50:
-                if params["speed"] <= 1.3:  # FIXME: 'slow' depends on model
-                    reward += 1.0
-                if params["steering_angle"] != 0.0:  # not straight
-                    reward += 1.0
-            else:
+        reward = difficulty * weighted_progress
+        if this_waypoint >= 45 and this_waypoint <= 63:
+            if this_waypoint <= 56:
+                if params["speed"] <= 1.3:  # go slow FIXME (depends on model)
+                    coach_factor += 1.0
+                if params["steering_angle"] != 0.0:  # turn
+                    coach_factor += 1.0
+            if this_waypoint >= 49:
                 if params["is_left_of_center"]:  # keep left
-                    reward = difficulty * weighted_progress
-        else:
-            reward = difficulty * weighted_progress
+                    coach_factor += 2.0
 
-    if params["progress"] == 100.0:
-        is_finished = 1
-
-    reward = float(reward)
+    reward = float(reward * coach_factor)
 
     action = -1
-    if params["steering_angle"] == -7.5:
+    if params["steering_angle"] == -5:
         action = 0
     elif params["steering_angle"] == 0.0:
         action = 1
@@ -118,6 +114,11 @@ def reward_function(params):
         action = 3
     elif params["steering_angle"] == 15 and params["speed"] == 1.3:
         action = 4
+    elif params["steering_angle"] == 25:
+        action = 5
+
+    if params["progress"] == 100.0:
+        is_finished = 1
 
     # This trace is needed for test logging
     print(

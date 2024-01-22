@@ -19,6 +19,10 @@
       {
         "steering_angle": 15,
         "speed": 1.3
+      },
+      {
+        "steering_angle": 25,
+        "speed": 1.2
       }
     ],
     "sensor": ["FRONT_FACING_CAMERA"],
