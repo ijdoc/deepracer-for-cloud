@@ -69,13 +69,13 @@ def reward_function(params):
     if params["steps"] <= 2:
         LAST_PROGRESS = 0.0
 
-    # Max difficulty is 2.5 and about 5x the min difficulty
+    # Max difficulty is 1.0 and about 5x the min difficulty
     this_waypoint = params["closest_waypoints"][0]
     difficulty = (
-        2.0
+        0.8
         * abs(get_direction_change(this_waypoint, params["waypoints"]))
         / TRACKS["caecer_loop"]["max_angle"]
-    ) + 0.5
+    ) + 0.2
 
     # Get the step progress
     step_progress = params["progress"] - LAST_PROGRESS
@@ -91,18 +91,18 @@ def reward_function(params):
         reward = 1e-5
     else:
         reward = difficulty * weighted_progress
-        if this_waypoint >= 45 and this_waypoint <= 63:
+        if this_waypoint >= 45 and this_waypoint <= 60:
             if this_waypoint <= 56:
                 # don't go fast FIXME (depends on model)
                 if params["speed"] > 2.0:
-                    coach_factor -= 0.2
+                    coach_factor -= 0.1
                 # don't go straight FIXME (depends on model)
                 if abs(params["steering_angle"]) < 10:
-                    coach_factor -= 0.2
-            if this_waypoint >= 49:
+                    coach_factor -= 0.3
+            if this_waypoint >= 52:
                 # don't keep right
                 if not params["is_left_of_center"]:
-                    coach_factor -= 0.4
+                    coach_factor -= 0.3
 
     reward = float(reward * coach_factor)
 
