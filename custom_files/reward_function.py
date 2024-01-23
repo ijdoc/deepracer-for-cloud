@@ -1,6 +1,7 @@
 import math
 import time
 
+TRIAL = 0
 LAST_PROGRESS = 0.0
 TRACKS = {
     "caecer_loop": {"length": 39.12, "min_angle": 0.0, "max_angle": 0.18297208942448917}
@@ -61,50 +62,41 @@ def get_direction_change(i, waypoints):
     diff1 = math.atan2(math.sin(diff1), math.cos(diff1))
     return (diff1 + diff0) / 2.0
 
+def sigmoid(x, k=3.9, x0=0.6, ymax=1.2):
+    return ymax / (1 + math.exp(-k * (x - x0)))
 
 def reward_function(params):
     global LAST_PROGRESS
+    global TRIAL
 
     # Reset progress at the beginning
     if params["steps"] <= 2:
         LAST_PROGRESS = 0.0
+        TRIAL += 1
 
-    # Max difficulty is 1.0 and about 5x the min difficulty
-    this_waypoint = params["closest_waypoints"][0]
-    difficulty = (
-        0.8
-        * abs(get_direction_change(this_waypoint, params["waypoints"]))
-        / TRACKS["caecer_loop"]["max_angle"]
-    ) + 0.2
-
-    # Get the step progress
-    step_progress = params["progress"] - LAST_PROGRESS
-    LAST_PROGRESS = params["progress"]
-    # Weight step progress to favour faster speeds
-    # weighted_progress = 1.7 * (step_progress**2)
-    weighted_progress = 10.0 * (1 - (1 / math.sqrt(1 + (0.5 * (step_progress**2)))))
-
-    coach_factor = 1.0
     is_finished = 0
     if params["is_offtrack"]:
         is_finished = 1
         reward = 1e-5
     else:
-        reward = difficulty * weighted_progress
-        if this_waypoint >= 45 and this_waypoint <= 60:
-            if this_waypoint <= 56:
-                # don't go fast FIXME (depends on model)
-                if params["speed"] > 2.0:
-                    coach_factor -= 0.1
-                # don't go straight FIXME (depends on model)
-                if abs(params["steering_angle"]) < 10:
-                    coach_factor -= 0.3
-            if this_waypoint >= 52:
-                # don't keep right
-                if not params["is_left_of_center"]:
-                    coach_factor -= 0.3
+        # difficulty ranges from 0.1 to 1.2
+        this_waypoint = params["closest_waypoints"][0]
+        difficulty = (
+            1.1 * abs(get_direction_change(this_waypoint, params["waypoints"]))
+            / TRACKS["caecer_loop"]["max_angle"]
+        ) + 0.1
 
-    reward = float(reward * coach_factor)
+        # Get the step progress
+        step_progress = params["progress"] - LAST_PROGRESS
+        LAST_PROGRESS = params["progress"]
+
+        # step_progress is saturated to ~ymax to avoid overfitting on outliers
+        step_progress = sigmoid(step_progress, k=3.9, x0=0.6, ymax=1.2)
+
+        # projected_steps is the number of steps needed to finish the track
+        # divided by a factor of 100 to make it a reasonable number
+        projected_steps = params["steps"] / params["progress"]
+        reward = float(difficulty + step_progress) / projected_steps
 
     action = -1
     if params["steering_angle"] == -5:
@@ -125,7 +117,7 @@ def reward_function(params):
 
     # This trace is needed for test logging
     print(
-        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{step_progress},{difficulty},{reward},{is_finished},{action}"
+        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{step_progress},{difficulty},{reward},{is_finished},{action},{TRIAL}"
     )
 
     return reward

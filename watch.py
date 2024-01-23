@@ -10,7 +10,7 @@ import numpy as np
 import subprocess
 import argparse
 
-# FIXME: Define from command line arguments in parent script
+# FIXME: Define from command line arguments in parent script?
 os.environ["WANDB_RUN_GROUP"] = "2402"
 GLOBAL_MIN_STEPS = 192.0
 
@@ -70,6 +70,7 @@ def reset_tables():
                 "difficulty",
                 "reward",
                 "action",
+                "trial",
             ]
         ),
         "train": wandb.Table(
@@ -81,6 +82,7 @@ def reset_tables():
                 "difficulty",
                 "reward",
                 "action",
+                "trial",
             ]
         ),
     }
@@ -171,6 +173,7 @@ def process_line(line):
         reward = float(parts[5])
         is_finished = int(parts[6])
         action = int(parts[7])
+        trial = int(parts[8])
         if is_testing:
             if not DEBUG:
                 tables["test"].add_data(
@@ -181,6 +184,7 @@ def process_line(line):
                     difficulty,
                     reward,
                     action,
+                    trial,
                 )
             trial_metrics["test"]["speed"].append(speed)
             trial_metrics["test"]["reward"].append(reward)
@@ -192,9 +196,9 @@ def process_line(line):
                 iter_metrics["test"]["steps"].append(steps)
                 iter_metrics["test"]["progress"].append(progress)
                 iter_metrics["test"]["speed"].append(speed)
-                print(
-                    f"{timestamp} iter: {reward:0.2f}, {progress:0.2f}%, {steps:0.2f} steps"
-                )
+                # print(
+                #     f"{timestamp} iter: {reward:0.2f}, {progress:0.2f}%, {steps:0.2f} steps"
+                # )
                 trial_metrics["test"] = {"speed": [], "reward": []}
         else:
             if not DEBUG:
@@ -206,6 +210,7 @@ def process_line(line):
                     difficulty,
                     reward,
                     action,
+                    trial,
                 )
             trial_metrics["train"]["speed"].append(speed)
             if is_finished == 1:
