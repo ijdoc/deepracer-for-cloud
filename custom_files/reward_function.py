@@ -89,7 +89,7 @@ def reward_function(params):
     LAST_PROGRESS = params["progress"]
 
     # step_progress is saturated to ~ymax to avoid overfitting on outliers
-    step_progress = sigmoid(step_progress, k=3.9, x0=0.6, ymax=1.2)
+    # step_progress = sigmoid(step_progress, k=3.9, x0=0.6, ymax=1.2)
 
     is_finished = 0
     if params["is_offtrack"]:
