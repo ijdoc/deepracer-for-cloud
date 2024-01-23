@@ -99,7 +99,7 @@ def reward_function(params):
         # projected_steps is the number of steps needed to finish the track
         # divided by a factor of 100 to make it a reasonable number
         projected_steps = params["steps"] / params["progress"]
-        reward = float(difficulty + step_progress) / projected_steps
+        reward = float(difficulty + (2 * step_progress)) / projected_steps
 
     action = -1
     if params["steering_angle"] == -5:
@@ -112,8 +112,8 @@ def reward_function(params):
         action = 3
     elif params["steering_angle"] == 15 and params["speed"] == 1.3:
         action = 4
-    elif params["steering_angle"] == 25:
-        action = 5
+    # elif params["steering_angle"] == 25:
+    #     action = 5
 
     if params["progress"] == 100.0:
         is_finished = 1

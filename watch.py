@@ -228,9 +228,9 @@ def process_line(line):
                 ckpt_metrics[job]["speed"] = np.mean(iter_metrics[job]["speed"])
                 ckpt_metrics[job]["progress"] = np.mean(iter_metrics[job]["progress"])
                 ckpt_metrics[job]["steps"] = np.mean(iter_metrics[job]["steps"])
-            print(
-                f'{timestamp} Same? {ckpt_metrics["test"]["reward"]:0.3f}, {float(test_reward):0.3f}'
-            )
+            # print(
+            #     f'{timestamp} Same? {ckpt_metrics["test"]["reward"]:0.3f}, {float(test_reward):0.3f}'
+            # )
 
             ckpt_metrics["learn"]["loss"] = np.mean(iter_metrics["learn"]["loss"])
             ckpt_metrics["learn"]["KL_div"] = np.mean(iter_metrics["learn"]["KL_div"])
