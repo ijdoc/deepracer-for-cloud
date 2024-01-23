@@ -211,11 +211,10 @@ def process_line(line):
         iter_metrics["learn"]["KL_div"].append(divergence)
         iter_metrics["learn"]["entropy"].append(entropy)
     elif "[BestModelSelection] Evaluation episode reward mean:" in line:
-        # test_reward = get_float(line.split(":")[1].strip())
+        test_reward = get_float(line.split(":")[1].strip())
         if not test_reward is None:
             # Aggregate metrics and log everything!!
             checkpoint = round((last_episode / 10) - 1)
-            # ckpt_metrics["test"]["reward"] = float(test_reward)
             for job in ["test", "train"]:
                 ckpt_metrics[job]["reward"] = np.mean(iter_metrics["train"]["reward"])
                 ckpt_metrics[job]["speed"] = np.mean(iter_metrics["test"]["speed"])
@@ -223,6 +222,9 @@ def process_line(line):
                     iter_metrics["test"]["progress"]
                 )
                 ckpt_metrics[job]["steps"] = np.mean(iter_metrics["test"]["steps"])
+            print(
+                f'{timestamp} Same? {ckpt_metrics["test"]["reward"]:0.3f}, {float(test_reward):0.3f}'
+            )
 
             ckpt_metrics["learn"]["loss"] = np.mean(iter_metrics["learn"]["loss"])
             ckpt_metrics["learn"]["KL_div"] = np.mean(iter_metrics["learn"]["KL_div"])
