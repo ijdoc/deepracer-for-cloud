@@ -61,7 +61,7 @@ def reset_iter_metrics():
 
 def reset_tables():
     columns = [
-        "trial",
+        "episode",
         "step",
         "waypoint",
         "progress",
@@ -89,6 +89,7 @@ trial_metrics = {
     "test": {"speed": [], "reward": []},
 }
 checkpoint = -1
+episode = {"train": 1, "test": 1}
 
 
 def update_run_env(name, checkpoint):
@@ -154,23 +155,22 @@ def process_line(line):
 
     timestamp = datetime.now()
     if "MY_TRACE_LOG" in line:
-        # f"MY_TRACE_LOG:{TRIAL},{params['steps']},{this_waypoint},{params['progress']},{step_progress},{difficulty},{reward},{action},{is_finished}"
+        # f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{step_progress},{difficulty},{reward},{action},{is_finished}"
         parts = line.split("MY_TRACE_LOG:")[1].split("\t")[0].split("\n")[0].split(",")
-        trial = int(parts[0])
-        steps = int(float(parts[1]))
-        waypoint = int(float(parts[2]))
-        progress = float(parts[3])
-        speed = float(parts[4])
-        difficulty = float(parts[5])
-        reward = float(parts[6])
-        action = int(parts[7])
-        is_finished = int(parts[8])
+        steps = int(float(parts[0]))
+        waypoint = int(float(parts[1]))
+        progress = float(parts[2])
+        speed = float(parts[3])
+        difficulty = float(parts[4])
+        reward = float(parts[5])
+        action = int(parts[6])
+        is_finished = int(parts[7])
         job = "train"
         if is_testing:
             job = "test"
         if not DEBUG:
             tables[job].add_data(
-                trial,
+                episode[job],
                 steps,
                 waypoint,
                 progress,
@@ -195,6 +195,14 @@ def process_line(line):
             trial_metrics[job] = {"speed": [], "reward": []}
         if DEBUG:
             print(f"{timestamp} {line}")
+
+    elif "Training>" in line and "[SAGE]" in line:
+        episode["train"] += 1
+        # print(f'Next train episode: {episode["train"]}')
+
+    elif "Testing>" in line and "[SAGE]" in line:
+        episode["test"] += 1
+        # print(f'Next episode: {episode["test"]}')
 
     elif "Policy training>" in line:
         metrics = line.split(",")
