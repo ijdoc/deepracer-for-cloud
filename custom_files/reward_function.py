@@ -62,8 +62,10 @@ def get_direction_change(i, waypoints):
     diff1 = math.atan2(math.sin(diff1), math.cos(diff1))
     return (diff1 + diff0) / 2.0
 
+
 def sigmoid(x, k=3.9, x0=0.6, ymax=1.2):
     return ymax / (1 + math.exp(-k * (x - x0)))
+
 
 def reward_function(params):
     global LAST_PROGRESS
@@ -74,25 +76,26 @@ def reward_function(params):
         LAST_PROGRESS = 0.0
         TRIAL += 1
 
+    # difficulty ranges from 0.1 to 1.2
+    this_waypoint = params["closest_waypoints"][0]
+    difficulty = (
+        1.1
+        * abs(get_direction_change(this_waypoint, params["waypoints"]))
+        / TRACKS["caecer_loop"]["max_angle"]
+    ) + 0.1
+
+    # Get the step progress
+    step_progress = params["progress"] - LAST_PROGRESS
+    LAST_PROGRESS = params["progress"]
+
+    # step_progress is saturated to ~ymax to avoid overfitting on outliers
+    step_progress = sigmoid(step_progress, k=3.9, x0=0.6, ymax=1.2)
+
     is_finished = 0
     if params["is_offtrack"]:
         is_finished = 1
         reward = 1e-5
     else:
-        # difficulty ranges from 0.1 to 1.2
-        this_waypoint = params["closest_waypoints"][0]
-        difficulty = (
-            1.1 * abs(get_direction_change(this_waypoint, params["waypoints"]))
-            / TRACKS["caecer_loop"]["max_angle"]
-        ) + 0.1
-
-        # Get the step progress
-        step_progress = params["progress"] - LAST_PROGRESS
-        LAST_PROGRESS = params["progress"]
-
-        # step_progress is saturated to ~ymax to avoid overfitting on outliers
-        step_progress = sigmoid(step_progress, k=3.9, x0=0.6, ymax=1.2)
-
         # projected_steps is the number of steps needed to finish the track
         # divided by a factor of 100 to make it a reasonable number
         projected_steps = params["steps"] / params["progress"]
