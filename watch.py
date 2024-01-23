@@ -88,7 +88,7 @@ trial_metrics = {
     "train": {"speed": [], "reward": []},
     "test": {"speed": [], "reward": []},
 }
-last_episode = 0
+checkpoint = -1
 
 
 def update_run_env(name, checkpoint):
@@ -148,7 +148,7 @@ def process_line(line):
     global ckpt_metrics
     global is_testing
     global best_metrics
-    global last_episode
+    global checkpoint
     global tables
     global trial_metrics
 
@@ -214,14 +214,12 @@ def process_line(line):
         test_reward = get_float(line.split(":")[1].strip())
         if not test_reward is None:
             # Aggregate metrics and log everything!!
-            checkpoint = round((last_episode / 10) - 1)
+            checkpoint += 1
             for job in ["test", "train"]:
-                ckpt_metrics[job]["reward"] = np.mean(iter_metrics["train"]["reward"])
-                ckpt_metrics[job]["speed"] = np.mean(iter_metrics["test"]["speed"])
-                ckpt_metrics[job]["progress"] = np.mean(
-                    iter_metrics["test"]["progress"]
-                )
-                ckpt_metrics[job]["steps"] = np.mean(iter_metrics["test"]["steps"])
+                ckpt_metrics[job]["reward"] = np.mean(iter_metrics[job]["reward"])
+                ckpt_metrics[job]["speed"] = np.mean(iter_metrics[job]["speed"])
+                ckpt_metrics[job]["progress"] = np.mean(iter_metrics[job]["progress"])
+                ckpt_metrics[job]["steps"] = np.mean(iter_metrics[job]["steps"])
             print(
                 f'{timestamp} Same? {ckpt_metrics["test"]["reward"]:0.3f}, {float(test_reward):0.3f}'
             )
