@@ -60,31 +60,19 @@ def reset_iter_metrics():
 
 
 def reset_tables():
+    columns = [
+        "trial",
+        "step",
+        "waypoint",
+        "progress",
+        "step_progress",
+        "difficulty",
+        "reward",
+        "action",
+    ]
     return {
-        "test": wandb.Table(
-            columns=[
-                "step",
-                "waypoint",
-                "progress",
-                "step_progress",
-                "difficulty",
-                "reward",
-                "action",
-                "trial",
-            ]
-        ),
-        "train": wandb.Table(
-            columns=[
-                "step",
-                "waypoint",
-                "progress",
-                "step_progress",
-                "difficulty",
-                "reward",
-                "action",
-                "trial",
-            ]
-        ),
+        "test": wandb.Table(columns=columns),
+        "train": wandb.Table(columns=columns),
     }
 
 
@@ -96,7 +84,10 @@ ckpt_metrics = {
 iter_metrics = reset_iter_metrics()
 best_metrics = {"reward": -1.0, "progress": 0.0, "speed": 0.0, "steps": 100000.0}
 is_testing = False
-trial_metrics = {"train": {"speed": []}, "test": {"speed": [], "reward": []}}
+trial_metrics = {
+    "train": {"speed": [], "reward": []},
+    "test": {"speed": [], "reward": []},
+}
 last_episode = 0
 
 
@@ -163,72 +154,48 @@ def process_line(line):
 
     timestamp = datetime.now()
     if "MY_TRACE_LOG" in line:
-        # f'MY_TRACE_LOG:{params["steps"]},{this_waypoint},{params["progress"]},{speed},{difficulty},{reward},{is_finished}'
+        # f"MY_TRACE_LOG:{TRIAL},{params['steps']},{this_waypoint},{params['progress']},{step_progress},{difficulty},{reward},{action},{is_finished}"
         parts = line.split("MY_TRACE_LOG:")[1].split("\t")[0].split("\n")[0].split(",")
-        steps = int(float(parts[0]))
-        waypoint = int(float(parts[1]))
-        progress = float(parts[2])
-        speed = float(parts[3])
-        difficulty = float(parts[4])
-        reward = float(parts[5])
-        is_finished = int(parts[6])
+        trial = int(parts[0])
+        steps = int(float(parts[1]))
+        waypoint = int(float(parts[2]))
+        progress = float(parts[3])
+        speed = float(parts[4])
+        difficulty = float(parts[5])
+        reward = float(parts[6])
         action = int(parts[7])
-        trial = int(parts[8])
+        is_finished = int(parts[8])
+        job = "train"
         if is_testing:
-            if not DEBUG:
-                tables["test"].add_data(
-                    steps,
-                    waypoint,
-                    progress,
-                    speed,
-                    difficulty,
-                    reward,
-                    action,
-                    trial,
-                )
-            trial_metrics["test"]["speed"].append(speed)
-            trial_metrics["test"]["reward"].append(reward)
-            if is_finished == 1:
-                reward = np.sum(trial_metrics["test"]["reward"])
-                speed = np.mean(trial_metrics["test"]["speed"])
-                steps = 100.0 * steps / progress
-                iter_metrics["test"]["reward"].append(reward)
-                iter_metrics["test"]["steps"].append(steps)
-                iter_metrics["test"]["progress"].append(progress)
-                iter_metrics["test"]["speed"].append(speed)
-                # print(
-                #     f"{timestamp} iter: {reward:0.2f}, {progress:0.2f}%, {steps:0.2f} steps"
-                # )
-                trial_metrics["test"] = {"speed": [], "reward": []}
-        else:
-            if not DEBUG:
-                tables["train"].add_data(
-                    steps,
-                    waypoint,
-                    progress,
-                    speed,
-                    difficulty,
-                    reward,
-                    action,
-                    trial,
-                )
-            trial_metrics["train"]["speed"].append(speed)
-            if is_finished == 1:
-                iter_metrics["train"]["steps"].append(steps)
-                iter_metrics["train"]["progress"].append(progress)
-                iter_metrics["train"]["speed"].append(
-                    np.mean(trial_metrics["train"]["speed"])
-                )
-                trial_metrics["train"]["speed"] = []
+            job = "test"
+        if not DEBUG:
+            tables[job].add_data(
+                trial,
+                steps,
+                waypoint,
+                progress,
+                speed,
+                difficulty,
+                reward,
+                action,
+            )
+        trial_metrics[job]["speed"].append(speed)
+        trial_metrics[job]["reward"].append(reward)
+        if is_finished == 1:
+            speed = np.mean(trial_metrics[job]["speed"])
+            reward = np.sum(trial_metrics[job]["reward"])
+            steps = 100.0 * steps / progress
+            iter_metrics[job]["reward"].append(reward)
+            iter_metrics[job]["steps"].append(steps)
+            iter_metrics[job]["progress"].append(progress)
+            iter_metrics[job]["speed"].append(speed)
+            # print(
+            #     f"{timestamp} iter: {reward:0.2f}, {progress:0.2f}%, {steps:0.2f} steps"
+            # )
+            trial_metrics[job] = {"speed": [], "reward": []}
         if DEBUG:
             print(f"{timestamp} {line}")
 
-    elif "Training>" in line and "[SAGE]" in line:
-        # Capture training episode metrics
-        metrics = line.split(",")
-        last_episode = int(metrics[2].split("=")[1])
-        reward = float(metrics[3].split("=")[1])
-        iter_metrics["train"]["reward"].append(reward)
     elif "Policy training>" in line:
         metrics = line.split(",")
         # epoch = int(metrics[3].split("=")[1])
@@ -244,28 +211,24 @@ def process_line(line):
         iter_metrics["learn"]["KL_div"].append(divergence)
         iter_metrics["learn"]["entropy"].append(entropy)
     elif "[BestModelSelection] Evaluation episode reward mean:" in line:
-        test_reward = get_float(line.split(":")[1].strip())
+        # test_reward = get_float(line.split(":")[1].strip())
         if not test_reward is None:
+            # Aggregate metrics and log everything!!
             checkpoint = round((last_episode / 10) - 1)
-            # Calculate means and log everything here!!
-            ckpt_metrics["test"]["reward"] = float(test_reward)
-            ckpt_metrics["test"]["speed"] = np.mean(iter_metrics["test"]["speed"])
-            ckpt_metrics["test"]["progress"] = np.mean(iter_metrics["test"]["progress"])
-            # Projected steps to completion
-            ckpt_metrics["test"]["steps"] = np.mean(iter_metrics["test"]["steps"])
-            ckpt_metrics["train"]["reward"] = np.mean(iter_metrics["train"]["reward"])
-            ckpt_metrics["train"]["progress"] = np.mean(
-                iter_metrics["train"]["progress"]
-            )
-            # Projected steps to completion
-            ckpt_metrics["train"]["steps"] = (
-                100.00 * np.mean(iter_metrics["train"]["steps"])
-            ) / ckpt_metrics["train"]["progress"]
-            ckpt_metrics["train"]["speed"] = np.mean(iter_metrics["train"]["speed"])
+            # ckpt_metrics["test"]["reward"] = float(test_reward)
+            for job in ["test", "train"]:
+                ckpt_metrics[job]["reward"] = np.mean(iter_metrics["train"]["reward"])
+                ckpt_metrics[job]["speed"] = np.mean(iter_metrics["test"]["speed"])
+                ckpt_metrics[job]["progress"] = np.mean(
+                    iter_metrics["test"]["progress"]
+                )
+                ckpt_metrics[job]["steps"] = np.mean(iter_metrics["test"]["steps"])
+
             ckpt_metrics["learn"]["loss"] = np.mean(iter_metrics["learn"]["loss"])
             ckpt_metrics["learn"]["KL_div"] = np.mean(iter_metrics["learn"]["KL_div"])
             ckpt_metrics["learn"]["entropy"] = np.mean(iter_metrics["learn"]["entropy"])
-            # Update best metrics for summary
+
+            # Update best metrics & summary
             if ckpt_metrics["test"]["progress"] > best_metrics["progress"] or (
                 ckpt_metrics["test"]["progress"] >= best_metrics["progress"]
                 and ckpt_metrics["test"]["steps"] < best_metrics["steps"]
