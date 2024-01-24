@@ -200,7 +200,7 @@ def process_line(line):
         episode["train"] += 1
         # print(f'Next train episode: {episode["train"]}')
 
-    elif "Testing>" in line and "[SAGE]" in line:
+    elif "Testing>" in line and "[ROBO]" in line:
         episode["test"] += 1
         # print(f'Next episode: {episode["test"]}')
 

@@ -64,6 +64,10 @@ def get_direction_change(i, waypoints):
 
 
 def sigmoid(x, k=3.9, x0=0.6, ymax=1.2):
+    """
+    Parametrized sigmoid function as seen on:
+    https://www.desmos.com/calculator/1c15zoa5b2
+    """
     return ymax / (1 + math.exp(-k * (x - x0)))
 
 
@@ -99,18 +103,18 @@ def reward_function(params):
         # projected_steps is the number of steps needed to finish the track
         # divided by a factor of 100 to make it a reasonable number
         projected_steps = params["steps"] / params["progress"]
-        reward = float(difficulty + (2 * step_progress)) / projected_steps
+        reward = float(difficulty + (3 * step_progress)) / projected_steps
 
     action = -1
     if params["steering_angle"] == -5:
         action = 0
     elif params["steering_angle"] == 0.0:
         action = 1
-    elif params["steering_angle"] == 7.5:
+    elif params["steering_angle"] == 5:
         action = 2
-    elif params["steering_angle"] == 15 and params["speed"] == 2.6:
+    elif params["steering_angle"] == 10:
         action = 3
-    elif params["steering_angle"] == 15 and params["speed"] == 1.3:
+    elif params["steering_angle"] == 15:
         action = 4
     # elif params["steering_angle"] == 25:
     #     action = 5
