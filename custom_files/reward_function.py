@@ -1,7 +1,7 @@
 import math
 import time
 
-TRIAL = 0
+SPEED_FACTOR = 3.5
 LAST_PROGRESS = 0.0
 TRACKS = {
     "caecer_loop": {"length": 39.12, "min_angle": 0.0, "max_angle": 0.18297208942448917}
@@ -73,12 +73,10 @@ def sigmoid(x, k=3.9, x0=0.6, ymax=1.2):
 
 def reward_function(params):
     global LAST_PROGRESS
-    global TRIAL
 
     # Reset progress at the beginning
     if params["steps"] <= 2:
         LAST_PROGRESS = 0.0
-        TRIAL += 1
 
     # difficulty ranges from 0.1 to 1.2
     this_waypoint = params["closest_waypoints"][0]
@@ -103,7 +101,7 @@ def reward_function(params):
         # projected_steps is the number of steps needed to finish the track
         # divided by a factor of 100 to make it a reasonable number
         projected_steps = params["steps"] / params["progress"]
-        reward = float(difficulty + (3 * step_progress)) / projected_steps
+        reward = float(difficulty + (SPEED_FACTOR * step_progress)) / projected_steps
 
     action = -1
     if params["steering_angle"] == -5:

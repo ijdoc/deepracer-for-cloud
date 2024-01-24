@@ -12,7 +12,7 @@ import argparse
 
 # FIXME: Define from command line arguments in parent script?
 os.environ["WANDB_RUN_GROUP"] = "2402"
-GLOBAL_MIN_STEPS = 192.0
+GLOBAL_MIN_STEPS = 181.0
 
 # Create ArgumentParser
 parser = argparse.ArgumentParser(description="Log testing metrics")
@@ -251,7 +251,7 @@ def process_line(line):
                 if (
                     not DEBUG
                     and best_metrics["progress"] >= 100.0
-                    and ckpt_metrics["test"]["steps"] < GLOBAL_MIN_STEPS
+                    and ckpt_metrics["test"]["steps"] <= GLOBAL_MIN_STEPS
                 ):
                     print(
                         f'{timestamp} 🚀 Uploading full progress checkpoint {checkpoint} expecting {best_metrics["steps"]:0.2f} steps)'
@@ -259,10 +259,13 @@ def process_line(line):
                     wandb.config["world_name"] = update_run_env(
                         wandb.run.name, checkpoint
                     ).replace("\n", "")
-                    # subprocess.run("./upload.sh", shell=True)
-                    subprocess.Popen(["./upload.sh"])  # Non-blocking!
-                    print(
-                        f"TODO: Create model reference to s3://jdoc-one-deepracer-data-b5pi7cdvar/{wandb.run.name}-{checkpoint}/"
+                    subprocess.run("./upload.sh", shell=True)
+                    # subprocess.Popen(["./upload.sh"])  # Non-blocking!
+                    # print(
+                    #     f"TODO: Create model reference to s3://jdoc-one-deepracer-data-b5pi7cdvar/{wandb.run.name}-{checkpoint}/"
+                    # )
+                    wandb.log_model(
+                        f"s3://jdoc-one-deepracer-data-b5pi7cdvar/{wandb.run.name}-{checkpoint}/"
                     )
             else:
                 print(
