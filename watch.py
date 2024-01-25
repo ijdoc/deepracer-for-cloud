@@ -68,7 +68,6 @@ def reset_tables():
         "step_progress",
         "difficulty",
         "reward",
-        "action",
     ]
     return {
         "test": wandb.Table(columns=columns),
@@ -118,6 +117,45 @@ with open("./custom_files/hyperparameters.json", "r") as json_file:
     # Load the JSON data into a Python dictionary
     config_dict = json.load(json_file)
 
+# Open the JSON file for reading
+with open("./custom_files/model_metadata.json", "r") as json_file:
+    # Load the JSON data into a Python dictionary
+    model_dict = json.load(json_file)
+    logged_dict = {}
+    logged_dict["version"] = model_dict["version"]
+    logged_dict["type"] = model_dict["action_space_type"]
+    logged_dict["algo"] = model_dict["training_algorithm"]
+    logged_dict["net"] = model_dict["neural_network"]
+    if logged_dict["type"] == "continuous":
+        logged_dict["steer_max"] = model_dict["action_space"]["steering_angle"]["high"]
+        logged_dict["steer_min"] = model_dict["action_space"]["steering_angle"]["low"]
+        logged_dict["speed_max"] = model_dict["action_space"]["speed"]["high"]
+        logged_dict["speed_min"] = model_dict["action_space"]["speed"]["low"]
+    else:
+        logged_dict["action_count"] = len(model_dict["action_space"])
+        steer_min = 1000.0
+        steer_max = -1000.0
+        speed_min = 1000.0
+        speed_max = -1000.0
+        for action in model_dict["action_space"]:
+            steer_min = min(steer_min, action["steering_angle"])
+            steer_max = max(steer_max, action["steering_angle"])
+            speed_min = min(speed_min, action["speed"])
+            speed_max = max(speed_max, action["speed"])
+        logged_dict["steer_max"] = steer_max
+        logged_dict["steer_min"] = steer_min
+        logged_dict["speed_max"] = speed_max
+        logged_dict["speed_min"] = speed_min
+    config_dict["model"] = logged_dict
+
+# Open reward file for reading
+with open("./custom_files/reward_function.py", "r") as py_file:
+    for line in py_file.readlines():
+        if "SPEED_FACTOR" in line:
+            factor = float(line.split("=")[1].strip())
+            config_dict["speed_factor"] = factor
+            break
+
 # Start training job
 if not DEBUG:
     if args.pretrained:
@@ -155,7 +193,7 @@ def process_line(line):
 
     timestamp = datetime.now()
     if "MY_TRACE_LOG" in line:
-        # f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{step_progress},{difficulty},{reward},{action},{is_finished}"
+        # f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{step_progress},{difficulty},{reward},{is_finished}"
         parts = line.split("MY_TRACE_LOG:")[1].split("\t")[0].split("\n")[0].split(",")
         steps = int(float(parts[0]))
         waypoint = int(float(parts[1]))
@@ -163,8 +201,7 @@ def process_line(line):
         speed = float(parts[3])
         difficulty = float(parts[4])
         reward = float(parts[5])
-        action = int(parts[6])
-        is_finished = int(parts[7])
+        is_finished = int(parts[6])
         job = "train"
         if is_testing:
             job = "test"
@@ -177,7 +214,6 @@ def process_line(line):
                 speed,
                 difficulty,
                 reward,
-                action,
             )
         trial_metrics[job]["speed"].append(speed)
         trial_metrics[job]["reward"].append(reward)

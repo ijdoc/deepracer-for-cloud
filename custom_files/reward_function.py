@@ -90,9 +90,6 @@ def reward_function(params):
     step_progress = params["progress"] - LAST_PROGRESS
     LAST_PROGRESS = params["progress"]
 
-    # step_progress is saturated to ~ymax to avoid overfitting on outliers
-    # step_progress = sigmoid(step_progress, k=3.9, x0=0.6, ymax=1.2)
-
     is_finished = 0
     if params["is_offtrack"]:
         is_finished = 1
@@ -103,26 +100,12 @@ def reward_function(params):
         projected_steps = params["steps"] / params["progress"]
         reward = float(difficulty + (SPEED_FACTOR * step_progress)) / projected_steps
 
-    action = -1
-    if params["steering_angle"] == -5:
-        action = 0
-    elif params["steering_angle"] == 0.0:
-        action = 1
-    elif params["steering_angle"] == 5:
-        action = 2
-    elif params["steering_angle"] == 10:
-        action = 3
-    elif params["steering_angle"] == 15:
-        action = 4
-    # elif params["steering_angle"] == 25:
-    #     action = 5
-
     if params["progress"] == 100.0:
         is_finished = 1
 
     # This trace is needed for test logging
     print(
-        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{step_progress},{difficulty},{reward},{action},{is_finished}"
+        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{step_progress},{difficulty},{reward},{is_finished}"
     )
 
     return reward
