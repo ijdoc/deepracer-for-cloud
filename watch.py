@@ -153,7 +153,7 @@ with open("./custom_files/reward_function.py", "r") as py_file:
     for line in py_file.readlines():
         if "SPEED_FACTOR" in line:
             factor = float(line.split("=")[1].strip())
-            config_dict["speed_factor"] = factor
+            config_dict["reward"] = {"speed_factor": factor}
             break
 
 # Start training job
