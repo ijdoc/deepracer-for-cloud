@@ -1,7 +1,7 @@
 import math
 import time
 
-SPEED_FACTOR = 6.0
+SPEED_FACTOR = 10.0
 LAST_PROGRESS = 0.0
 TRACKS = {
     "caecer_loop": {"length": 39.12, "min_angle": 0.0, "max_angle": 0.18297208942448917}
