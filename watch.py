@@ -67,6 +67,8 @@ def reset_tables():
         "progress",
         "step_progress",
         "difficulty",
+        "throttle",
+        "steer",
         "reward",
     ]
     return {
@@ -146,15 +148,27 @@ with open("./custom_files/model_metadata.json", "r") as json_file:
         logged_dict["steer_min"] = steer_min
         logged_dict["speed_max"] = speed_max
         logged_dict["speed_min"] = speed_min
-    config_dict["model"] = logged_dict
+    config_dict["m"] = logged_dict
+
 
 # Open reward file for reading
 with open("./custom_files/reward_function.py", "r") as py_file:
+    logged_dict = {}
     for line in py_file.readlines():
+        if "STEP_BASE" in line:
+            logged_dict{"base"} = float(line.split("=")[1].strip())
         if "SPEED_FACTOR" in line:
-            factor = float(line.split("=")[1].strip())
-            config_dict["reward"] = {"speed_factor": factor}
+            logged_dict{"s_factor"} = float(line.split("=")[1].strip())
+        if "DIFFICULTY_FACTOR" in line:
+            logged_dict{"d_factor"} = float(line.split("=")[1].strip())
+        if "DIFFICULTY_MAX" in line:
+            logged_dict{"d_max"} = float(line.split("=")[1].strip())
+        if "DIFFICULTY_MIN" in line:
+            logged_dict{"d_min"} = float(line.split("=")[1].strip())
+        if "REWARD_TYPE" in line:
+            logged_dict{"type"} = line.split("=")[1].strip()
             break
+    config_dict["r"] = logged_dict
 
 # Start training job
 if not DEBUG:
@@ -193,15 +207,16 @@ def process_line(line):
 
     timestamp = datetime.now()
     if "MY_TRACE_LOG" in line:
-        # f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{step_progress},{difficulty},{reward},{is_finished}"
         parts = line.split("MY_TRACE_LOG:")[1].split("\t")[0].split("\n")[0].split(",")
         steps = int(float(parts[0]))
         waypoint = int(float(parts[1]))
         progress = float(parts[2])
         speed = float(parts[3])
         difficulty = float(parts[4])
-        reward = float(parts[5])
-        is_finished = int(parts[6])
+        throttle = float(parts[5])
+        steer = float(parts[6])
+        reward = float(parts[7])
+        is_finished = int(parts[8])
         job = "train"
         if is_testing:
             job = "test"
@@ -213,6 +228,8 @@ def process_line(line):
                 progress,
                 speed,
                 difficulty,
+                throttle,
+                steer,
                 reward,
             )
         trial_metrics[job]["speed"].append(speed)

@@ -2,11 +2,11 @@
     "action_space": {
     "steering_angle" : {
       "high" : 15.0,
-      "low" : -5.0
+      "low" : -15.0
     },
     "speed" : {
-      "high" : 3.3,
-      "low" : 1.2
+      "high" : 3.8,
+      "low" : 1.1
     }
   },
     "sensor": ["FRONT_FACING_CAMERA"],
