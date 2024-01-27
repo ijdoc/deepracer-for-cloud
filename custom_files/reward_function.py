@@ -4,9 +4,9 @@ import time
 # Reward parameters
 STEP_BASE = 0.1
 SPEED_FACTOR = 1.0
-DIFFICULTY_FACTOR = 3.0
-DIFFICULTY_MAX = 1.2
-DIFFICULTY_MIN = 0.1
+DIFFICULTY_FACTOR = 1.0
+DIFFICULTY_MAX = 8.0
+DIFFICULTY_MIN = 1.0
 REWARD_TYPE = "multiplicative"  # "additive" or "multiplicative
 
 # Other globals

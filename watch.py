@@ -156,17 +156,17 @@ with open("./custom_files/reward_function.py", "r") as py_file:
     logged_dict = {}
     for line in py_file.readlines():
         if "STEP_BASE" in line:
-            logged_dict["base"] = float(line.split("=")[1].strip())
+            logged_dict["base"] = float(line.split("=")[1].split("#")[0].strip())
         if "SPEED_FACTOR" in line:
-            logged_dict["s_factor"] = float(line.split("=")[1].strip())
+            logged_dict["s_factor"] = float(line.split("=")[1].split("#")[0].strip())
         if "DIFFICULTY_FACTOR" in line:
-            logged_dict["d_factor"] = float(line.split("=")[1].strip())
+            logged_dict["d_factor"] = float(line.split("=")[1].split("#")[0].strip())
         if "DIFFICULTY_MAX" in line:
-            logged_dict["d_max"] = float(line.split("=")[1].strip())
+            logged_dict["d_max"] = float(line.split("=")[1].split("#")[0].strip())
         if "DIFFICULTY_MIN" in line:
-            logged_dict["d_min"] = float(line.split("=")[1].strip())
+            logged_dict["d_min"] = float(line.split("=")[1].split("#")[0].strip())
         if "REWARD_TYPE" in line:
-            logged_dict["type"] = line.split("=")[1].strip()
+            logged_dict["type"] = line.split("=")[1].split("#")[0].strip()
             break
     config_dict["r"] = logged_dict
 
