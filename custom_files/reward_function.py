@@ -131,8 +131,8 @@ def reward_function(params):
             )
         else:
             reward = float(
-                STEP_BASE
-                + (difficulty * SPEED_FACTOR * step_progress) / projected_steps
+                (STEP_BASE + (difficulty * SPEED_FACTOR * step_progress))
+                / projected_steps
             )
         # Curve coaching
         for curve in CURVES:
