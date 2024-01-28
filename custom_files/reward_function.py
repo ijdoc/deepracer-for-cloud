@@ -3,7 +3,7 @@ import time
 
 # Reward parameters
 STEP_BASE = 0.1
-SPEED_FACTOR = 3.0
+SPEED_FACTOR = 2.5
 DIFFICULTY_MAX = 1.2
 DIFFICULTY_MIN = 0.1
 REWARD_TYPE = "additive"  # "additive" or "multiplicative
@@ -13,6 +13,10 @@ LAST_PROGRESS = 0.0
 TRACKS = {
     "caecer_loop": {"length": 39.12, "min_angle": 0.0, "max_angle": 0.18297208942448917}
 }
+CURVES = [
+    {"dir": "left", "start": 41, "cross": 48, "end": 60},
+    {"dir": "left", "start": 78, "cross": 82, "end": 92},
+]
 
 
 def get_next_distinct_index(i, waypoints):
@@ -117,35 +121,31 @@ def reward_function(params):
         is_finished = 1
         reward = 1e-5
     else:
-        # Agent needs a bit of coaching
-        if this_waypoint >= 45 and this_waypoint <= 63:
-            reward = float(1e-5)
-            if this_waypoint <= 49:
-                if params["speed"] <= 1.3:  # FIXME: Go slow (depends on model)
-                    reward += 1.0
-                if params["steering_angle"] > 5:  # Turn left
-                    reward += 1.0
-            else:
-                if params["is_left_of_center"]:  # Keep left
-                    reward += 1.0
-                if (
-                    params["heading"] >= -90 and params["heading"] <= -60
-                ):  # Aim straight ahead
-                    reward += 1.0
+        # projected_steps is the number of steps needed to finish the track
+        # divided by a factor of 100 to make it a reasonable number
+        projected_steps = params["steps"] / params["progress"]
+        if REWARD_TYPE == "additive":
+            reward = float(
+                (STEP_BASE + difficulty + (SPEED_FACTOR * step_progress))
+                / projected_steps
+            )
         else:
-            # projected_steps is the number of steps needed to finish the track
-            # divided by a factor of 100 to make it a reasonable number
-            projected_steps = params["steps"] / params["progress"]
-            if REWARD_TYPE == "additive":
-                reward = float(
-                    (STEP_BASE + difficulty + (SPEED_FACTOR * step_progress))
-                    / projected_steps
-                )
-            else:
-                reward = float(
-                    STEP_BASE
-                    + (difficulty * SPEED_FACTOR * step_progress) / projected_steps
-                )
+            reward = float(
+                STEP_BASE
+                + (difficulty * SPEED_FACTOR * step_progress) / projected_steps
+            )
+        # Curve coaching
+        for curve in CURVES:
+            if this_waypoint >= curve["start"] and this_waypoint < curve["cross"]:
+                if curve["dir"] == "left" and params["is_left_of_center"]:
+                    reward /= 10.0
+                if curve["dir"] == "right" and not params["is_left_of_center"]:
+                    reward /= 10.0
+            if this_waypoint > curve["cross"] and this_waypoint <= curve["end"]:
+                if curve["dir"] == "left" and not params["is_left_of_center"]:
+                    reward /= 10.0
+                if curve["dir"] == "right" and params["is_left_of_center"]:
+                    reward /= 10.0
 
     if params["progress"] == 100.0:
         is_finished = 1
