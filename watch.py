@@ -159,8 +159,6 @@ with open("./custom_files/reward_function.py", "r") as py_file:
             logged_dict["base"] = float(line.split("=")[1].split("#")[0].strip())
         if "SPEED_FACTOR" in line:
             logged_dict["s_factor"] = float(line.split("=")[1].split("#")[0].strip())
-        if "DIFFICULTY_FACTOR" in line:
-            logged_dict["d_factor"] = float(line.split("=")[1].split("#")[0].strip())
         if "DIFFICULTY_MAX" in line:
             logged_dict["d_max"] = float(line.split("=")[1].split("#")[0].strip())
         if "DIFFICULTY_MIN" in line:

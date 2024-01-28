@@ -3,11 +3,10 @@ import time
 
 # Reward parameters
 STEP_BASE = 0.1
-SPEED_FACTOR = 1.0
-DIFFICULTY_FACTOR = 1.0
-DIFFICULTY_MAX = 8.0
-DIFFICULTY_MIN = 1.0
-REWARD_TYPE = "multiplicative"  # "additive" or "multiplicative
+SPEED_FACTOR = 3.0
+DIFFICULTY_MAX = 1.2
+DIFFICULTY_MIN = 0.1
+REWARD_TYPE = "additive"  # "additive" or "multiplicative
 
 # Other globals
 LAST_PROGRESS = 0.0
@@ -71,6 +70,21 @@ def get_direction_change(i, waypoints):
     return (diff1 + diff0) / 2.0
 
 
+def gaussian(x, a, b, c):
+    """_summary_
+
+    Args:
+        x (float): the input value
+        a (float): height of the curve's peak
+        b (float): position of the center of the peak
+        c (float): width of the “bell”
+
+    Returns:
+        float: the value of the gaussian function at x
+    """
+    return a * math.exp(-((x - b) ** 2) / (2 * c**2))
+
+
 def sigmoid(x, k=3.9, x0=0.6, ymax=1.2):
     """
     Parametrized sigmoid function as seen on:
@@ -103,24 +117,35 @@ def reward_function(params):
         is_finished = 1
         reward = 1e-5
     else:
-        # projected_steps is the number of steps needed to finish the track
-        # divided by a factor of 100 to make it a reasonable number
-        projected_steps = params["steps"] / params["progress"]
-        if REWARD_TYPE == "additive":
-            reward = float(
-                (
-                    STEP_BASE
-                    + (DIFFICULTY_FACTOR * difficulty)
-                    + (SPEED_FACTOR * step_progress)
-                )
-                / projected_steps
-            )
+        # Agent needs a bit of coaching
+        if this_waypoint >= 45 and this_waypoint <= 63:
+            reward = float(1e-5)
+            if this_waypoint <= 49:
+                if params["speed"] <= 1.3:  # FIXME: Go slow (depends on model)
+                    reward += 1.0
+                if params["steering_angle"] > 5:  # Turn left
+                    reward += 1.0
+            else:
+                if params["is_left_of_center"]:  # Keep left
+                    reward += 1.0
+                if (
+                    params["heading"] >= -90 and params["heading"] <= -60
+                ):  # Aim straight ahead
+                    reward += 1.0
         else:
-            reward = float(
-                STEP_BASE
-                + (DIFFICULTY_FACTOR * difficulty * SPEED_FACTOR * step_progress)
-                / projected_steps
-            )
+            # projected_steps is the number of steps needed to finish the track
+            # divided by a factor of 100 to make it a reasonable number
+            projected_steps = params["steps"] / params["progress"]
+            if REWARD_TYPE == "additive":
+                reward = float(
+                    (STEP_BASE + difficulty + (SPEED_FACTOR * step_progress))
+                    / projected_steps
+                )
+            else:
+                reward = float(
+                    STEP_BASE
+                    + (difficulty * SPEED_FACTOR * step_progress) / projected_steps
+                )
 
     if params["progress"] == 100.0:
         is_finished = 1
