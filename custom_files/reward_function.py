@@ -2,21 +2,25 @@ import math
 import time
 
 # Reward parameters
-STEP_BASE = 0.1
-SPEED_FACTOR = 2.5
+STEP_BASE = 0.0
+SPEED_FACTOR = 3.0
 DIFFICULTY_MAX = 1.2
 DIFFICULTY_MIN = 0.1
 REWARD_TYPE = "additive"  # "additive" or "multiplicative
+IS_COACHED = False
 
 # Other globals
 LAST_PROGRESS = 0.0
-TRACKS = {
-    "caecer_loop": {"length": 39.12, "min_angle": 0.0, "max_angle": 0.18297208942448917}
+# caecer_loop
+TRACK = {
+    "length": 39.12,
+    "min_angle": 0.0,
+    "max_angle": 0.18297208942448917,
+    "curves": [
+        {"dir": "left", "start": 41, "cross": 47, "end": 60},
+        {"dir": "left", "start": 78, "cross": 81, "end": 92},
+    ],
 }
-CURVES = [
-    {"dir": "left", "start": 41, "cross": 48, "end": 60},
-    {"dir": "left", "start": 78, "cross": 82, "end": 92},
-]
 
 
 def get_next_distinct_index(i, waypoints):
@@ -109,7 +113,7 @@ def reward_function(params):
     difficulty = (
         (DIFFICULTY_MAX - DIFFICULTY_MIN)
         * abs(get_direction_change(this_waypoint, params["waypoints"]))
-        / TRACKS["caecer_loop"]["max_angle"]
+        / TRACK["max_angle"]
     ) + DIFFICULTY_MIN
 
     # Get the step progress
@@ -134,18 +138,18 @@ def reward_function(params):
                 (STEP_BASE + (difficulty * SPEED_FACTOR * step_progress))
                 / projected_steps
             )
-        # Curve coaching
-        for curve in CURVES:
-            if this_waypoint >= curve["start"] and this_waypoint < curve["cross"]:
-                if curve["dir"] == "left" and params["is_left_of_center"]:
-                    reward /= 10.0
-                if curve["dir"] == "right" and not params["is_left_of_center"]:
-                    reward /= 10.0
-            if this_waypoint > curve["cross"] and this_waypoint <= curve["end"]:
-                if curve["dir"] == "left" and not params["is_left_of_center"]:
-                    reward /= 10.0
-                if curve["dir"] == "right" and params["is_left_of_center"]:
-                    reward /= 10.0
+        if IS_COACHED:  # Curve coaching
+            for curve in TRACK["curves"]:
+                if this_waypoint >= curve["start"] and this_waypoint < curve["cross"]:
+                    if curve["dir"] == "left" and params["is_left_of_center"]:
+                        reward /= 10.0
+                    if curve["dir"] == "right" and not params["is_left_of_center"]:
+                        reward /= 10.0
+                if this_waypoint > curve["cross"] and this_waypoint <= curve["end"]:
+                    if curve["dir"] == "left" and not params["is_left_of_center"]:
+                        reward /= 10.0
+                    if curve["dir"] == "right" and params["is_left_of_center"]:
+                        reward /= 10.0
 
     if params["progress"] == 100.0:
         is_finished = 1
