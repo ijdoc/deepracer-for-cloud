@@ -157,14 +157,16 @@ with open("./custom_files/reward_function.py", "r") as py_file:
     for line in py_file.readlines():
         if "STEP_BASE" in line:
             logged_dict["base"] = float(line.split("=")[1].split("#")[0].strip())
-        if "SPEED_FACTOR" in line:
+        elif "SPEED_FACTOR" in line:
             logged_dict["s_factor"] = float(line.split("=")[1].split("#")[0].strip())
-        if "DIFFICULTY_MAX" in line:
+        elif "DIFFICULTY_MAX" in line:
             logged_dict["d_max"] = float(line.split("=")[1].split("#")[0].strip())
-        if "DIFFICULTY_MIN" in line:
+        elif "DIFFICULTY_MIN" in line:
             logged_dict["d_min"] = float(line.split("=")[1].split("#")[0].strip())
-        if "REWARD_TYPE" in line:
+        elif "REWARD_TYPE" in line:
             logged_dict["type"] = line.split("=")[1].split("#")[0].strip()
+        elif "IS_COACHED" in line:
+            logged_dict["coached"] = bool(line.split("=")[1].split("#")[0].strip())
             break
     config_dict["r"] = logged_dict
 
