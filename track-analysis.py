@@ -31,19 +31,18 @@ def main(track):
     outer_line = list([tuple(sublist[4:6]) for sublist in npy_data])
 
     for i in range(waypoint_count):
-        # TODO: Trace a line from inner to outer
-        change = reward_function.get_direction_change(i, center_line)
-        next_index = reward_function.get_next_distinct_index(i, center_line)
-        distance = (
-            ((center_line[next_index][0] - center_line[i][0]) ** 2)
-            + ((center_line[next_index][1] - center_line[i][1]) ** 2)
-        ) ** 0.5
-        change_rate = change / distance
-        if change_rate < difficulty["min"]:
-            difficulty["min"] = change_rate
-        if change_rate > difficulty["max"]:
-            difficulty["max"] = change_rate
-        print(f"{i}: {change_rate:0.4f}")
+        difficulty["ahead"] = 4
+        j = i
+        change = 0.0
+        for _ in range(difficulty["ahead"]):
+            change += reward_function.get_direction_change(j, center_line)
+            j = reward_function.get_next_distinct_index(j, center_line)
+        change = abs(change / difficulty["ahead"])
+        if change < difficulty["min"]:
+            difficulty["min"] = change
+        if change > difficulty["max"]:
+            difficulty["max"] = change
+        print(f"{i}: {change:0.4f}")
         plt.plot(
             [inner_line[i][0], outer_line[i][0]],
             [inner_line[i][1], outer_line[i][1]],

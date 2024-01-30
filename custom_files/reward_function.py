@@ -2,9 +2,10 @@ import math
 import time
 
 # Reward parameters
-STEP_BASE = 0.0
-SPEED_FACTOR = 3.0
-REWARD_TYPE = "additive"  # "additive" or "multiplicative
+SPEED_FACTOR = 1.0
+DIFFICULTY_MIN = 1.0
+DIFFICULTY_MAX = 10.0
+REWARD_TYPE = "multiplicative"  # "additive" or "multiplicative"
 IS_COACHED = False
 
 # Other globals
@@ -12,8 +13,11 @@ LAST_PROGRESS = 0.0
 # caecer_loop
 TRACK = {
     "length": 39.12,
-    "min_angle": 0.0,
-    "max_angle": 0.18297208942448917,
+    "difficulty": {
+        "min": 0.00044293424911018286,
+        "max": 0.1767213283925288,
+        "ahead": 4,
+    },
     "curves": [
         {"dir": "left", "start": 41, "cross": 47, "end": 60},
         {"dir": "left", "start": 78, "cross": 81, "end": 92},
@@ -91,12 +95,21 @@ def gaussian(x, a, b, c):
     return a * math.exp(-((x - b) ** 2) / (2 * c**2))
 
 
-def sigmoid(x, k=3.9, x0=0.6, ymax=1.2):
+def sigmoid(x, k=3.9, x0=0.6, ymin=0.0, ymax=1.2):
+    """Parametrized sigmoid function as seen on:
+       https://www.desmos.com/calculator/1c15zoa5b2
+
+    Args:
+        x (float): the input value
+        k (float): _summary_
+        x0 (float): _summary_
+        ymin (float): _summary_
+        ymax (float): _summary_
+
+    Returns:
+        float: the value of the sigmoid function at x
     """
-    Parametrized sigmoid function as seen on:
-    https://www.desmos.com/calculator/1c15zoa5b2
-    """
-    return ymax / (1 + math.exp(-k * (x - x0)))
+    return ((ymax - ymin) / (1 + math.exp(-k * (x - x0)))) + ymin
 
 
 def reward_function(params):
@@ -106,27 +119,19 @@ def reward_function(params):
     if params["steps"] <= 2:
         LAST_PROGRESS = 0.0
 
-    # Get waypoint reward for all waypoints covered since last step
+    # Get difficulty
     this_waypoint = params["closest_waypoints"][0]
-    next_waypoint = get_next_distinct_index(this_waypoint, params["waypoints"])
-    change = abs(get_direction_change(this_waypoint, params["waypoints"]))
-    distance = (
-        (
-            (
-                params["waypoints"][next_waypoint][0]
-                - params["waypoints"][this_waypoint][0]
-            )
-            ** 2
-        )
-        + (
-            (
-                params["waypoints"][next_waypoint][1]
-                - params["waypoints"][this_waypoint][1]
-            )
-            ** 2
-        )
-    ) ** 0.5
-    difficulty = change / distance
+    next_waypoint = this_waypoint
+    change = 0.0
+    for _ in range(TRACK["difficulty"]["ahead"]):
+        change += get_direction_change(this_waypoint, params["waypoints"])
+        next_waypoint = get_next_distinct_index(next_waypoint, params["waypoints"])
+    difficulty = abs(change / TRACK["difficulty"]["ahead"])
+    difficulty = (
+        (difficulty - TRACK["difficulty"]["min"])
+        / (TRACK["difficulty"]["max"] - TRACK["difficulty"]["min"])
+        * (DIFFICULTY_MAX - DIFFICULTY_MIN)
+    ) + DIFFICULTY_MIN
 
     # Get the step progress
     step_progress = params["progress"] - LAST_PROGRESS
@@ -142,13 +147,11 @@ def reward_function(params):
         projected_steps = params["steps"] / params["progress"]
         if REWARD_TYPE == "additive":
             reward = float(
-                (STEP_BASE + difficulty + (SPEED_FACTOR * step_progress))
-                / projected_steps
+                (difficulty + (SPEED_FACTOR * step_progress)) / projected_steps
             )
         else:
             reward = float(
-                (STEP_BASE + (difficulty * SPEED_FACTOR * step_progress))
-                / projected_steps
+                ((difficulty * SPEED_FACTOR * step_progress)) / projected_steps
             )
         if IS_COACHED:  # Curve coaching
             for curve in TRACK["curves"]:
