@@ -3,13 +3,12 @@ import time
 
 # Reward parameters
 STEP_BASE = 0.0
-SPEED_FACTOR = 1.0
+SPEED_FACTOR = 3.0
 REWARD_TYPE = "additive"  # "additive" or "multiplicative
 IS_COACHED = False
 
 # Other globals
 LAST_PROGRESS = 0.0
-LAST_WAYPOINT = 0
 # caecer_loop
 TRACK = {
     "length": 39.12,
@@ -102,37 +101,32 @@ def sigmoid(x, k=3.9, x0=0.6, ymax=1.2):
 
 def reward_function(params):
     global LAST_PROGRESS
-    global LAST_WAYPOINT
 
     # Reset progress at the beginning
     if params["steps"] <= 2:
         LAST_PROGRESS = 0.0
-        LAST_WAYPOINT = params["closest_waypoints"][0]
 
     # Get waypoint reward for all waypoints covered since last step
     this_waypoint = params["closest_waypoints"][0]
-    milestone = 0.0
-    while this_waypoint > LAST_WAYPOINT:
-        next_waypoint = get_next_distinct_index(LAST_WAYPOINT, params["waypoints"])
-        change = abs(get_direction_change(LAST_WAYPOINT, params["waypoints"]))
-        distance = (
+    next_waypoint = get_next_distinct_index(this_waypoint, params["waypoints"])
+    change = abs(get_direction_change(this_waypoint, params["waypoints"]))
+    distance = (
+        (
             (
-                (
-                    params["waypoints"][next_waypoint][0]
-                    - params["waypoints"][LAST_WAYPOINT][0]
-                )
-                ** 2
+                params["waypoints"][next_waypoint][0]
+                - params["waypoints"][this_waypoint][0]
             )
-            + (
-                (
-                    params["waypoints"][next_waypoint][1]
-                    - params["waypoints"][LAST_WAYPOINT][1]
-                )
-                ** 2
+            ** 2
+        )
+        + (
+            (
+                params["waypoints"][next_waypoint][1]
+                - params["waypoints"][this_waypoint][1]
             )
-        ) ** 0.5
-        milestone += change / distance
-        LAST_WAYPOINT = next_waypoint
+            ** 2
+        )
+    ) ** 0.5
+    difficulty = change / distance
 
     # Get the step progress
     step_progress = params["progress"] - LAST_PROGRESS
@@ -148,12 +142,12 @@ def reward_function(params):
         projected_steps = params["steps"] / params["progress"]
         if REWARD_TYPE == "additive":
             reward = float(
-                (STEP_BASE + milestone + (SPEED_FACTOR * step_progress))
+                (STEP_BASE + difficulty + (SPEED_FACTOR * step_progress))
                 / projected_steps
             )
         else:
             reward = float(
-                (STEP_BASE + (milestone * SPEED_FACTOR * step_progress))
+                (STEP_BASE + (difficulty * SPEED_FACTOR * step_progress))
                 / projected_steps
             )
         if IS_COACHED:  # Curve coaching
@@ -174,7 +168,7 @@ def reward_function(params):
 
     # This trace is needed for test logging
     print(
-        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{step_progress},{milestone},{params['speed']},{params['steering_angle']},{reward},{is_finished}"
+        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{step_progress},{difficulty},{params['speed']},{params['steering_angle']},{reward},{is_finished}"
     )
 
     return reward

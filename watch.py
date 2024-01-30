@@ -66,7 +66,7 @@ def reset_tables():
         "waypoint",
         "progress",
         "step_progress",
-        "milestone",
+        "difficulty",
         "throttle",
         "steer",
         "reward",
@@ -212,7 +212,7 @@ def process_line(line):
         waypoint = int(float(parts[1]))
         progress = float(parts[2])
         speed = float(parts[3])
-        milestone = float(parts[4])
+        difficulty = float(parts[4])
         throttle = float(parts[5])
         steer = float(parts[6])
         reward = float(parts[7])
@@ -227,7 +227,7 @@ def process_line(line):
                 waypoint,
                 progress,
                 speed,
-                milestone,
+                difficulty,
                 throttle,
                 steer,
                 reward,
