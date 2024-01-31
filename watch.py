@@ -210,7 +210,7 @@ def process_line(line):
         steps = int(float(parts[0]))
         waypoint = int(float(parts[1]))
         progress = float(parts[2])
-        step_progress = float(parts[3])
+        speed = float(parts[3])
         difficulty = float(parts[4])
         boost = float(parts[5])
         throttle = float(parts[6])
@@ -226,7 +226,7 @@ def process_line(line):
                 steps,
                 waypoint,
                 progress,
-                step_progress,
+                speed,
                 difficulty,
                 boost,
                 throttle,
