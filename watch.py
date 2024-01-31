@@ -53,8 +53,8 @@ os.environ["WANDB_RESUME"] = "allow"
 
 def reset_iter_metrics():
     return {
-        "test": {"reward": [], "steps": [], "progress": [], "speed": []},
-        "train": {"reward": [], "steps": [], "progress": [], "speed": []},
+        "test": {"reward": [], "steps": [], "progress": []},
+        "train": {"reward": [], "steps": [], "progress": []},
         "learn": {"loss": [], "KL_div": [], "entropy": []},
     }
 
@@ -65,11 +65,10 @@ def reset_tables():
         "step",
         "waypoint",
         "progress",
-        "step_progress",
-        "difficulty",
-        "boost",
         "throttle",
         "steer",
+        "projected_steps",
+        "step_reward",
         "reward",
     ]
     return {
@@ -79,16 +78,16 @@ def reset_tables():
 
 
 ckpt_metrics = {
-    "test": {"reward": None, "steps": None, "progress": None, "speed": None},
-    "train": {"reward": None, "steps": None, "progress": None, "speed": None},
+    "test": {"reward": None, "steps": None, "progress": None, "lap": None},
+    "train": {"reward": None, "steps": None, "progress": None, "lap": None},
     "learn": {"loss": None, "KL_div": None, "entropy": None},
 }
 iter_metrics = reset_iter_metrics()
-best_metrics = {"reward": -1.0, "progress": 0.0, "speed": 0.0, "steps": 100000.0}
+best_metrics = {"reward": -1.0, "progress": 0.0, "lap": 10000.0, "steps": 100000.0}
 is_testing = False
-trial_metrics = {
-    "train": {"speed": [], "reward": []},
-    "test": {"speed": [], "reward": []},
+step_metrics = {
+    "train": {"reward": []},
+    "test": {"reward": []},
 }
 checkpoint = -1
 episode = {"train": 1, "test": 1}
@@ -153,21 +152,21 @@ with open("./custom_files/model_metadata.json", "r") as json_file:
 
 
 # Open reward file for reading
-with open("./custom_files/reward_function.py", "r") as py_file:
-    logged_dict = {}
-    for line in py_file.readlines():
-        if "SPEED_FACTOR" in line:
-            logged_dict["s_factor"] = float(line.split("=")[1].split("#")[0].strip())
-        elif "DIFFICULTY_MAX" in line:
-            logged_dict["d_max"] = float(line.split("=")[1].split("#")[0].strip())
-        elif "DIFFICULTY_MIN" in line:
-            logged_dict["d_min"] = float(line.split("=")[1].split("#")[0].strip())
-        elif "REWARD_TYPE" in line:
-            logged_dict["type"] = line.split("=")[1].split("#")[0].strip()
-        elif "IS_COACHED" in line:
-            logged_dict["coached"] = bool(line.split("=")[1].split("#")[0].strip())
-            break
-    config_dict["r"] = logged_dict
+# with open("./custom_files/reward_function.py", "r") as py_file:
+#     logged_dict = {}
+#     for line in py_file.readlines():
+#         if "SPEED_FACTOR" in line:
+#             logged_dict["s_factor"] = float(line.split("=")[1].split("#")[0].strip())
+#         elif "DIFFICULTY_MAX" in line:
+#             logged_dict["d_max"] = float(line.split("=")[1].split("#")[0].strip())
+#         elif "DIFFICULTY_MIN" in line:
+#             logged_dict["d_min"] = float(line.split("=")[1].split("#")[0].strip())
+#         elif "REWARD_TYPE" in line:
+#             logged_dict["type"] = line.split("=")[1].split("#")[0].strip()
+#         elif "IS_COACHED" in line:
+#             logged_dict["coached"] = bool(line.split("=")[1].split("#")[0].strip())
+#             break
+#     config_dict["r"] = logged_dict
 
 # Start training job
 if not DEBUG:
@@ -202,7 +201,7 @@ def process_line(line):
     global best_metrics
     global checkpoint
     global tables
-    global trial_metrics
+    global step_metrics
 
     timestamp = datetime.now()
     if "MY_TRACE_LOG" in line:
@@ -210,13 +209,12 @@ def process_line(line):
         steps = int(float(parts[0]))
         waypoint = int(float(parts[1]))
         progress = float(parts[2])
-        speed = float(parts[3])
-        difficulty = float(parts[4])
-        boost = float(parts[5])
-        throttle = float(parts[6])
-        steer = float(parts[7])
-        reward = float(parts[8])
-        is_finished = int(parts[9])
+        throttle = float(parts[3])
+        steer = float(parts[4])
+        projected_steps = float(parts[5])
+        step_reward = float(parts[6])
+        reward = float(parts[7])
+        is_finished = int(parts[8])
         job = "train"
         if is_testing:
             job = "test"
@@ -226,27 +224,21 @@ def process_line(line):
                 steps,
                 waypoint,
                 progress,
-                speed,
-                difficulty,
-                boost,
                 throttle,
                 steer,
+                projected_steps,
+                step_reward,
                 reward,
             )
-        trial_metrics[job]["speed"].append(speed)
-        trial_metrics[job]["reward"].append(reward)
+        step_metrics[job]["reward"].append(reward)
         if is_finished == 1:
-            speed = np.mean(trial_metrics[job]["speed"])
-            reward = np.sum(trial_metrics[job]["reward"])
+            reward = np.sum(step_metrics[job]["reward"])
             steps = 100.0 * steps / progress
+            lap = steps / 15
             iter_metrics[job]["reward"].append(reward)
             iter_metrics[job]["steps"].append(steps)
             iter_metrics[job]["progress"].append(progress)
-            iter_metrics[job]["speed"].append(speed)
-            # print(
-            #     f"{timestamp} iter: {reward:0.2f}, {progress:0.2f}%, {steps:0.2f} steps"
-            # )
-            trial_metrics[job] = {"speed": [], "reward": []}
+            step_metrics[job] = {"reward": []}
         if DEBUG:
             print(f"{timestamp} {line}")
 
@@ -279,9 +271,9 @@ def process_line(line):
             checkpoint += 1
             for job in ["test", "train"]:
                 ckpt_metrics[job]["reward"] = np.mean(iter_metrics[job]["reward"])
-                ckpt_metrics[job]["speed"] = np.mean(iter_metrics[job]["speed"])
                 ckpt_metrics[job]["progress"] = np.mean(iter_metrics[job]["progress"])
                 ckpt_metrics[job]["steps"] = np.mean(iter_metrics[job]["steps"])
+                ckpt_metrics[job]["lap"] = ckpt_metrics[job]["steps"] / 15.0
             # print(
             #     f'{timestamp} Same? {ckpt_metrics["test"]["reward"]:0.3f}, {float(test_reward):0.3f}'
             # )
@@ -296,7 +288,7 @@ def process_line(line):
                 and ckpt_metrics["test"]["steps"] < best_metrics["steps"]
             ):
                 best_metrics["reward"] = ckpt_metrics["test"]["reward"]
-                best_metrics["speed"] = ckpt_metrics["test"]["speed"]
+                best_metrics["lap"] = ckpt_metrics["test"]["lap"]
                 best_metrics["steps"] = ckpt_metrics["test"]["steps"]
                 best_metrics["progress"] = ckpt_metrics["test"]["progress"]
                 print(
@@ -333,12 +325,12 @@ def process_line(line):
                         "train/reward": ckpt_metrics["train"]["reward"],
                         "train/steps": ckpt_metrics["train"]["steps"],
                         "train/progress": ckpt_metrics["train"]["progress"],
-                        "train/speed": ckpt_metrics["train"]["speed"],
+                        "train/lap": ckpt_metrics["train"]["lap"],
                         "learn/loss": ckpt_metrics["learn"]["loss"],
                         "learn/KL_div": ckpt_metrics["learn"]["KL_div"],
                         "learn/entropy": ckpt_metrics["learn"]["entropy"],
                         "test/reward": ckpt_metrics["test"]["reward"],
-                        "test/speed": ckpt_metrics["test"]["speed"],
+                        "test/lap": ckpt_metrics["test"]["lap"],
                         "test/steps": ckpt_metrics["test"]["steps"],
                         "test/progress": ckpt_metrics["test"]["progress"],
                         "train_trace": tables["train"],
@@ -347,7 +339,7 @@ def process_line(line):
                 )
                 # Update test metrics summary
                 wandb.run.summary["test/reward"] = best_metrics["reward"]
-                wandb.run.summary["test/speed"] = best_metrics["speed"]
+                wandb.run.summary["test/lap"] = best_metrics["lap"]
                 wandb.run.summary["test/steps"] = best_metrics["steps"]
                 wandb.run.summary["test/progress"] = best_metrics["progress"]
         # Resetting tracker variables

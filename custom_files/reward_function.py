@@ -1,11 +1,6 @@
 import math
 import time
 
-# Reward parameters
-DIFFICULTY_MIN = 1.0
-DIFFICULTY_MAX = 4.0
-IS_COACHED = False
-
 # Other globals
 LAST_PROGRESS = 0.0
 # caecer_loop
@@ -111,64 +106,34 @@ def sigmoid(x, k=3.9, x0=0.6, ymin=0.0, ymax=1.2):
 
 
 def reward_function(params):
-    global LAST_PROGRESS
-
-    # Reset progress at the beginning
-    if params["steps"] <= 2:
-        LAST_PROGRESS = 0.0
-
-    # Get difficulty
     this_waypoint = params["closest_waypoints"][0]
-    next_waypoint = this_waypoint
-    change = 0.0
-    for _ in range(TRACK["difficulty"]["ahead"]):
-        change += get_direction_change(this_waypoint, params["waypoints"])
-        next_waypoint = get_next_distinct_index(next_waypoint, params["waypoints"])
-    difficulty = abs(change / TRACK["difficulty"]["ahead"])
-    difficulty = (
-        (difficulty - TRACK["difficulty"]["min"])
-        / (TRACK["difficulty"]["max"] - TRACK["difficulty"]["min"])
-        * (DIFFICULTY_MAX - DIFFICULTY_MIN)
-    ) + DIFFICULTY_MIN
-
-    # Get the step progress
-    step_progress = params["progress"] - LAST_PROGRESS
-    LAST_PROGRESS = params["progress"]
 
     # projected_steps is the estimated number of steps needed to
-    # finish the track, divided by 100
+    # finish the track, divided by 100, so if the model finishes
+    # the track in 200 steps, projected_steps should be ~2.0 on
+    # average
     projected_steps = params["steps"] / params["progress"]
-    steps_boost = 0.5 / (projected_steps - 1.0)
+
+    # @350 steps, ~0.184 per step = 64.4 reward
+    # @300 steps, ~0.25 per step = 75 reward
+    # @250 steps, ~0.36 per step = 90 reward
+    # @200 steps, ~0.563 per step = 112.6 reward
+    # @150 steps, ~1 per step = 150 reward
+    step_reward = 2.25 / (projected_steps**2)
 
     is_finished = 0
     if params["is_offtrack"]:
         is_finished = 1
         reward = 1e-5
     else:
-        # if REWARD_TYPE == "additive":
-        #     reward = float((difficulty + (SPEED_FACTOR * step_progress)) * steps_boost)
-        # else:
-        #     reward = float(((difficulty * SPEED_FACTOR * step_progress)) * steps_boost)
-        reward = float(step_progress * difficulty * steps_boost)
-        if IS_COACHED:  # Curve coaching
-            for curve in TRACK["curves"]:
-                if this_waypoint >= curve["start"] and this_waypoint < curve["cross"]:
-                    if curve["dir"] == "left" and params["is_left_of_center"]:
-                        reward /= 10.0
-                    if curve["dir"] == "right" and not params["is_left_of_center"]:
-                        reward /= 10.0
-                if this_waypoint > curve["cross"] and this_waypoint <= curve["end"]:
-                    if curve["dir"] == "left" and not params["is_left_of_center"]:
-                        reward /= 10.0
-                    if curve["dir"] == "right" and params["is_left_of_center"]:
-                        reward /= 10.0
+        reward = float(2.0 * step_reward)
 
     if params["progress"] == 100.0:
         is_finished = 1
 
     # This trace is needed for test logging
     print(
-        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{step_progress},{difficulty},{steps_boost},{params['speed']},{params['steering_angle']},{reward},{is_finished}"
+        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{params['speed']},{params['steering_angle']},{projected_steps * 100},{step_reward},{reward},{is_finished}"
     )
 
     return reward
