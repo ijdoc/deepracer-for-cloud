@@ -65,7 +65,7 @@ def reset_tables():
         "step",
         "waypoint",
         "progress",
-        "step_progress",
+        "speed_boost",
         "difficulty",
         "throttle",
         "steer",
