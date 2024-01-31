@@ -111,11 +111,11 @@ def sigmoid(x, k=3.9, x0=0.6, ymin=0.0, ymax=1.2):
 
 
 def reward_function(params):
-    # global LAST_PROGRESS
+    global LAST_PROGRESS
 
     # Reset progress at the beginning
-    # if params["steps"] <= 2:
-    #     LAST_PROGRESS = 0.0
+    if params["steps"] <= 2:
+        LAST_PROGRESS = 0.0
 
     # Get difficulty
     this_waypoint = params["closest_waypoints"][0]
@@ -132,8 +132,8 @@ def reward_function(params):
     ) + DIFFICULTY_MIN
 
     # Get the step progress
-    # step_progress = params["progress"] - LAST_PROGRESS
-    # LAST_PROGRESS = params["progress"]
+    step_progress = params["progress"] - LAST_PROGRESS
+    LAST_PROGRESS = params["progress"]
 
     # projected_steps is the estimated number of steps needed to
     # finish the track, divided by 100
@@ -149,7 +149,7 @@ def reward_function(params):
         #     reward = float((difficulty + (SPEED_FACTOR * step_progress)) * steps_boost)
         # else:
         #     reward = float(((difficulty * SPEED_FACTOR * step_progress)) * steps_boost)
-        reward = float(difficulty * steps_boost)
+        reward = float(step_progress * difficulty * steps_boost)
         if IS_COACHED:  # Curve coaching
             for curve in TRACK["curves"]:
                 if this_waypoint >= curve["start"] and this_waypoint < curve["cross"]:
@@ -168,7 +168,7 @@ def reward_function(params):
 
     # This trace is needed for test logging
     print(
-        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{steps_boost},{difficulty},{params['speed']},{params['steering_angle']},{reward},{is_finished}"
+        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{step_progress},{difficulty},{steps_boost},{params['speed']},{params['steering_angle']},{reward},{is_finished}"
     )
 
     return reward
