@@ -68,7 +68,7 @@ def reset_tables():
         "throttle",
         "steer",
         "projected_steps",
-        "step_reward",
+        "step_progress",
         "reward",
     ]
     return {
@@ -78,12 +78,12 @@ def reset_tables():
 
 
 ckpt_metrics = {
-    "test": {"reward": None, "steps": None, "progress": None, "lap": None},
-    "train": {"reward": None, "steps": None, "progress": None, "lap": None},
+    "test": {"reward": None, "steps": None, "progress": None},
+    "train": {"reward": None, "steps": None, "progress": None},
     "learn": {"loss": None, "KL_div": None, "entropy": None},
 }
 iter_metrics = reset_iter_metrics()
-best_metrics = {"reward": -1.0, "progress": 0.0, "lap": 10000.0, "steps": 100000.0}
+best_metrics = {"reward": -1.0, "progress": 0.0, "steps": 100000.0}
 is_testing = False
 step_metrics = {
     "train": {"reward": []},
@@ -212,7 +212,7 @@ def process_line(line):
         throttle = float(parts[3])
         steer = float(parts[4])
         projected_steps = float(parts[5])
-        step_reward = float(parts[6])
+        step_progress = float(parts[6])
         reward = float(parts[7])
         is_finished = int(parts[8])
         job = "train"
@@ -227,14 +227,13 @@ def process_line(line):
                 throttle,
                 steer,
                 projected_steps,
-                step_reward,
+                step_progress,
                 reward,
             )
         step_metrics[job]["reward"].append(reward)
         if is_finished == 1:
             reward = np.sum(step_metrics[job]["reward"])
             steps = 100.0 * steps / progress
-            lap = steps / 15
             iter_metrics[job]["reward"].append(reward)
             iter_metrics[job]["steps"].append(steps)
             iter_metrics[job]["progress"].append(progress)
@@ -273,7 +272,6 @@ def process_line(line):
                 ckpt_metrics[job]["reward"] = np.mean(iter_metrics[job]["reward"])
                 ckpt_metrics[job]["progress"] = np.mean(iter_metrics[job]["progress"])
                 ckpt_metrics[job]["steps"] = np.mean(iter_metrics[job]["steps"])
-                ckpt_metrics[job]["lap"] = ckpt_metrics[job]["steps"] / 15.0
             # print(
             #     f'{timestamp} Same? {ckpt_metrics["test"]["reward"]:0.3f}, {float(test_reward):0.3f}'
             # )
@@ -288,7 +286,6 @@ def process_line(line):
                 and ckpt_metrics["test"]["steps"] < best_metrics["steps"]
             ):
                 best_metrics["reward"] = ckpt_metrics["test"]["reward"]
-                best_metrics["lap"] = ckpt_metrics["test"]["lap"]
                 best_metrics["steps"] = ckpt_metrics["test"]["steps"]
                 best_metrics["progress"] = ckpt_metrics["test"]["progress"]
                 print(
@@ -325,12 +322,10 @@ def process_line(line):
                         "train/reward": ckpt_metrics["train"]["reward"],
                         "train/steps": ckpt_metrics["train"]["steps"],
                         "train/progress": ckpt_metrics["train"]["progress"],
-                        "train/lap": ckpt_metrics["train"]["lap"],
                         "learn/loss": ckpt_metrics["learn"]["loss"],
                         "learn/KL_div": ckpt_metrics["learn"]["KL_div"],
                         "learn/entropy": ckpt_metrics["learn"]["entropy"],
                         "test/reward": ckpt_metrics["test"]["reward"],
-                        "test/lap": ckpt_metrics["test"]["lap"],
                         "test/steps": ckpt_metrics["test"]["steps"],
                         "test/progress": ckpt_metrics["test"]["progress"],
                         "train_trace": tables["train"],
@@ -339,7 +334,6 @@ def process_line(line):
                 )
                 # Update test metrics summary
                 wandb.run.summary["test/reward"] = best_metrics["reward"]
-                wandb.run.summary["test/lap"] = best_metrics["lap"]
                 wandb.run.summary["test/steps"] = best_metrics["steps"]
                 wandb.run.summary["test/progress"] = best_metrics["progress"]
         # Resetting tracker variables

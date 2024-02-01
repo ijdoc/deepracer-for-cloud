@@ -106,6 +106,16 @@ def sigmoid(x, k=3.9, x0=0.6, ymin=0.0, ymax=1.2):
 
 
 def reward_function(params):
+    global LAST_PROGRESS
+
+    # Reset progress at the beginning
+    if params["steps"] <= 2:
+        LAST_PROGRESS = params["progress"]
+
+    # Get the step progress
+    step_progress = params["progress"] - LAST_PROGRESS
+    LAST_PROGRESS = params["progress"]
+
     this_waypoint = params["closest_waypoints"][0]
 
     # projected_steps is the estimated number of steps needed to
@@ -119,21 +129,21 @@ def reward_function(params):
     # @250 steps, ~0.36 per step = 90 reward
     # @200 steps, ~0.563 per step = 112.6 reward
     # @150 steps, ~1 per step = 150 reward
-    step_reward = 2.25 / (projected_steps**2)
+    step_boost = 2.25 / (projected_steps**2)
 
     is_finished = 0
     if params["is_offtrack"]:
         is_finished = 1
         reward = 1e-5
     else:
-        reward = float(2.0 * step_reward)
+        reward = float(4.0 * step_boost * step_progress)
 
     if params["progress"] == 100.0:
         is_finished = 1
 
     # This trace is needed for test logging
     print(
-        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{params['speed']},{params['steering_angle']},{projected_steps * 100},{step_reward},{reward},{is_finished}"
+        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{params['speed']},{params['steering_angle']},{projected_steps * 100},{step_progress},{reward},{is_finished}"
     )
 
     return reward
