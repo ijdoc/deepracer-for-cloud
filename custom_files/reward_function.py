@@ -112,7 +112,7 @@ def reward_function(params):
 
     if params["steps"] <= 2:
         # Reset progress at the beginning of the episode
-        LAST_PROGRESS = params["progress"]
+        LAST_PROGRESS = 0.0
 
     # Get the step progress
     step_progress = params["progress"] - LAST_PROGRESS
@@ -128,7 +128,7 @@ def reward_function(params):
     else:
         projected_steps = 1 / step_progress
 
-    if step_progress > 0.0:
+    if step_progress >= 0.0:
         # We reward projected_steps based on each step's progress.
         # The sigmoid saturates outliers to a reward equivalent to the target
         # projected_steps, which is 1.5 (or 150 actual steps) in our case.
@@ -144,15 +144,13 @@ def reward_function(params):
         # We are going backwards
         step_reward = -sigmoid(-projected_steps, k=-3.3, x0=1.25, ymin=0.0, ymax=3.3)
 
-    is_finished = 0
-    if params["is_offtrack"]:
-        is_finished = 1
-        reward = 1e-5
-    else:
-        reward = float(2.0 * step_reward)
+    reward = float(2.0 * step_reward)
 
-    if params["progress"] == 100.0:
+    is_finished = 0
+    if params["is_offtrack"] or params["progress"] == 100.0:
         is_finished = 1
+        if params["is_offtrack"]:
+            reward /= 1000.0
 
     # This trace is needed for test logging
     print(
