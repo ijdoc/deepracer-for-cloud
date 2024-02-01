@@ -104,6 +104,14 @@ def sigmoid(x, k=3.9, x0=0.6, ymin=0.0, ymax=1.2):
     Returns:
         float: the value of the sigmoid function at x
     """
+
+    # Prevent math range error for large values of k * (x - x0)
+    exp_arg = -k * (x - x0)
+    if exp_arg < -700:  # any number smaller than this will cause underflow
+        return ymin
+    if exp_arg > 700:  # any number larger than this will cause overflow
+        return ymax
+
     return ((ymax - ymin) / (1 + math.exp(-k * (x - x0)))) + ymin
 
 
