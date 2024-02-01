@@ -1,6 +1,8 @@
 import math
 import time
 
+REWARD_TYPE = "sigmoid"
+
 # Other globals
 LAST_PROGRESS = 0.0
 # caecer_loop
@@ -108,8 +110,8 @@ def sigmoid(x, k=3.9, x0=0.6, ymin=0.0, ymax=1.2):
 def reward_function(params):
     global LAST_PROGRESS
 
-    # Reset progress at the beginning
     if params["steps"] <= 2:
+        # Reset progress at the beginning of the episode
         LAST_PROGRESS = params["progress"]
 
     # Get the step progress
@@ -118,32 +120,43 @@ def reward_function(params):
 
     this_waypoint = params["closest_waypoints"][0]
 
-    # projected_steps is the estimated number of steps needed to
-    # finish the track, divided by 100, so if the model finishes
-    # the track in 200 steps, projected_steps should be ~2.0 on
-    # average
-    projected_steps = params["steps"] / params["progress"]
+    # projected_steps is 0.01 of steps needed to finish the track,
+    # so if the model finishes in 200 steps, projected_steps
+    # should be 2.0 on average
+    if step_progress == 0.0:
+        projected_steps = 100  # 10000 actual steps
+    else:
+        projected_steps = 1 / step_progress
 
-    # @350 steps, ~0.184 per step = 64.4 reward
-    # @300 steps, ~0.25 per step = 75 reward
-    # @250 steps, ~0.36 per step = 90 reward
-    # @200 steps, ~0.563 per step = 112.6 reward
-    # @150 steps, ~1 per step = 150 reward
-    step_boost = 2.25 / (projected_steps**2)
+    if step_progress > 0.0:
+        # We reward projected_steps based on each step's progress.
+        # The sigmoid saturates outliers to a reward equivalent to the target
+        # projected_steps, which is 1.5 (or 150 actual steps) in our case.
+        # @350 steps, ~1 reward
+        # @300 steps, ~3 reward
+        # @250 steps, ~13 reward
+        # @200 steps, ~50 reward
+        # @150 steps, ~150 reward
+        # @100 steps, ~230 reward
+        # @50 steps, ~150 reward
+        step_reward = sigmoid(projected_steps, k=-3.3, x0=1.25, ymin=0.0, ymax=3.3)
+    else:
+        # We are going backwards
+        step_reward = -sigmoid(-projected_steps, k=-3.3, x0=1.25, ymin=0.0, ymax=3.3)
 
     is_finished = 0
     if params["is_offtrack"]:
         is_finished = 1
         reward = 1e-5
     else:
-        reward = float(4.0 * step_boost * step_progress)
+        reward = float(2.0 * step_reward)
 
     if params["progress"] == 100.0:
         is_finished = 1
 
     # This trace is needed for test logging
     print(
-        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{params['speed']},{params['steering_angle']},{projected_steps * 100},{step_progress},{reward},{is_finished}"
+        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{params['speed']},{params['steering_angle']},{step_progress},{projected_steps * 100},{reward},{is_finished}"
     )
 
     return reward

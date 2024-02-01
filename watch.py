@@ -67,8 +67,8 @@ def reset_tables():
         "progress",
         "throttle",
         "steer",
-        "projected_steps",
         "step_progress",
+        "projected_steps",
         "reward",
     ]
     return {
@@ -152,21 +152,13 @@ with open("./custom_files/model_metadata.json", "r") as json_file:
 
 
 # Open reward file for reading
-# with open("./custom_files/reward_function.py", "r") as py_file:
-#     logged_dict = {}
-#     for line in py_file.readlines():
-#         if "SPEED_FACTOR" in line:
-#             logged_dict["s_factor"] = float(line.split("=")[1].split("#")[0].strip())
-#         elif "DIFFICULTY_MAX" in line:
-#             logged_dict["d_max"] = float(line.split("=")[1].split("#")[0].strip())
-#         elif "DIFFICULTY_MIN" in line:
-#             logged_dict["d_min"] = float(line.split("=")[1].split("#")[0].strip())
-#         elif "REWARD_TYPE" in line:
-#             logged_dict["type"] = line.split("=")[1].split("#")[0].strip()
-#         elif "IS_COACHED" in line:
-#             logged_dict["coached"] = bool(line.split("=")[1].split("#")[0].strip())
-#             break
-#     config_dict["r"] = logged_dict
+with open("./custom_files/reward_function.py", "r") as py_file:
+    logged_dict = {}
+    for line in py_file.readlines():
+        if "REWARD_TYPE" in line:
+            logged_dict["type"] = line.split("=")[1].split("#")[0].strip()
+            break
+    config_dict["r"] = logged_dict
 
 # Start training job
 if not DEBUG:
@@ -211,8 +203,8 @@ def process_line(line):
         progress = float(parts[2])
         throttle = float(parts[3])
         steer = float(parts[4])
-        projected_steps = float(parts[5])
-        step_progress = float(parts[6])
+        step_progress = float(parts[5])
+        projected_steps = float(parts[6])
         reward = float(parts[7])
         is_finished = int(parts[8])
         job = "train"
@@ -226,8 +218,8 @@ def process_line(line):
                 progress,
                 throttle,
                 steer,
-                projected_steps,
                 step_progress,
+                projected_steps,
                 reward,
             )
         step_metrics[job]["reward"].append(reward)
