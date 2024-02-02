@@ -155,22 +155,22 @@ def reward_function(params):
         # Process curve exceptions
         if this_waypoint >= curve["start"] and this_waypoint <= curve["exit"]:
             # Penalize speeding on curves
-            # if this_waypoint <= curve["end"]:
-            #     change = 0.0
-            #     j = this_waypoint
-            #     for _ in range(TRACK["change"]["ahead"]):
-            #         j = get_next_distinct_index(j, params["waypoints"])
-            #         change += get_direction_change(j, params["waypoints"])
-            #     change = abs(change)
-            #     normalized = (change - TRACK["change"]["min"]) / (
-            #         TRACK["change"]["max"] - TRACK["change"]["min"]
-            #     )
-            #     suggested_throttle = (
-            #         (1.0 - normalized) * (MODEL["max"] - MODEL["min"])
-            #     ) + MODEL["min"]
-            #     throttle_diff = abs(suggested_throttle - params["speed"])
-            #     throttle_diff_normalized = throttle_diff / (MODEL["max"] - MODEL["min"])
-            #     coaching_factor = 1.0 - throttle_diff_normalized
+            if this_waypoint <= curve["end"]:
+                change = 0.0
+                j = this_waypoint
+                for _ in range(TRACK["change"]["ahead"]):
+                    j = get_next_distinct_index(j, params["waypoints"])
+                    change += get_direction_change(j, params["waypoints"])
+                change = abs(change)
+                normalized = (change - TRACK["change"]["min"]) / (
+                    TRACK["change"]["max"] - TRACK["change"]["min"]
+                )
+                suggested_throttle = (
+                    (1.0 - normalized) * (MODEL["max"] - MODEL["min"])
+                ) + MODEL["min"]
+                throttle_diff = abs(suggested_throttle - params["speed"])
+                throttle_diff_normalized = throttle_diff / (MODEL["max"] - MODEL["min"])
+                coaching_factor = 1.0 - throttle_diff_normalized
             # Penalize the wrong side of the track
             if curve["dir"] == "left":
                 if this_waypoint < curve["cross"] and params["is_left_of_center"]:
