@@ -65,8 +65,8 @@ def reset_tables():
         "step",
         "waypoint",
         "progress",
-        "throttle",
-        "steer",
+        "expected_heading",
+        "actual_heading",
         "step_progress",
         "projected_steps",
         "reward",
@@ -155,8 +155,12 @@ with open("./custom_files/model_metadata.json", "r") as json_file:
 with open("./custom_files/reward_function.py", "r") as py_file:
     logged_dict = {}
     for line in py_file.readlines():
-        if "REWARD_TYPE" in line:
-            logged_dict["type"] = line.split("=")[1].split("#")[0].strip()
+        if "HEADING_LOOK_AHEAD" in line:
+            logged_dict["look_ahead"] = int(
+                line.split("=")[1].split("#")[0].strip('"').strip()
+            )
+        elif "REWARD_TYPE" in line:
+            logged_dict["type"] = line.split("=")[1].split("#")[0].strip('"').strip()
             break
     config_dict["r"] = logged_dict
 
@@ -201,8 +205,8 @@ def process_line(line):
         steps = int(float(parts[0]))
         waypoint = int(float(parts[1]))
         progress = float(parts[2])
-        throttle = float(parts[3])
-        steer = float(parts[4])
+        expected_heading = float(parts[3])
+        actual_heading = float(parts[4])
         step_progress = float(parts[5])
         projected_steps = float(parts[6])
         reward = float(parts[7])
@@ -216,8 +220,8 @@ def process_line(line):
                 steps,
                 waypoint,
                 progress,
-                throttle,
-                steer,
+                expected_heading,
+                actual_heading,
                 step_progress,
                 projected_steps,
                 reward,

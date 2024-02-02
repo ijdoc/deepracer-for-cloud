@@ -1,23 +1,12 @@
 import math
 import time
 
+# TRACK_NAME = "caecer_loop"
+HEADING_LOOK_AHEAD = 2
 REWARD_TYPE = "sigmoid"
 
 # Other globals
 LAST_PROGRESS = 0.0
-# caecer_loop
-TRACK = {
-    "length": 39.12,
-    "difficulty": {
-        "min": 0.00044293424911018286,
-        "max": 0.1767213283925288,
-        "ahead": 4,
-    },
-    "curves": [
-        {"dir": "left", "start": 41, "cross": 47, "end": 60},
-        {"dir": "left", "start": 78, "cross": 81, "end": 92},
-    ],
-}
 
 
 def get_next_distinct_index(i, waypoints):
@@ -152,7 +141,20 @@ def reward_function(params):
         # We are going backwards
         step_reward = -sigmoid(-projected_steps, k=-3.3, x0=1.25, ymin=0.0, ymax=3.3)
 
-    reward = float(2.0 * step_reward)
+    # Get suggested heading
+    direction = get_direction(this_waypoint, params["waypoints"])
+    change = 0.0
+    j = this_waypoint
+    for _ in range(HEADING_LOOK_AHEAD):
+        j = get_next_distinct_index(j, params["waypoints"])
+        change += get_direction_change(j, params["waypoints"])
+    expected_heading = math.degrees(direction + change)
+    heading_diff = abs(params["heading"] - expected_heading)
+    # The heading_factor tolerates a 45 degree difference in heading without
+    # penalizing the reward. At 67.5 degrees, the reward is penalized by 50%
+    # and at 90 degrees, the reward is penalized by 100%.
+    heading_factor = sigmoid(heading_diff, k=-0.25, x0=67.5, ymin=0.0, ymax=1.0)
+    reward = float(2.0 * step_reward * heading_factor)
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:
@@ -162,7 +164,7 @@ def reward_function(params):
 
     # This trace is needed for test logging
     print(
-        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{params['speed']},{params['steering_angle']},{step_progress},{projected_steps * 100},{reward},{is_finished}"
+        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{expected_heading},{params['heading']},{step_progress},{projected_steps * 100},{reward},{is_finished}"
     )
 
     return reward
