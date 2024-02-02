@@ -38,8 +38,9 @@ def main(track):
     inner_line = list([tuple(sublist[2:4]) for sublist in npy_data])
     outer_line = list([tuple(sublist[4:6]) for sublist in npy_data])
     limits = {
-        "ahead": 2,
-        "heading": [0 for _ in range(len(center_line))],
+        "ahead": 4,
+        "max": -1000,
+        "min": 1000,
     }
 
     print_numbered_line(inner_line)
@@ -48,6 +49,7 @@ def main(track):
     plt.ylabel("Y")
     plt.grid(True)
 
+    change_line = [0 for _ in range(len(center_line))]
     for i in range(waypoint_count):
         # Plot cross-waypoint lines
         plt.plot(
@@ -57,38 +59,45 @@ def main(track):
             color="black",
         )
         # Plot waypoint direction
-        direction = reward_function.get_direction(i, center_line)
-        x_start = center_line[i][0]
-        y_start = center_line[i][1]
-        x_end = x_start + 0.1 * math.cos(direction)
-        y_end = y_start + 0.1 * math.sin(direction)
-        plt.arrow(
-            x_start,
-            y_start,
-            x_end - x_start,
-            y_end - y_start,
-            head_width=0.025,
-            head_length=0.025,
-            fc="blue",
-            ec="blue",
-            linestyle="-",
-            color="blue",
-            width=0.001,
-        )
-        limits["ahead"] = 2
-        change = 0.0
+        # direction = reward_function.get_direction(i, center_line)
+        # x_start = center_line[i][0]
+        # y_start = center_line[i][1]
+        # x_end = x_start + 0.1 * math.cos(direction)
+        # y_end = y_start + 0.1 * math.sin(direction)
+        # plt.arrow(
+        #     x_start,
+        #     y_start,
+        #     x_end - x_start,
+        #     y_end - y_start,
+        #     head_width=0.025,
+        #     head_length=0.025,
+        #     fc="blue",
+        #     ec="blue",
+        #     linestyle="-",
+        #     color="blue",
+        #     width=0.001,
+        # )
+        # Calculate cumulative direction change
         j = i
         for _ in range(limits["ahead"]):
             j = reward_function.get_next_distinct_index(j, center_line)
-            change += reward_function.get_direction_change(j, center_line)
-        # change = abs(change / limits["ahead"])
+            change_line[i] += reward_function.get_direction_change(j, center_line)
+        change_line[i] = abs(change_line[i])
+        # Calculate limits
+        if change_line[i] > limits["max"]:
+            limits["max"] = change_line[i]
+        if change_line[i] < limits["min"]:
+            limits["min"] = change_line[i]
 
-        # Plot look ahead direction
-        limits["heading"][i] = math.degrees(direction + change)
+    # Plot expected throttle values
+    for i in range(waypoint_count):
+        direction = reward_function.get_direction(i, center_line)
+        normalized = (change_line[i] - limits["min"]) / (limits["max"] - limits["min"])
+        length = (1.0 - normalized) * 1.0
         x_start = center_line[i][0]
         y_start = center_line[i][1]
-        x_end = x_start + 0.1 * math.cos(direction + change)
-        y_end = y_start + 0.1 * math.sin(direction + change)
+        x_end = x_start + length * math.cos(direction)
+        y_end = y_start + length * math.sin(direction)
         plt.arrow(
             x_start,
             y_start,
@@ -102,10 +111,8 @@ def main(track):
             color="green",
             width=0.001,
         )
-
-    # print(f"{track} direction change limits: {limits}")
-    for i in range(len(limits["heading"])):
-        print(i, limits["heading"][i])
+        print(i, 1.0 - normalized)
+    print(limits)
 
     plt.show()
 
