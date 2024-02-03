@@ -67,7 +67,6 @@ def reset_tables():
         "progress",
         "step_progress",
         "projected_steps",
-        "coaching_factor",
         "reward",
     ]
     return {
@@ -206,9 +205,8 @@ def process_line(line):
         progress = float(parts[2])
         step_progress = float(parts[3])
         projected_steps = float(parts[4])
-        coaching_factor = float(parts[5])
-        reward = float(parts[6])
-        is_finished = int(parts[7])
+        reward = float(parts[5])
+        is_finished = int(parts[6])
         job = "train"
         if is_testing:
             job = "test"
@@ -220,7 +218,6 @@ def process_line(line):
                 progress,
                 step_progress,
                 projected_steps,
-                coaching_factor,
                 reward,
             )
         step_metrics[job]["reward"].append(reward)
