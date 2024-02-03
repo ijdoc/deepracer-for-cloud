@@ -17,15 +17,15 @@ COACH = {
             "exit": 60,  # waypoint index to exit the curve
             "max_throttle": 0.3,  # throttle is normalized to 0-1
             "min_steer": 10,  # actual degrees
-            },
-            {
-                "dir": "left",
-                "break_start": 78,
-                "cross": 79,
-                "break_end": 82,
-                "exit": 92,
-                "max_throttle": 0.8,
-                "min_steer": 4,
+        },
+        {
+            "dir": "left",
+            "break_start": 78,
+            "cross": 79,
+            "break_end": 82,
+            "exit": 92,
+            "max_throttle": 0.8,
+            "min_steer": 4,
         },
     ],
 }
