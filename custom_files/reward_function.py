@@ -5,27 +5,27 @@ import time
 REWARD_TYPE = "sigmoid"
 # caecer_loop
 MODEL = {"max": 3.8, "min": 1.2}
-TRACK = {
-    "length": 39.12,
-    "change": {"ahead": 4, "max": 0.7068853135701152, "min": 0.0017717369964407315},
+COACH = {
+    # "length": 39.12,
+    # "change": {"ahead": 4, "max": 0.7068853135701152, "min": 0.0017717369964407315},
     "curves": [
         {
             "dir": "left",  # direction of the curve
             "break_start": 41,  # waypoint index to start braking
-            "cross": 45,  # waypoint index to cross the curve
+            "cross": 44,  # waypoint index to cross the center line
             "break_end": 52,  # waypoint index to end braking
             "exit": 60,  # waypoint index to exit the curve
             "max_throttle": 0.3,  # throttle is normalized to 0-1
             "min_steer": 10,  # actual degrees
-        },
-        {
-            "dir": "left",
-            "break_start": 78,
-            "cross": 79,
-            "break_end": 82,
-            "exit": 92,
-            "max_throttle": 0.6,
-            "min_steer": 5,
+            # },
+            # {
+            #     "dir": "left",
+            #     "break_start": 78,
+            #     "cross": 79,
+            #     "break_end": 82,
+            #     "exit": 92,
+            #     "max_throttle": 0.6,
+            #     "min_steer": 5,
         },
     ],
 }
@@ -168,7 +168,7 @@ def reward_function(params):
 
     reward = 2.0 * step_reward
 
-    for curve in TRACK["curves"]:
+    for curve in COACH["curves"]:
         # Process curve exceptions
         if this_waypoint >= curve["break_start"] and this_waypoint <= curve["exit"]:
             reward = 1e-5
@@ -180,7 +180,7 @@ def reward_function(params):
                 ):
                     reward += 2.0
             # Reward steering on curve
-            if this_waypoint >= curve["cross"] and this_waypoint <= curve["break_end"]:
+            if this_waypoint >= curve["cross"]:
                 if params["steering_angle"] > curve["min_steer"]:
                     reward += 1.0
             # Reward correct side of track
@@ -205,7 +205,7 @@ def reward_function(params):
 
     # This trace is needed for test logging
     print(
-        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{step_progress},{projected_steps * 100},{reward},{is_finished}"
+        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{params['speed']},{params['steering_angle']},{step_progress},{projected_steps * 100},{reward},{is_finished}"
     )
 
     return reward
