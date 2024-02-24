@@ -4,7 +4,7 @@ import time
 # TRACK_NAME = "caecer_loop"
 REWARD_TYPE = "sigmoid"
 # caecer_loop
-MODEL = {"max": 3.8, "min": 1.2}
+MODEL = {"max": 3.8, "min": 1.3}
 COACH = {
     # "length": 39.12,
     # "change": {"ahead": 4, "max": 0.7068853135701152, "min": 0.0017717369964407315},
@@ -15,8 +15,8 @@ COACH = {
             "cross": 44,  # waypoint index to cross the center line
             "break_end": 52,  # waypoint index to end braking
             "exit": 60,  # waypoint index to exit the curve
-            "max_throttle": 0.3,  # throttle is normalized to 0-1
-            "min_steer": 10,  # actual degrees
+            "ideal_throttle": 0.15,  # throttle is normalized to 0-1
+            "ideal_steering": 15,  # actual degrees
         },
         {
             "dir": "left",
@@ -24,8 +24,8 @@ COACH = {
             "cross": 79,
             "break_end": 82,
             "exit": 92,
-            "max_throttle": 0.8,
-            "min_steer": 4,
+            "ideal_throttle": 0.6,
+            "ideal_steering": 8,
         },
     ],
 }
@@ -174,15 +174,23 @@ def reward_function(params):
             reward = 1e-5
             # Reward braking on curve
             if this_waypoint <= curve["break_end"]:
-                if params["speed"] < (
-                    (curve["max_throttle"] * (MODEL["max"] - MODEL["min"]))
-                    + MODEL["min"]
-                ):
-                    reward += 2.0
+                # Use a gaussian to target ideal throttle
+                reward += gaussian(
+                    params["speed"],
+                    2.0,
+                    (curve["ideal_throttle"] * (MODEL["max"] - MODEL["min"]))
+                    + MODEL["min"],
+                    0.4, # Actual throttle difference
+                )
             # Reward steering on curve
             if this_waypoint >= curve["cross"]:
-                if params["steering_angle"] > curve["min_steer"]:
-                    reward += 1.0
+                # Use a gaussian to target ideal steering
+                reward += gaussian(
+                    params["steering_angle"],
+                    1.0,
+                    curve["ideal_steering"],
+                    8, # Actual steering difference
+                )
             # Reward correct side of track
             if curve["dir"] == "left":
                 if this_waypoint < curve["cross"] and not params["is_left_of_center"]:
