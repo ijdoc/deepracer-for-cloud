@@ -4,26 +4,21 @@ import time
 # TRACK_NAME = "caecer_loop"
 REWARD_TYPE = "sigmoid"
 # caecer_loop
-MODEL = {"max": 3.9, "min": 1.3}
+MODEL = {"max": 3.9, "min": 1.2}
 COACH = {
     # "length": 39.12,
     # "change": {"ahead": 4, "max": 0.7068853135701152, "min": 0.0017717369964407315},
+    "heading": [89,87,88,88,89,92,94,98,102,108,115,121,126,129,133,135,137,138,140,143,144,147,149,152,154,157,160,162,165,167,170,172,174,174,175,175,175,175,175,176,180,-174,-171,-164,-157,-151,-144,-136,-127,-118,-118,-108,-98,-88,-79,-69,-60,-52,-46,-41,-37,-36,-38,-41,-46,-50,-56,-62,-68,-71,-71,-74,-75,-75,-75,-74,-73,-70,-67,-62,-56,-50,-44,-36,-29,-25,-21,-16,-12,-7,-3,1,6,8,9,10,12,14,17,21,24,26,31,34,37,38,42,47,51,57,65,71,76,81,84,87,89,90,91,91,89],
     "curves": [
         {
             "dir": "left",  # direction of the curve
             "start": 41,  # waypoint index to start braking
-            "cross": 44,  # waypoint index to cross the track center
             "apex": 55,  # waypoint index to reach the apex
-            "max_throttle": 0.2,  # throttle is normalized to 0-1
-            "min_steer": 10,  # actual degrees
         },
         {
             "dir": "left",
             "start": 78,
-            "cross": 79,
             "apex": 87,
-            "max_throttle": 0.7,
-            "min_steer": 4,
         },
     ],
 }
@@ -102,6 +97,37 @@ def gaussian(x, a, b, c):
     return a * math.exp(-((x - b) ** 2) / (2 * c**2))
 
 
+def wrapped_bell_curve(x, center=0, width=90):
+    """
+    Generates a bell-like curve using the cosine function, centered at a specified point,
+    with a specified 'width' determining the spread of the bell curve. The curve is adjusted
+    to have a maximum of 1.0 and a minimum of 0.0.
+
+    Parameters:
+    - x: The input angle in degrees for which to evaluate the bell curve.
+    - center: The center of the bell curve on the -180 to 180 degree axis.
+    - width: The 'width' of the bell curve, affecting its spread.
+
+    Returns:
+    - The value of the bell-like curve at the given input angle, adjusted to range from 0 to 1.
+    """
+    # Convert angles from degrees to radians
+    x_rad = math.radians(x)
+    center_rad = math.radians(center)
+
+    # Adjust for wrapping
+    diff = math.atan2(math.sin(x_rad - center_rad), math.cos(x_rad - center_rad))
+
+    # Use the cosine function to create a bell-like curve that wraps around
+    width_rad = math.radians(width)
+    cosine_value = math.cos(diff * math.pi / width_rad)
+
+    # Adjust the output to have a range from 0 to 1
+    adjusted_value = (cosine_value + 1) / 2
+
+    return adjusted_value
+
+
 def sigmoid(x, k=3.9, x0=0.6, ymin=0.0, ymax=1.2):
     """Parametrized sigmoid function as seen on:
        https://www.desmos.com/calculator/wbdyedqfwp
@@ -166,52 +192,11 @@ def reward_function(params):
 
     reward = 2.0 * step_reward
 
-    # Initialize coach variables so they can be traced
-    expected = -1.0
-    position = -1.0
-    # Process curve exceptions
-    for curve in COACH["curves"]:
-        if this_waypoint >= curve["start"] and this_waypoint <= curve["apex"]:
-            # Reward using full track width. Here we calculate the track position as a
-            # range from 0 - 1 where 1 is the outer edge of the turn and 0 is the apex
-            if curve["dir"] == "left":
-                if params["is_left_of_center"]:
-                    # position is 0 to 0.5
-                    position = 0.5 - (
-                        params["distance_from_center"] / params["track_width"]
-                    )
-                else:
-                    # position is 0.5 to 1
-                    position = 0.5 + (
-                        params["distance_from_center"] / params["track_width"]
-                    )
-            else:
-                if params["is_left_of_center"]:
-                    # position is 0.5 to 1
-                    position = 0.5 + (
-                        params["distance_from_center"] / params["track_width"]
-                    )
-                else:
-                    # position is 0 to 0.5
-                    position = 0.5 - (
-                        params["distance_from_center"] / params["track_width"]
-                    )
-
-            if this_waypoint <= curve["cross"]:
-                # Must go from 1 to 0.5 (outside to center line)
-                expected = 0.5 + (
-                    (
-                        (this_waypoint - curve["cross"])
-                        / (curve["start"] - curve["cross"])
-                    )
-                    / 2.0
-                )
-            elif this_waypoint <= curve["apex"]:
-                # Must go from 0.5 to 0.0 (center line to apex)
-                expected = (
-                    (this_waypoint - curve["apex"]) / (curve["cross"] - curve["apex"])
-                ) / 2.0
-            reward *= gaussian(position, 1.0, expected, 0.25)
+    # for curve in COACH["curves"]:
+    #     if this_waypoint >= curve["start"] and this_waypoint <= curve["apex"]:
+    reward *= wrapped_bell_curve(
+        params["heading"], COACH["heading"][this_waypoint], 20
+    )
 
     reward = float(reward)
 
@@ -223,7 +208,7 @@ def reward_function(params):
 
     # This trace is needed for test logging
     print(
-        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{params['speed']},{params['steering_angle']},{expected},{position},{reward},{is_finished}"
+        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{params['speed']},{params['steering_angle']},{COACH['heading'][this_waypoint]},{params['heading']},{reward},{is_finished}"
     )
 
     return reward
