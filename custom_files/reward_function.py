@@ -11,7 +11,7 @@ COACH = {
     "curves": [
         {
             "dir": "left",  # direction of the curve
-            "break_start": 41,  # waypoint index to start braking
+            "start": 41,  # waypoint index to start braking
             "cross": 44,  # waypoint index to cross the track center
             "apex": 55,  # waypoint index to reach the apex
             "max_throttle": 0.2,  # throttle is normalized to 0-1
@@ -19,7 +19,7 @@ COACH = {
         },
         {
             "dir": "left",
-            "break_start": 78,
+            "start": 78,
             "cross": 79,
             "apex": 87,
             "max_throttle": 0.7,
@@ -166,41 +166,52 @@ def reward_function(params):
 
     reward = 2.0 * step_reward
 
+    # Initialize coach variables so they can be traced
+    expected = -1.0
+    position = -1.0
+    # Process curve exceptions
     for curve in COACH["curves"]:
-        # Process curve exceptions
-        if this_waypoint >= curve["break_start"] and this_waypoint < curve["apex"]:
-            reward = 1e-5
-            throttle_fraction = (params["speed"] - MODEL["min"]) / (
-                MODEL["max"] - MODEL["min"]
-            )
-            # Reward braking ahead of apex
-            reward += sigmoid(
-                throttle_fraction,
-                k=-100,  # ~10% of the throttle range
-                x0=curve["max_throttle"],
-                ymin=0.0,
-                ymax=1.5,
-            )
-            # Reward steering ahead of apex
-            reward += sigmoid(
-                params["steering_angle"],
-                k=5,  # Sigmoid spread is ~2.0 degrees
-                x0=curve["min_steer"],
-                ymin=0.0,
-                ymax=1.5,
-            )
-
-            # Reward correct side of track
+        if this_waypoint >= curve["start"] and this_waypoint <= curve["apex"]:
+            # Reward using full track width. Here we calculate the track position as a
+            # range from 0 - 1 where 1 is the outer edge of the turn and 0 is the apex
             if curve["dir"] == "left":
-                if this_waypoint < curve["cross"] and not params["is_left_of_center"]:
-                    reward += 1.0
-                elif this_waypoint > curve["cross"] and params["is_left_of_center"]:
-                    reward += 1.0
-            elif curve["dir"] == "right":
-                if this_waypoint < curve["cross"] and params["is_left_of_center"]:
-                    reward += 1.0
-                elif this_waypoint > curve["cross"] and not params["is_left_of_center"]:
-                    reward += 1.0
+                if params["is_left_of_center"]:
+                    # position is 0 to 0.5
+                    position = 0.5 - (
+                        params["distance_from_center"] / params["track_width"]
+                    )
+                else:
+                    # position is 0.5 to 1
+                    position = 0.5 + (
+                        params["distance_from_center"] / params["track_width"]
+                    )
+            else:
+                if params["is_left_of_center"]:
+                    # position is 0.5 to 1
+                    position = 0.5 + (
+                        params["distance_from_center"] / params["track_width"]
+                    )
+                else:
+                    # position is 0 to 0.5
+                    position = 0.5 - (
+                        params["distance_from_center"] / params["track_width"]
+                    )
+
+            if this_waypoint <= curve["cross"]:
+                # Must go from 1 to 0.5 (outside to center line)
+                expected = 0.5 + (
+                    (
+                        (this_waypoint - curve["cross"])
+                        / (curve["start"] - curve["cross"])
+                    )
+                    / 2.0
+                )
+            elif this_waypoint <= curve["apex"]:
+                # Must go from 0.5 to 0.0 (center line to apex)
+                expected = (
+                    (this_waypoint - curve["apex"]) / (curve["cross"] - curve["apex"])
+                ) / 2.0
+            reward *= gaussian(position, 1.0, expected, 0.25)
 
     reward = float(reward)
 
@@ -212,7 +223,7 @@ def reward_function(params):
 
     # This trace is needed for test logging
     print(
-        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{params['speed']},{params['steering_angle']},{step_progress},{projected_steps * 100},{reward},{is_finished}"
+        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{params['speed']},{params['steering_angle']},{expected},{position},{reward},{is_finished}"
     )
 
     return reward
