@@ -4,7 +4,7 @@ import time
 # TRACK_NAME = "caecer_loop"
 REWARD_TYPE = "sigmoid"
 # caecer_loop
-MODEL = {"max": 3.8, "min": 1.3}
+MODEL = {"max": 3.9, "min": 1.3}
 COACH = {
     # "length": 39.12,
     # "change": {"ahead": 4, "max": 0.7068853135701152, "min": 0.0017717369964407315},
@@ -12,7 +12,7 @@ COACH = {
         {
             "dir": "left",  # direction of the curve
             "break_start": 41,  # waypoint index to start braking
-            "steer_start": 42,  # waypoint index to start steering
+            "cross": 44,  # waypoint index to cross the track center
             "apex": 55,  # waypoint index to reach the apex
             "max_throttle": 0.2,  # throttle is normalized to 0-1
             "min_steer": 10,  # actual degrees
@@ -20,7 +20,7 @@ COACH = {
         {
             "dir": "left",
             "break_start": 78,
-            "steer_start": 78,
+            "cross": 79,
             "apex": 87,
             "max_throttle": 0.7,
             "min_steer": 4,
@@ -168,7 +168,7 @@ def reward_function(params):
 
     for curve in COACH["curves"]:
         # Process curve exceptions
-        if this_waypoint >= curve["break_start"] and this_waypoint <= curve["apex"]:
+        if this_waypoint >= curve["break_start"] and this_waypoint < curve["apex"]:
             reward = 1e-5
             throttle_fraction = (params["speed"] - MODEL["min"]) / (
                 MODEL["max"] - MODEL["min"]
@@ -182,45 +182,25 @@ def reward_function(params):
                 ymax=1.5,
             )
             # Reward steering ahead of apex
-            if this_waypoint >= curve["steer_start"] and this_waypoint <= curve["apex"]:
-                reward += sigmoid(
-                    params["steering_angle"],
-                    k=5,  # Sigmoid spread is ~2.0 degrees
-                    x0=curve["min_steer"],
-                    ymin=0.0,
-                    ymax=1.5,
-                )
-
-            # Reward using full track width. Here we calculate the track position as a
-            # range from 0 - 1 where 1 is the outer edge of the turn and 0 is the apex
-            if curve["dir"] == "left":
-                if params["is_left_of_center"]:
-                    # position is 0 to 0.5
-                    position = 0.5 - (
-                        params["distance_from_center"] / params["track_width"]
-                    )
-                else:
-                    # position is 0.5 to 1
-                    position = 0.5 + (
-                        params["distance_from_center"] / params["track_width"]
-                    )
-            else:
-                if params["is_left_of_center"]:
-                    # position is 0.5 to 1
-                    position = 0.5 + (
-                        params["distance_from_center"] / params["track_width"]
-                    )
-                else:
-                    # position is 0 to 0.5
-                    position = 0.5 - (
-                        params["distance_from_center"] / params["track_width"]
-                    )
-
-            # Must go from 1 to 0 (outside to apex)
-            expected = (this_waypoint - curve["apex"]) / (
-                curve["break_start"] - curve["apex"]
+            reward += sigmoid(
+                params["steering_angle"],
+                k=5,  # Sigmoid spread is ~2.0 degrees
+                x0=curve["min_steer"],
+                ymin=0.0,
+                ymax=1.5,
             )
-            reward *= 1.0 - abs(position - expected)
+
+            # Reward correct side of track
+            if curve["dir"] == "left":
+                if this_waypoint < curve["cross"] and not params["is_left_of_center"]:
+                    reward += 1.0
+                elif this_waypoint > curve["cross"] and params["is_left_of_center"]:
+                    reward += 1.0
+            elif curve["dir"] == "right":
+                if this_waypoint < curve["cross"] and params["is_left_of_center"]:
+                    reward += 1.0
+                elif this_waypoint > curve["cross"] and not params["is_left_of_center"]:
+                    reward += 1.0
 
     reward = float(reward)
 
