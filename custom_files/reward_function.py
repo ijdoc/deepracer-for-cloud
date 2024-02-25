@@ -198,9 +198,7 @@ def reward_function(params):
 
     # for curve in COACH["curves"]:
     #     if this_waypoint >= curve["start"] and this_waypoint <= curve["apex"]:
-    reward *= wrapped_bell_curve(
-        params["heading"], COACH["heading"][this_waypoint], 20
-    )
+    reward *= wrapped_bell_curve(params["heading"], COACH["heading"][this_waypoint], 45)
 
     reward = float(reward)
 
