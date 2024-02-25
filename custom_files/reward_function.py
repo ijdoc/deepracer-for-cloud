@@ -12,20 +12,22 @@ COACH = {
         {
             "dir": "left",  # direction of the curve
             "break_start": 41,  # waypoint index to start braking
-            "cross": 44,  # waypoint index to cross the center line
-            "break_end": 52,  # waypoint index to end braking
+            "steer_start": 42,  # waypoint index to start steering
+            "steer_end": 46,  # waypoint index to stop braking & steering
+            "apex": 55,  # waypoint index to reach the apex
             "exit": 60,  # waypoint index to exit the curve
-            "ideal_throttle": 0.15,  # throttle is normalized to 0-1
-            "ideal_steering": 15,  # actual degrees
+            "break_throttle": 0.3,  # throttle is normalized to 0-1
+            "min_steer": 10,  # actual degrees
         },
         {
             "dir": "left",
             "break_start": 78,
-            "cross": 79,
-            "break_end": 82,
+            "steer_start": 78,
+            "steer_end": 80,
+            "apex": 87,
             "exit": 92,
-            "ideal_throttle": 0.6,
-            "ideal_steering": 8,
+            "break_throttle": 0.8,
+            "min_steer": 4,
         },
     ],
 }
@@ -106,7 +108,7 @@ def gaussian(x, a, b, c):
 
 def sigmoid(x, k=3.9, x0=0.6, ymin=0.0, ymax=1.2):
     """Parametrized sigmoid function as seen on:
-       https://www.desmos.com/calculator/1c15zoa5b2
+       https://www.desmos.com/calculator/wbdyedqfwp
 
     Args:
         x (float): the input value
@@ -172,36 +174,80 @@ def reward_function(params):
         # Process curve exceptions
         if this_waypoint >= curve["break_start"] and this_waypoint <= curve["exit"]:
             reward = 1e-5
-            # Reward braking on curve
-            if this_waypoint <= curve["break_end"]:
-                # Use a gaussian to target ideal throttle
-                reward += gaussian(
-                    params["speed"],
-                    2.0,
-                    (curve["ideal_throttle"] * (MODEL["max"] - MODEL["min"]))
-                    + MODEL["min"],
-                    0.4, # Actual throttle difference
-                )
-            # Reward steering on curve
-            if this_waypoint >= curve["cross"]:
-                # Use a gaussian to target ideal steering
-                reward += gaussian(
+            throttle_fraction = (params["speed"] - MODEL["min"]) / (
+                MODEL["max"] - MODEL["min"]
+            )
+            if this_waypoint <= curve["steer_end"]:
+                # Reward braking ahead of curve
+                spread = -50  # ~20% of the throttle range
+            else:
+                # Reward speeding out of the curve
+                spread = 50  # ~20% of the throttle range
+            reward += sigmoid(
+                throttle_fraction,
+                k=spread,
+                x0=curve["break_throttle"],
+                ymin=0.0,
+                ymax=1.0,
+            )
+            # Reward steering ahead of curve
+            if (
+                this_waypoint >= curve["steer_start"]
+                and this_waypoint <= curve["steer_end"]
+            ):
+                reward += sigmoid(
                     params["steering_angle"],
-                    1.0,
-                    curve["ideal_steering"],
-                    8, # Actual steering difference
+                    k=5, # Sigmoid spread is ~2.0 degrees
+                    x0=curve["min_steer"],
+                    ymin=0.0,
+                    ymax=2.0,
                 )
-            # Reward correct side of track
+            # Reward not steering out of the curve
+            elif this_waypoint > curve["steer_end"]:
+                reward += sigmoid(
+                    params["steering_angle"],
+                    k=-5, # Sigmoid spread is ~2.0 degrees
+                    x0=3.0,
+                    ymin=0.0,
+                    ymax=2.0,
+                )
+
+            # Reward using full track width. Here we calculate the track position as a
+            # range from 0 - 1 where 1 is the outer edge of the turn and 0 is the apex
             if curve["dir"] == "left":
-                if this_waypoint < curve["cross"] and not params["is_left_of_center"]:
-                    reward += 0.5
-                elif this_waypoint > curve["cross"] and params["is_left_of_center"]:
-                    reward += 1.0
-            elif curve["dir"] == "right":
-                if this_waypoint < curve["cross"] and params["is_left_of_center"]:
-                    reward += 0.5
-                elif this_waypoint > curve["cross"] and not params["is_left_of_center"]:
-                    reward += 1.0
+                if params["is_left_of_center"]:
+                    # position is 0 to 0.5
+                    position = 0.5 - (
+                        params["distance_from_center"] / params["track_width"]
+                    )
+                else:
+                    # position is 0.5 to 1
+                    position = 0.5 + (
+                        params["distance_from_center"] / params["track_width"]
+                    )
+            else:
+                if params["is_left_of_center"]:
+                    # position is 0.5 to 1
+                    position = 0.5 + (
+                        params["distance_from_center"] / params["track_width"]
+                    )
+                else:
+                    # position is 0 to 0.5
+                    position = 0.5 - (
+                        params["distance_from_center"] / params["track_width"]
+                    )
+
+            if this_waypoint <= curve["apex"]:
+                # Must go from 1 to 0 (outside to apex)
+                expected = (this_waypoint - curve["apex"]) / (
+                    curve["break_start"] - curve["apex"]
+                )
+            else:
+                # Must go from 0 to 0.5 (apex to center line)
+                expected = (
+                    (this_waypoint - curve["apex"]) / (curve["exit"] - curve["apex"])
+                ) / 2.0
+            reward += 1.0 - abs(position - expected)
 
     reward = float(reward)
 
