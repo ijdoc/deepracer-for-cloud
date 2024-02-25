@@ -114,16 +114,20 @@ def wrapped_bell_curve(x, center=0, width=90):
     # Convert angles from degrees to radians
     x_rad = math.radians(x)
     center_rad = math.radians(center)
+    width_rad = math.radians(width)
 
     # Adjust for wrapping
     diff = math.atan2(math.sin(x_rad - center_rad), math.cos(x_rad - center_rad))
 
+    # Ignore values beyond the main cycle
+    if diff > width_rad or diff < -width_rad:
+        return 0.0
+
     # Use the cosine function to create a bell-like curve that wraps around
-    width_rad = math.radians(width)
-    cosine_value = math.cos(diff * math.pi / width_rad)
+    cosine_value = math.cos((diff * math.pi) / width_rad)
 
     # Adjust the output to have a range from 0 to 1
-    adjusted_value = (cosine_value + 1) / 2
+    adjusted_value = (cosine_value + 1.0) / 2.0
 
     return adjusted_value
 

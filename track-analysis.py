@@ -38,7 +38,7 @@ def main(track):
     inner_line = list([tuple(sublist[2:4]) for sublist in npy_data])
     outer_line = list([tuple(sublist[4:6]) for sublist in npy_data])
     limits = {
-        "ahead": 4,
+        "ahead": 2,
         "max": -1000,
         "min": 1000,
     }
@@ -50,6 +50,7 @@ def main(track):
     plt.grid(True)
 
     change_line = [0 for _ in range(len(center_line))]
+    print("[", end="")
     for i in range(waypoint_count):
         # Plot cross-waypoint lines
         plt.plot(
@@ -59,45 +60,41 @@ def main(track):
             color="black",
         )
         # Plot waypoint direction
-        # direction = reward_function.get_direction(i, center_line)
-        # x_start = center_line[i][0]
-        # y_start = center_line[i][1]
-        # x_end = x_start + 0.1 * math.cos(direction)
-        # y_end = y_start + 0.1 * math.sin(direction)
-        # plt.arrow(
-        #     x_start,
-        #     y_start,
-        #     x_end - x_start,
-        #     y_end - y_start,
-        #     head_width=0.025,
-        #     head_length=0.025,
-        #     fc="blue",
-        #     ec="blue",
-        #     linestyle="-",
-        #     color="blue",
-        #     width=0.001,
-        # )
+        direction = reward_function.get_direction(i, center_line)
+        x_start = center_line[i][0]
+        y_start = center_line[i][1]
+        length = 0.1
+        x_end = x_start + length * math.cos(direction)
+        y_end = y_start + length * math.sin(direction)
+        plt.arrow(
+            x_start,
+            y_start,
+            x_end - x_start,
+            y_end - y_start,
+            head_width=0.025,
+            head_length=0.025,
+            fc="blue",
+            ec="blue",
+            linestyle="-",
+            color="blue",
+            width=0.001,
+        )
         # Calculate cumulative direction change
         j = i
+        change_line[i] = direction
         for _ in range(limits["ahead"]):
             j = reward_function.get_next_distinct_index(j, center_line)
             change_line[i] += reward_function.get_direction_change(j, center_line)
-        change_line[i] = abs(change_line[i])
+        # change_line[i] = abs(change_line[i])
         # Calculate limits
-        if change_line[i] > limits["max"]:
-            limits["max"] = change_line[i]
-        if change_line[i] < limits["min"]:
-            limits["min"] = change_line[i]
-
-    # Plot expected throttle values
-    for i in range(waypoint_count):
-        direction = reward_function.get_direction(i, center_line)
-        normalized = (change_line[i] - limits["min"]) / (limits["max"] - limits["min"])
-        length = (1.0 - normalized) * 1.0
+        # if change_line[i] > limits["max"]:
+        #     limits["max"] = change_line[i]
+        # if change_line[i] < limits["min"]:
+        #     limits["min"] = change_line[i]
         x_start = center_line[i][0]
         y_start = center_line[i][1]
-        x_end = x_start + length * math.cos(direction)
-        y_end = y_start + length * math.sin(direction)
+        x_end = x_start + length * math.cos(change_line[i])
+        y_end = y_start + length * math.sin(change_line[i])
         plt.arrow(
             x_start,
             y_start,
@@ -111,11 +108,53 @@ def main(track):
             color="green",
             width=0.001,
         )
-        print(i, 1.0 - normalized)
-    print(limits)
+        # print(
+        #     i,
+        #     round(math.degrees(math.atan2(math.sin(direction), math.cos(direction)))),
+        #     round(
+        #         math.degrees(
+        #             math.atan2(math.sin(change_line[i]), math.cos(change_line[i]))
+        #         )
+        #     ),
+        # )
+        print(
+            round(
+                math.degrees(
+                    math.atan2(math.sin(change_line[i]), math.cos(change_line[i]))
+                )
+            ),
+            end=",",
+        )
+    print("]")
+
+    # Plot expected throttle values
+    # for i in range(waypoint_count):
+    #     direction = reward_function.get_direction(i, center_line)
+    # normalized = (change_line[i] - limits["min"]) / (limits["max"] - limits["min"])
+    # length = (1.0 - normalized) * 1.0
+    # print(i, 1.0 - normalized)
+    # print(limits)
 
     plt.show()
 
+# Example usage
+x_values = range(-180, 181, 1)  # Generate a range of values from -180 to 180
+center = -170  # Center of the bell curve
+width = 45  # Width of the bell curve
+bell_curve_values = [
+    reward_function.wrapped_bell_curve(x, center, width) for x in x_values
+]
+
+# Plotting
+plt.figure(figsize=(10, 5))
+plt.plot(x_values, bell_curve_values, label="Bell Curve", color="blue")
+plt.title("Wrapped Bell Curve")
+plt.xlabel("Angle (degrees)")
+plt.ylabel("Value")
+plt.grid(True)
+plt.xticks(range(-180, 181, 30))  # Setting x-axis ticks for better readability
+plt.legend()
+plt.show()
 
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser()
