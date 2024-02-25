@@ -13,20 +13,20 @@ COACH = {
             "dir": "left",  # direction of the curve
             "break_start": 41,  # waypoint index to start braking
             "steer_start": 42,  # waypoint index to start steering
-            "steer_end": 46,  # waypoint index to stop braking & steering
+            "break_end": 52,  # waypoint index to stop braking & steering
             "apex": 55,  # waypoint index to reach the apex
             "exit": 60,  # waypoint index to exit the curve
-            "break_throttle": 0.3,  # throttle is normalized to 0-1
+            "break_throttle": 0.15,  # throttle is normalized to 0-1
             "min_steer": 10,  # actual degrees
         },
         {
             "dir": "left",
             "break_start": 78,
             "steer_start": 78,
-            "steer_end": 80,
+            "break_end": 82,
             "apex": 87,
             "exit": 92,
-            "break_throttle": 0.8,
+            "break_throttle": 0.6,
             "min_steer": 4,
         },
     ],
@@ -177,39 +177,42 @@ def reward_function(params):
             throttle_fraction = (params["speed"] - MODEL["min"]) / (
                 MODEL["max"] - MODEL["min"]
             )
-            if this_waypoint <= curve["steer_end"]:
+            spread = 100  # ~10% of the throttle range
+            if this_waypoint <= curve["break_end"]:
                 # Reward braking ahead of curve
-                spread = -50  # ~20% of the throttle range
-            else:
-                # Reward speeding out of the curve
-                spread = 50  # ~20% of the throttle range
-            reward += sigmoid(
-                throttle_fraction,
-                k=spread,
-                x0=curve["break_throttle"],
-                ymin=0.0,
-                ymax=1.0,
-            )
+                reward += sigmoid(
+                    throttle_fraction,
+                    k=-spread,
+                    x0=curve["break_throttle"],
+                    ymin=0.0,
+                    ymax=1.5,
+                )
+            elif this_waypoint > curve["apex"]:
+                # Reward speeding after apex
+                reward += sigmoid(
+                    throttle_fraction,
+                    k=spread,
+                    x0=curve["break_throttle"],
+                    ymin=0.0,
+                    ymax=1.0,
+                )
             # Reward steering ahead of curve
-            if (
-                this_waypoint >= curve["steer_start"]
-                and this_waypoint <= curve["steer_end"]
-            ):
+            if this_waypoint >= curve["steer_start"] and this_waypoint <= curve["apex"]:
                 reward += sigmoid(
                     params["steering_angle"],
-                    k=5, # Sigmoid spread is ~2.0 degrees
+                    k=5,  # Sigmoid spread is ~2.0 degrees
                     x0=curve["min_steer"],
                     ymin=0.0,
-                    ymax=2.0,
+                    ymax=1.5,
                 )
             # Reward not steering out of the curve
-            elif this_waypoint > curve["steer_end"]:
+            elif this_waypoint > curve["apex"]:
                 reward += sigmoid(
                     params["steering_angle"],
-                    k=-5, # Sigmoid spread is ~2.0 degrees
+                    k=-5,  # Sigmoid spread is ~2.0 degrees
                     x0=3.0,
                     ymin=0.0,
-                    ymax=2.0,
+                    ymax=1.0,
                 )
 
             # Reward using full track width. Here we calculate the track position as a
@@ -247,7 +250,7 @@ def reward_function(params):
                 expected = (
                     (this_waypoint - curve["apex"]) / (curve["exit"] - curve["apex"])
                 ) / 2.0
-            reward += 1.0 - abs(position - expected)
+            reward += (1.0 - abs(position - expected)) * 1.5
 
     reward = float(reward)
 
