@@ -13,14 +13,14 @@ COACH = {
             "start": 41,  # waypoint index to start braking
             "apex": 55,  # waypoint index to reach the apex
             "max_throttle": 1.5,
-            "min_steer": 12,
+            "min_steer": 10,
         },
         {
             "dir": "left",
             "start": 78,
             "apex": 87,
-            "max_throttle": 3.0,
-            "min_steer": 6,
+            "max_throttle": 3.3,
+            "min_steer": 5,
         },
     ],
 }
@@ -196,33 +196,35 @@ def reward_function(params):
         # We are going backwards
         step_reward = -sigmoid(-projected_steps, k=-3.3, x0=1.25, ymin=0.0, ymax=3.3)
 
-    reward = 2.0 * step_reward
-
+    is_coached = False
+    coach_factor = 2.0
     for curve in COACH["curves"]:
-        if this_waypoint >= curve["start"] and this_waypoint < curve["apex"]:
-            reward = 1e-5
+        mid_point = (curve["apex"] - curve["start"]) / 2.0
+        if this_waypoint >= curve["start"] and this_waypoint <= mid_point:
+            is_coached = True
+            coach_factor = 1e-5
             # Reward breaking ahead of curve
-            reward += sigmoid(
+            coach_factor += sigmoid(
                 params["speed"],
                 k=-100,  # Sigmoid spread is ~0.1
                 x0=curve["max_throttle"],
                 ymin=0.0,
-                ymax=1.5,
+                ymax=1.2,
             )
             if curve["dir"] == "left":
                 k_factor = 5  # Sigmoid spread is ~2.0
             else:
                 k_factor = -5
             # Reward steering ahead of curve
-            reward += sigmoid(
+            coach_factor += sigmoid(
                 params["steering_angle"],
                 k=k_factor,
                 x0=curve["min_steer"],
                 ymin=0.0,
-                ymax=1.5,
+                ymax=0.8,
             )
 
-    reward = float(reward)
+    reward = float(coach_factor * step_reward)
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:
@@ -232,7 +234,7 @@ def reward_function(params):
 
     # This trace is needed for test logging
     print(
-        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{params['speed']},{params['steering_angle']},{reward},{is_finished}"
+        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{params['speed']},{params['steering_angle']},{is_coached},{coach_factor},{reward},{is_finished}"
     )
 
     return reward
