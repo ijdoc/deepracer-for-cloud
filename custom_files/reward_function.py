@@ -4,21 +4,23 @@ import time
 # TRACK_NAME = "caecer_loop"
 REWARD_TYPE = "sigmoid"
 # caecer_loop
-MODEL = {"max": 4.0, "min": 1.0}
 COACH = {
     # "length": 39.12,
     # "change": {"ahead": 4, "max": 0.7068853135701152, "min": 0.0017717369964407315},
-    "heading": [89,87,88,88,89,92,94,98,102,108,115,121,126,129,133,135,137,138,140,143,144,147,149,152,154,157,160,162,165,167,170,172,174,174,175,175,175,175,175,176,180,-174,-171,-164,-157,-151,-144,-136,-127,-118,-118,-108,-98,-88,-79,-69,-60,-52,-46,-41,-37,-36,-38,-41,-46,-50,-56,-62,-68,-71,-71,-74,-75,-75,-75,-74,-73,-70,-67,-62,-56,-50,-44,-36,-29,-25,-21,-16,-12,-7,-3,1,6,8,9,10,12,14,17,21,24,26,31,34,37,38,42,47,51,57,65,71,76,81,84,87,89,90,91,91,89],
     "curves": [
         {
             "dir": "left",  # direction of the curve
             "start": 41,  # waypoint index to start braking
             "apex": 55,  # waypoint index to reach the apex
+            "max_throttle": 1.5,
+            "min_steer": 12,
         },
         {
             "dir": "left",
             "start": 78,
             "apex": 87,
+            "max_throttle": 3.0,
+            "min_steer": 6,
         },
     ],
 }
@@ -194,11 +196,30 @@ def reward_function(params):
         # We are going backwards
         step_reward = -sigmoid(-projected_steps, k=-3.3, x0=1.25, ymin=0.0, ymax=3.3)
 
-    reward = step_reward
+    reward = 2.0 * step_reward
 
     for curve in COACH["curves"]:
-        if this_waypoint >= curve["start"] and this_waypoint <= curve["apex"]:
-            reward *= 2.0 * wrapped_bell_curve(params["heading"], COACH["heading"][this_waypoint], 60)
+        if this_waypoint >= curve["start"] and this_waypoint < curve["apex"]:
+            # Reward breaking ahead of curve
+            reward = sigmoid(
+                throttle_fraction,
+                k=-100,  # Sigmoid spread is ~0.1
+                x0=curve["max_throttle"],
+                ymin=0.0,
+                ymax=1.5,
+            )
+            if curve["dir"] == "left":
+                k_factor = 5  # Sigmoid spread is ~2.0
+            else:
+                k_factor = -5
+            # Reward steering ahead of curve
+            reward = sigmoid(
+                params["steering_angle"],
+                k=k_factor,
+                x0=curve["min_steer"],
+                ymin=0.0,
+                ymax=1.5,
+            )
 
     reward = float(reward)
 
