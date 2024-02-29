@@ -4,7 +4,7 @@ import time
 # TRACK_NAME = "caecer_loop"
 REWARD_TYPE = "sigmoid"
 # caecer_loop
-MODEL = {"max": 3.9, "min": 1.2}
+MODEL = {"max": 4.0, "min": 1.0}
 COACH = {
     # "length": 39.12,
     # "change": {"ahead": 4, "max": 0.7068853135701152, "min": 0.0017717369964407315},
@@ -194,11 +194,11 @@ def reward_function(params):
         # We are going backwards
         step_reward = -sigmoid(-projected_steps, k=-3.3, x0=1.25, ymin=0.0, ymax=3.3)
 
-    reward = 2.0 * step_reward
+    reward = step_reward
 
-    # for curve in COACH["curves"]:
-    #     if this_waypoint >= curve["start"] and this_waypoint <= curve["apex"]:
-    reward *= wrapped_bell_curve(params["heading"], COACH["heading"][this_waypoint], 45)
+    for curve in COACH["curves"]:
+        if this_waypoint >= curve["start"] and this_waypoint <= curve["apex"]:
+            reward *= 2.0 * wrapped_bell_curve(params["heading"], COACH["heading"][this_waypoint], 60)
 
     reward = float(reward)
 
