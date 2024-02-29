@@ -67,8 +67,6 @@ def reset_tables():
         "progress",
         "throttle",
         "steer",
-        "expected",
-        "actual",
         "reward",
     ]
     return {
@@ -207,10 +205,8 @@ def process_line(line):
         progress = float(parts[2])
         throttle = float(parts[3])
         steer = float(parts[4])
-        expected = float(parts[5])
-        actual = float(parts[6])
-        reward = float(parts[7])
-        is_finished = int(parts[8])
+        reward = float(parts[5])
+        is_finished = int(parts[6])
         job = "train"
         if is_testing:
             job = "test"
@@ -222,8 +218,6 @@ def process_line(line):
                 progress,
                 throttle,
                 steer,
-                expected,
-                actual,
                 reward,
             )
         step_metrics[job]["reward"].append(reward)

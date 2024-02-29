@@ -231,7 +231,7 @@ def reward_function(params):
 
     # This trace is needed for test logging
     print(
-        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{params['speed']},{params['steering_angle']},{COACH['heading'][this_waypoint]},{params['heading']},{reward},{is_finished}"
+        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{params['speed']},{params['steering_angle']},{reward},{is_finished}"
     )
 
     return reward
