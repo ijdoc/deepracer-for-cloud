@@ -200,8 +200,9 @@ def reward_function(params):
 
     for curve in COACH["curves"]:
         if this_waypoint >= curve["start"] and this_waypoint < curve["apex"]:
+            reward = 1e-5
             # Reward breaking ahead of curve
-            reward = sigmoid(
+            reward += sigmoid(
                 params["speed"],
                 k=-100,  # Sigmoid spread is ~0.1
                 x0=curve["max_throttle"],
@@ -213,7 +214,7 @@ def reward_function(params):
             else:
                 k_factor = -5
             # Reward steering ahead of curve
-            reward = sigmoid(
+            reward += sigmoid(
                 params["steering_angle"],
                 k=k_factor,
                 x0=curve["min_steer"],
