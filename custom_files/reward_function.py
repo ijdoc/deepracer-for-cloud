@@ -202,7 +202,7 @@ def reward_function(params):
         if this_waypoint >= curve["start"] and this_waypoint < curve["apex"]:
             # Reward breaking ahead of curve
             reward = sigmoid(
-                throttle_fraction,
+                params["speed"],
                 k=-100,  # Sigmoid spread is ~0.1
                 x0=curve["max_throttle"],
                 ymin=0.0,
