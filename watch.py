@@ -161,6 +161,8 @@ with open("./custom_files/reward_function.py", "r") as py_file:
             )
         elif "REWARD_TYPE" in line:
             logged_dict["type"] = line.split("=")[1].split("#")[0].strip('"').strip()
+        elif "TRACK_NAME" in line:
+            logged_dict["world_name"] = line.split("=")[1].split("#")[0].strip('"').strip()
             break
     config_dict["r"] = logged_dict
 

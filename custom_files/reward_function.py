@@ -1,12 +1,133 @@
 import math
 import time
 
-# TRACK_NAME = "caecer_loop"
-REWARD_TYPE = "sigmoid"
-# caecer_loop
+TRACK_NAME = "caecer_loop"
 COACH = {
     # "length": 39.12,
     # "change": {"ahead": 4, "max": 0.7068853135701152, "min": 0.0017717369964407315},
+    "heading": [
+        89,
+        87,
+        88,
+        88,
+        89,
+        92,
+        94,
+        98,
+        102,
+        108,
+        115,
+        121,
+        126,
+        129,
+        133,
+        135,
+        137,
+        138,
+        140,
+        143,
+        144,
+        147,
+        149,
+        152,
+        154,
+        157,
+        160,
+        162,
+        165,
+        167,
+        170,
+        172,
+        174,
+        174,
+        175,
+        175,
+        175,
+        175,
+        175,
+        176,
+        180,
+        -174,
+        -171,
+        -164,
+        -157,
+        -151,
+        -144,
+        -136,
+        -127,
+        -118,
+        -118,
+        -108,
+        -98,
+        -88,
+        -79,
+        -69,
+        -60,
+        -52,
+        -46,
+        -41,
+        -37,
+        -36,
+        -38,
+        -41,
+        -46,
+        -50,
+        -56,
+        -62,
+        -68,
+        -71,
+        -71,
+        -74,
+        -75,
+        -75,
+        -75,
+        -74,
+        -73,
+        -70,
+        -67,
+        -62,
+        -56,
+        -50,
+        -44,
+        -36,
+        -29,
+        -25,
+        -21,
+        -16,
+        -12,
+        -7,
+        -3,
+        1,
+        6,
+        8,
+        9,
+        10,
+        12,
+        14,
+        17,
+        21,
+        24,
+        26,
+        31,
+        34,
+        37,
+        38,
+        42,
+        47,
+        51,
+        57,
+        65,
+        71,
+        76,
+        81,
+        84,
+        87,
+        89,
+        90,
+        91,
+        91,
+        89,
+    ],
     "curves": [
         {
             "dir": "left",  # direction of the curve
@@ -199,30 +320,57 @@ def reward_function(params):
     is_coached = False
     coach_factor = 2.0
     for curve in COACH["curves"]:
-        mid_point = ((curve["apex"] - curve["start"]) * 0.6) + curve["start"]
-        if this_waypoint >= curve["start"] and this_waypoint <= mid_point:
+        if this_waypoint >= curve["start"] and this_waypoint <= curve["apex"]:
+            # We are coaching
             is_coached = True
             coach_factor = 1e-5
-            # Reward breaking ahead of curve
-            coach_factor += sigmoid(
-                params["speed"],
-                k=-100,  # Sigmoid spread is ~0.1
-                x0=curve["max_throttle"],
-                ymin=0.0,
-                ymax=1.2,
-            )
-            if curve["dir"] == "left":
-                k_factor = 5  # Sigmoid spread is ~2.0
+            mid_point = ((curve["apex"] - curve["start"]) * 0.6) + curve["start"]
+            # At the beginning of the curve, reward breaking and track location
+            if this_waypoint == curve["start"]:
+                coach_factor += sigmoid(
+                    params["speed"],
+                    k=-100,  # Sigmoid spread is ~0.1
+                    x0=curve["max_throttle"],
+                    ymin=0.0,
+                    ymax=1.2,
+                )
+                if curve["dir"] == "left":
+                    if not params["is_left_of_center"]:
+                        coach_factor += 0.8
+            # At the apex, reward heading and track location
+            elif this_waypoint == curve["apex"]:
+                coach_factor += wrapped_bell_curve(
+                    params["heading"], COACH["heading"][this_waypoint], 60
+                )
+                if curve["dir"] == "left":
+                    if params["is_left_of_center"]:
+                        distance = params["distance_from_center"] / params["track_width"] # 0.0 to 0.5
+                        coach_factor += gaussian(params["distance_from_center"], 1, 0.5, 0.25)
+            # At beginning of curve, reward breaking and steering
+            elif this_waypoint <= mid_point:
+                coach_factor += sigmoid(
+                    params["speed"],
+                    k=-100,  # Sigmoid spread is ~0.1
+                    x0=curve["max_throttle"],
+                    ymin=0.0,
+                    ymax=1.2,
+                )
+                if curve["dir"] == "left":
+                    k_factor = 5  # Sigmoid spread is ~2.0
+                else:
+                    k_factor = -5
+                coach_factor += sigmoid(
+                    params["steering_angle"],
+                    k=k_factor,
+                    x0=curve["min_steer"],
+                    ymin=0.0,
+                    ymax=0.8,
+                )
+            # As we approach the apex, reward heading
             else:
-                k_factor = -5
-            # Reward steering ahead of curve
-            coach_factor += sigmoid(
-                params["steering_angle"],
-                k=k_factor,
-                x0=curve["min_steer"],
-                ymin=0.0,
-                ymax=0.8,
-            )
+                coach_factor += 2.0 * wrapped_bell_curve(
+                    params["heading"], COACH["heading"][this_waypoint], 60
+                )
 
     reward = float(coach_factor * step_reward)
 
