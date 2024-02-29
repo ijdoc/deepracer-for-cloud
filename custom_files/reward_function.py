@@ -199,7 +199,7 @@ def reward_function(params):
     is_coached = False
     coach_factor = 2.0
     for curve in COACH["curves"]:
-        mid_point = (curve["apex"] - curve["start"]) / 2.0
+        mid_point = ((curve["apex"] - curve["start"]) * 0.6) + curve["start"]
         if this_waypoint >= curve["start"] and this_waypoint <= mid_point:
             is_coached = True
             coach_factor = 1e-5
