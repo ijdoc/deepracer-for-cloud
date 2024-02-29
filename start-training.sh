@@ -57,7 +57,7 @@ dr-stop-viewer && dr-stop-training
 test_command_outcome "[$0] Stop previous training"
 dr-reload
 test_command_outcome "[$0] Reload"
-sleep 5
+sleep 10
 dr-update && dr-update-env && dr-upload-custom-files
 test_command_outcome "[$0] Update and upload training files"
 
@@ -73,5 +73,5 @@ else
     dr-start-training -wva
 fi
 
-sleep 1
+sleep 5
 python watch.py "$@"
