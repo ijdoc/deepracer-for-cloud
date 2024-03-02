@@ -2,7 +2,7 @@ import math
 import time
 
 TRACK_NAME = "caecer_gp"
-DIFFICULTY_SPREAD = 1.0
+DIFFICULTY_FACTOR = 1.0
 
 # Other globals
 LAST_PROGRESS = 0.0
@@ -63,7 +63,7 @@ def get_direction_change(i, waypoints):
     return (diff1 + diff0) / 2.0
 
 
-def get_difficulty(i, waypoints):
+def get_difficulty(i, waypoints, spread=DIFFICULTY_FACTOR):
     """
     Get difficulty at waypoint i
     """
@@ -72,7 +72,7 @@ def get_difficulty(i, waypoints):
     dx = waypoints[next_idx][0] - waypoints[i][0]
     dy = waypoints[next_idx][1] - waypoints[i][1]
     d = math.sqrt(dx**2 + dy**2)
-    return (DIFFICULTY_SPREAD * (difficulty / d)) + 1.0
+    return spread * (difficulty / d)
 
 
 def gaussian(x, a, b, c):
@@ -163,6 +163,8 @@ def reward_function(params):
 
     this_waypoint = params["closest_waypoints"][0]
 
+    difficulty = get_difficulty(this_waypoint, params["waypoints"])
+
     # projected_steps is 0.01 of steps needed to finish the track,
     # so if the model finishes in 200 steps, projected_steps
     # should be 2.0 on average
@@ -174,22 +176,32 @@ def reward_function(params):
     if step_progress >= 0.0:
         # We reward projected_steps based on each step's progress.
         # The sigmoid saturates outliers to a reward equivalent to the target
-        # projected_steps, which is 3.0 (or 300 actual steps) in our case.
-        # @600 steps, ~20 reward
-        # @550 steps, ~48 reward
-        # @500 steps, ~114 reward
-        # @450 steps, ~246 reward
-        # @400 steps, ~453 reward
-        # @350 steps, ~653 reward
-        # @300 steps, ~736 reward
-        step_reward = sigmoid(projected_steps, k=-2, x0=3.75, ymin=0.0, ymax=3.0)
+        # projected_steps, which is ~2.5 (or 250 actual steps) in our case.
+        # @500 steps, ~41 reward
+        # @450 steps, ~93 reward
+        # @400 steps, ~187 reward
+        # @350 steps, ~304 reward
+        # @300 steps, ~382 reward
+        # @250 steps, ~383 reward
+        step_reward = sigmoid(
+            projected_steps,
+            k=-2,
+            x0=3.5,
+            ymin=0.0,
+            ymax=1.7394709392167267,  # The max difficulty value
+        )
     else:
         # We are going backwards
-        step_reward = -sigmoid(-projected_steps, k=-2, x0=3.75, ymin=0.0, ymax=3.0)
+        step_reward = -sigmoid(
+            -projected_steps,
+            k=-2,
+            x0=3.5,
+            ymin=0.0,
+            ymax=1.7394709392167267,  # The max difficulty value
+        )
 
-    difficulty = get_difficulty(this_waypoint, params["waypoints"])
-
-    reward = float(difficulty * step_reward)
+    # When DIFFICULTY_FACTOR is 1.0, step_reward and difficulty are equally weighted
+    reward = float(step_reward + difficulty)
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:

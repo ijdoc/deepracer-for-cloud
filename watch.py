@@ -94,16 +94,13 @@ episode = {"train": 1, "test": 1}
 
 
 def update_run_env(name, checkpoint):
-    world_name = ""
-    # Open the file in read and write mode
+    # Open the file in read mode
     file_path = "./run.env"
     with open(file_path, "r") as file:
         lines = file.readlines()
     # Modify the content in memory
     new_lines = []
     for line in lines:
-        if line.startswith("DR_WORLD_NAME="):
-            world_name = line.split("=")[1]
         if line.startswith("DR_UPLOAD_S3_PREFIX="):
             new_lines.append(f"DR_UPLOAD_S3_PREFIX={name}-{checkpoint}\n")
         else:
@@ -111,7 +108,6 @@ def update_run_env(name, checkpoint):
     # Write the modified content back to the file
     with open(file_path, "w") as file:
         file.writelines(new_lines)
-    return world_name
 
 
 # Open the JSON file for reading
@@ -155,16 +151,20 @@ with open("./custom_files/model_metadata.json", "r") as json_file:
 with open("./custom_files/reward_function.py", "r") as py_file:
     logged_dict = {}
     for line in py_file.readlines():
-        if "DIFFICULTY_SPREAD" in line:
-            logged_dict["difficulty_spread"] = int(
-                line.split("=")[1].split("#")[0].strip('"').strip()
-            )
-        elif "TRACK_NAME" in line:
-            logged_dict["world_name"] = (
+        if "DIFFICULTY_FACTOR" in line:
+            logged_dict["difficulty_factor"] = int(
                 line.split("=")[1].split("#")[0].strip('"').strip()
             )
             break
     config_dict["r"] = logged_dict
+
+# Open env file for reading
+with open("./run.env", "r") as run_file:
+    # Open the file in read mode
+    for line in run_file.readlines():
+        if line.startswith("DR_WORLD_NAME="):
+            config_dict["world_name"] = line.split("=")[1]
+            break
 
 # Start training job
 if not DEBUG:
@@ -298,9 +298,7 @@ def process_line(line):
                     print(
                         f'{timestamp} 🚀 Uploading full progress checkpoint {checkpoint} expecting {best_metrics["steps"]:0.2f} steps)'
                     )
-                    wandb.config["world_name"] = update_run_env(
-                        wandb.run.name, checkpoint
-                    ).replace("\n", "")
+                    update_run_env(wandb.run.name, checkpoint).replace("\n", "")
                     subprocess.run("./upload.sh", shell=True)
                     # subprocess.Popen(["./upload.sh"])  # Non-blocking!
                     # print(
