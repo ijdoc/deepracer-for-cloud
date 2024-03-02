@@ -2,6 +2,7 @@ import math
 import time
 
 TRACK_NAME = "caecer_gp"
+DIFFICULTY_SPREAD = 1.0
 
 # Other globals
 LAST_PROGRESS = 0.0
@@ -71,7 +72,7 @@ def get_difficulty(i, waypoints):
     dx = waypoints[next_idx][0] - waypoints[i][0]
     dy = waypoints[next_idx][1] - waypoints[i][1]
     d = math.sqrt(dx**2 + dy**2)
-    return (difficulty / d) + 1.0
+    return (DIFFICULTY_SPREAD * (difficulty / d)) + 1.0
 
 
 def gaussian(x, a, b, c):
