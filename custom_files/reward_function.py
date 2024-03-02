@@ -173,18 +173,18 @@ def reward_function(params):
     if step_progress >= 0.0:
         # We reward projected_steps based on each step's progress.
         # The sigmoid saturates outliers to a reward equivalent to the target
-        # projected_steps, which is 1.5 (or 150 actual steps) in our case.
-        # @350 steps, ~1 reward
-        # @300 steps, ~3 reward
-        # @250 steps, ~13 reward
-        # @200 steps, ~50 reward
-        # @150 steps, ~150 reward
-        # @100 steps, ~230 reward
-        # @50 steps, ~150 reward
-        step_reward = sigmoid(projected_steps, k=-3.3, x0=1.25, ymin=0.0, ymax=3.3)
+        # projected_steps, which is 3.0 (or 300 actual steps) in our case.
+        # @600 steps, ~20 reward
+        # @550 steps, ~48 reward
+        # @500 steps, ~114 reward
+        # @450 steps, ~246 reward
+        # @400 steps, ~453 reward
+        # @350 steps, ~653 reward
+        # @300 steps, ~736 reward
+        step_reward = sigmoid(projected_steps, k=-2, x0=3.75, ymin=0.0, ymax=3.0)
     else:
         # We are going backwards
-        step_reward = -sigmoid(-projected_steps, k=-3.3, x0=1.25, ymin=0.0, ymax=3.3)
+        step_reward = -sigmoid(-projected_steps, k=-2, x0=3.75, ymin=0.0, ymax=3.0)
 
     difficulty = get_difficulty(this_waypoint, params["waypoints"])
 
