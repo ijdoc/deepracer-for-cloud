@@ -1,150 +1,7 @@
 import math
 import time
 
-TRACK_NAME = "caecer_loop"
-COACH = {
-    # "length": 39.12,
-    # "change": {"ahead": 4, "max": 0.7068853135701152, "min": 0.0017717369964407315},
-    "heading": [
-        89,
-        87,
-        88,
-        88,
-        89,
-        92,
-        94,
-        98,
-        102,
-        108,
-        115,
-        121,
-        126,
-        129,
-        133,
-        135,
-        137,
-        138,
-        140,
-        143,
-        144,
-        147,
-        149,
-        152,
-        154,
-        157,
-        160,
-        162,
-        165,
-        167,
-        170,
-        172,
-        174,
-        174,
-        175,
-        175,
-        175,
-        175,
-        175,
-        176,
-        180,
-        -174,
-        -171,
-        -164,
-        -157,
-        -151,
-        -144,
-        -136,
-        -127,
-        -118,
-        -118,
-        -108,
-        -98,
-        -88,
-        -79,
-        -69,
-        -60,
-        -52,
-        -46,
-        -41,
-        -37,
-        -36,
-        -38,
-        -41,
-        -46,
-        -50,
-        -56,
-        -62,
-        -68,
-        -71,
-        -71,
-        -74,
-        -75,
-        -75,
-        -75,
-        -74,
-        -73,
-        -70,
-        -67,
-        -62,
-        -56,
-        -50,
-        -44,
-        -36,
-        -29,
-        -25,
-        -21,
-        -16,
-        -12,
-        -7,
-        -3,
-        1,
-        6,
-        8,
-        9,
-        10,
-        12,
-        14,
-        17,
-        21,
-        24,
-        26,
-        31,
-        34,
-        37,
-        38,
-        42,
-        47,
-        51,
-        57,
-        65,
-        71,
-        76,
-        81,
-        84,
-        87,
-        89,
-        90,
-        91,
-        91,
-        89,
-    ],
-    "curves": [
-        {
-            "dir": "left",  # direction of the curve
-            "start": 41,  # waypoint index to start braking
-            "apex": 55,  # waypoint index to reach the apex
-            "max_throttle": 1.5,
-            "min_steer": 10,
-        },
-        {
-            "dir": "left",
-            "start": 78,
-            "apex": 87,
-            "max_throttle": 3.3,
-            "min_steer": 5,
-        },
-    ],
-}
+TRACK_NAME = "caecer_gp"
 
 # Other globals
 LAST_PROGRESS = 0.0
@@ -203,6 +60,18 @@ def get_direction_change(i, waypoints):
     diff0 = math.atan2(math.sin(diff0), math.cos(diff0))
     diff1 = math.atan2(math.sin(diff1), math.cos(diff1))
     return (diff1 + diff0) / 2.0
+
+
+def get_difficulty(i, waypoints):
+    """
+    Get difficulty at waypoint i
+    """
+    difficulty = abs(get_direction_change(i, waypoints))
+    next_idx = get_next_distinct_index(i, waypoints)
+    dx = waypoints[next_idx][0] - waypoints[i][0]
+    dy = waypoints[next_idx][1] - waypoints[i][1]
+    d = math.sqrt(dx**2 + dy**2)
+    return (difficulty / d) + 1.0
 
 
 def gaussian(x, a, b, c):
@@ -317,62 +186,9 @@ def reward_function(params):
         # We are going backwards
         step_reward = -sigmoid(-projected_steps, k=-3.3, x0=1.25, ymin=0.0, ymax=3.3)
 
-    is_coached = False
-    coach_factor = 2.0
-    for curve in COACH["curves"]:
-        if this_waypoint >= curve["start"] and this_waypoint <= curve["apex"]:
-            # We are coaching
-            is_coached = True
-            coach_factor = 1e-5
-            mid_point = ((curve["apex"] - curve["start"]) * 0.6) + curve["start"]
-            # At the beginning of the curve, reward breaking and track location
-            if this_waypoint == curve["start"]:
-                coach_factor += sigmoid(
-                    params["speed"],
-                    k=-100,  # Sigmoid spread is ~0.1
-                    x0=curve["max_throttle"],
-                    ymin=0.0,
-                    ymax=1.2,
-                )
-                if curve["dir"] == "left":
-                    if not params["is_left_of_center"]:
-                        coach_factor += 0.8
-            # At the apex, reward heading and track location
-            elif this_waypoint == curve["apex"]:
-                coach_factor += wrapped_bell_curve(
-                    params["heading"], COACH["heading"][this_waypoint], 60
-                )
-                if curve["dir"] == "left":
-                    if params["is_left_of_center"]:
-                        distance = params["distance_from_center"] / params["track_width"] # 0.0 to 0.5
-                        coach_factor += gaussian(params["distance_from_center"], 1, 0.5, 0.25)
-            # At beginning of curve, reward breaking and steering
-            elif this_waypoint <= mid_point:
-                coach_factor += sigmoid(
-                    params["speed"],
-                    k=-100,  # Sigmoid spread is ~0.1
-                    x0=curve["max_throttle"],
-                    ymin=0.0,
-                    ymax=1.2,
-                )
-                if curve["dir"] == "left":
-                    k_factor = 5  # Sigmoid spread is ~2.0
-                else:
-                    k_factor = -5
-                coach_factor += sigmoid(
-                    params["steering_angle"],
-                    k=k_factor,
-                    x0=curve["min_steer"],
-                    ymin=0.0,
-                    ymax=0.8,
-                )
-            # As we approach the apex, reward heading
-            else:
-                coach_factor += 2.0 * wrapped_bell_curve(
-                    params["heading"], COACH["heading"][this_waypoint], 60
-                )
+    difficulty = get_difficulty(this_waypoint, params["waypoints"])
 
-    reward = float(coach_factor * step_reward)
+    reward = float(difficulty * step_reward)
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:
@@ -382,7 +198,7 @@ def reward_function(params):
 
     # This trace is needed for test logging
     print(
-        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{params['speed']},{params['steering_angle']},{is_coached},{coach_factor},{reward},{is_finished}"
+        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{params['speed']},{params['steering_angle']},{step_reward},{difficulty},{reward},{is_finished}"
     )
 
     return reward

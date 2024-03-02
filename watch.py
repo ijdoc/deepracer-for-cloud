@@ -11,8 +11,8 @@ import subprocess
 import argparse
 
 # FIXME: Define from command line arguments in parent script?
-os.environ["WANDB_RUN_GROUP"] = "2402"
-GLOBAL_MIN_STEPS = 176.0
+os.environ["WANDB_RUN_GROUP"] = "2403"
+GLOBAL_MIN_STEPS = 300.0
 
 # Create ArgumentParser
 parser = argparse.ArgumentParser(description="Log testing metrics")
@@ -67,8 +67,8 @@ def reset_tables():
         "progress",
         "throttle",
         "steer",
-        "coached",
-        "factor",
+        "step_reward",
+        "difficulty",
         "reward",
     ]
     return {
@@ -162,7 +162,9 @@ with open("./custom_files/reward_function.py", "r") as py_file:
         elif "REWARD_TYPE" in line:
             logged_dict["type"] = line.split("=")[1].split("#")[0].strip('"').strip()
         elif "TRACK_NAME" in line:
-            logged_dict["world_name"] = line.split("=")[1].split("#")[0].strip('"').strip()
+            logged_dict["world_name"] = (
+                line.split("=")[1].split("#")[0].strip('"').strip()
+            )
             break
     config_dict["r"] = logged_dict
 
@@ -209,8 +211,8 @@ def process_line(line):
         progress = float(parts[2])
         throttle = float(parts[3])
         steer = float(parts[4])
-        coached = parts[5]
-        factor = float(parts[6])
+        step_reward = float(parts[5])
+        difficulty = float(parts[6])
         reward = float(parts[7])
         is_finished = int(parts[8])
         job = "train"
@@ -224,8 +226,8 @@ def process_line(line):
                 progress,
                 throttle,
                 steer,
-                coached,
-                factor,
+                step_reward,
+                difficulty,
                 reward,
             )
         step_metrics[job]["reward"].append(reward)
