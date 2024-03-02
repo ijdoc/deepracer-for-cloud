@@ -152,7 +152,7 @@ with open("./custom_files/reward_function.py", "r") as py_file:
     logged_dict = {}
     for line in py_file.readlines():
         if "DIFFICULTY_FACTOR" in line:
-            logged_dict["difficulty_factor"] = int(
+            logged_dict["difficulty_factor"] = float(
                 line.split("=")[1].split("#")[0].strip('"').strip()
             )
             break
