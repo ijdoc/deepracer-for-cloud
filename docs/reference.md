@@ -27,6 +27,7 @@ The scripts assume that two files `system.env` containing constant configuration
 | `DR_TRAIN_MIN_EVAL_TRIALS` | The minimum number of evaluation trials run between each training iteration.  Evaluations will continue as long as policy training is occuring and may be more than this number.  This establishes the minimum, and is generally useful if you want to speed up training especially when using gpu sagemaker containers.|
 | `DR_TRAIN_REVERSE_DIRECTION` | Set to `True` to reverse the direction in which the car traverses the track. |
 | `DR_TRAIN_BEST_MODEL_METRIC` | Can be used to control which model is kept as the "best" model. Set to `progress` to select the model with the highest evaluation completion percentage, set to `reward` to select the model with the highest evaluation reward.|
+| `DR_TRAIN_MAX_STEPS_PER_ITERATION` | Can be used to control the max number of steps per iteration to use for learning, the excess steps will be discarded to avoid out-of-memory situations, default is 10000. |
 | `DR_LOCAL_S3_PRETRAINED` | Determines if training or evaluation shall be based on the model created in a previous session, held in `s3://{DR_LOCAL_S3_BUCKET}/{LOCAL_S3_PRETRAINED_PREFIX}`, accessible by credentials held in profile `{DR_LOCAL_S3_PROFILE}`.|
 | `DR_LOCAL_S3_PRETRAINED_PREFIX` | Prefix of pretrained model within S3 bucket.|
 | `DR_LOCAL_S3_MODEL_PREFIX` | Prefix of model within S3 bucket.|
@@ -67,6 +68,7 @@ The scripts assume that two files `system.env` containing constant configuration
 | `DR_ROBOMAKER_MOUNT_LOGS` | True to get logs mounted to `$DR_DIR/data/logs/robomaker/$DR_LOCAL_S3_MODEL_PREFIX`|
 | `DR_ROBOMAKER_MOUNT_SIMAPP_DIR` | Path to the altered Robomaker bundle, e.g. `/home/ubuntu/deepracer-simapp/bundle`.|
 | `DR_CLOUD_WATCH_ENABLE` | Send log files to AWS CloudWatch.|
+| `DR_CLOUD_WATCH_LOG_STREAM_PREFIX` | Add a prefix to the CloudWatch log stream name.|
 | `DR_DOCKER_STYLE` | Valid Options are `Swarm` and `Compose`.  Use Compose for openGL optimized containers.|
 | `DR_HOST_X` | Uses the host X-windows server, rather than starting one inside of Robomaker. Required for OpenGL images.|
 | `DR_WEBVIEWER_PORT` | Port for the web-viewer proxy which enables the streaming of all robomaker workers at once.|
