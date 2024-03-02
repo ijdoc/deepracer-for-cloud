@@ -83,7 +83,7 @@ ckpt_metrics = {
     "learn": {"loss": None, "KL_div": None, "entropy": None},
 }
 iter_metrics = reset_iter_metrics()
-best_metrics = {"reward": -1.0, "progress": 0.0, "steps": 100000.0}
+best_metrics = {"reward": -1.0, "progress": 0.0, "steps": 100000.0, "checkpoint": -1}
 is_testing = False
 step_metrics = {
     "train": {"reward": []},
@@ -288,13 +288,14 @@ def process_line(line):
                 best_metrics["reward"] = ckpt_metrics["test"]["reward"]
                 best_metrics["steps"] = ckpt_metrics["test"]["steps"]
                 best_metrics["progress"] = ckpt_metrics["test"]["progress"]
+                best_metrics["checkpoint"] = checkpoint
                 print(
                     f'{timestamp} ckpt {checkpoint}: {ckpt_metrics["test"]["reward"]:0.2f}, {ckpt_metrics["test"]["progress"]:0.2f}%, {ckpt_metrics["test"]["steps"]:0.2f} steps (improved)'
                 )
                 if (
                     not DEBUG
                     and best_metrics["progress"] >= 100.0
-                    and ckpt_metrics["test"]["steps"] <= GLOBAL_MIN_STEPS
+                    # and ckpt_metrics["test"]["steps"] <= GLOBAL_MIN_STEPS
                 ):
                     print(
                         f'{timestamp} 🚀 Uploading full progress checkpoint {checkpoint} expecting {best_metrics["steps"]:0.2f} steps)'
@@ -336,6 +337,7 @@ def process_line(line):
                 wandb.run.summary["test/reward"] = best_metrics["reward"]
                 wandb.run.summary["test/steps"] = best_metrics["steps"]
                 wandb.run.summary["test/progress"] = best_metrics["progress"]
+                wandb.run.summary["best_checkpoint"] = best_metrics["checkpoint"]
         # Resetting tracker variables
         iter_metrics = reset_iter_metrics()
         tables = reset_tables()
