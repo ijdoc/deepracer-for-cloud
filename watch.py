@@ -314,7 +314,7 @@ def process_line(line):
                     print(
                         f'{timestamp} 🚀 Uploading full progress checkpoint {checkpoint} expecting {best_metrics["steps"]:0.2f} steps)'
                     )
-                    update_run_env(wandb.run.name, checkpoint).replace("\n", "")
+                    update_run_env(wandb.run.name, checkpoint)
                     subprocess.run("./upload.sh", shell=True)
                     # subprocess.Popen(["./upload.sh"])  # Non-blocking!
                     # print(
