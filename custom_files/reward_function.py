@@ -182,7 +182,7 @@ def reward_function(params):
         # projected_steps, which is ~370@290 steps in our case.
         step_reward = sigmoid(
             projected_steps,
-            k=-STEP_K,
+            k=STEP_K,
             x0=STEP_X0,
             ymin=STEP_YMIN,
             ymax=STEP_YMAX,
