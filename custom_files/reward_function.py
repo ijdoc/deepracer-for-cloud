@@ -6,7 +6,7 @@ STEP_K = -2
 STEP_X0 = 5.5
 STEP_YMIN = 0.0
 STEP_YMAX = 1.7394709392167267  # The max difficulty value
-DIFFICULTY_FACTOR = 5.0
+DIFFICULTY_FACTOR = 1.25
 
 # Other globals
 LAST_PROGRESS = 0.0
@@ -204,7 +204,7 @@ def reward_function(params):
         )
 
     # When DIFFICULTY_FACTOR is 1.0, step_reward and difficulty are equally weighted
-    reward = float((step_reward + difficulty) / DIFFICULTY_FACTOR)
+    reward = float((step_reward + difficulty) / (DIFFICULTY_FACTOR + 1.0))
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:
