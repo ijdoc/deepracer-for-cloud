@@ -67,7 +67,7 @@ def reset_tables():
         "progress",
         "throttle",
         "steer",
-        "step_reward",
+        "projected_steps",
         "difficulty",
         "reward",
     ]
@@ -225,7 +225,7 @@ def process_line(line):
         progress = float(parts[2])
         throttle = float(parts[3])
         steer = float(parts[4])
-        step_reward = float(parts[5])
+        projected_steps = float(parts[5])
         difficulty = float(parts[6])
         reward = float(parts[7])
         is_finished = int(parts[8])
@@ -240,7 +240,7 @@ def process_line(line):
                 progress,
                 throttle,
                 steer,
-                step_reward,
+                projected_steps,
                 difficulty,
                 reward,
             )
