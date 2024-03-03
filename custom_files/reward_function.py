@@ -3,10 +3,10 @@ import time
 
 TRACK_NAME = "caecer_gp"
 STEP_K = -2
-STEP_X0 = 5.5
+STEP_X0 = 5.6
 STEP_YMIN = 0.0
 STEP_YMAX = 1.7394709392167267  # The max difficulty value
-DIFFICULTY_FACTOR = 1.25
+DIFFICULTY_FACTOR = 2.0
 
 # Other globals
 LAST_PROGRESS = 0.0
@@ -67,7 +67,7 @@ def get_direction_change(i, waypoints):
     return (diff1 + diff0) / 2.0
 
 
-def get_difficulty(i, waypoints, spread=DIFFICULTY_FACTOR):
+def get_difficulty(i, waypoints):
     """
     Get difficulty at waypoint i
     """
@@ -76,7 +76,7 @@ def get_difficulty(i, waypoints, spread=DIFFICULTY_FACTOR):
     dx = waypoints[next_idx][0] - waypoints[i][0]
     dy = waypoints[next_idx][1] - waypoints[i][1]
     d = math.sqrt(dx**2 + dy**2)
-    return spread * (difficulty / d)
+    return difficulty / d
 
 
 def gaussian(x, a, b, c):
@@ -204,7 +204,10 @@ def reward_function(params):
         )
 
     # When DIFFICULTY_FACTOR is 1.0, step_reward and difficulty are equally weighted
-    reward = float((step_reward + difficulty) / (DIFFICULTY_FACTOR + 1.0))
+    reward = float(
+        (step_reward * ((DIFFICULTY_FACTOR * difficulty) + 1.0))
+        / ((DIFFICULTY_FACTOR * STEP_YMAX) + 1.0)
+    )
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:
