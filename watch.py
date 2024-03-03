@@ -151,7 +151,23 @@ with open("./custom_files/model_metadata.json", "r") as json_file:
 with open("./custom_files/reward_function.py", "r") as py_file:
     logged_dict = {}
     for line in py_file.readlines():
-        if "DIFFICULTY_FACTOR" in line:
+        if "STEP_K" in line:
+            logged_dict["k"] = float(
+                line.split("=")[1].split("#")[0].strip('"').strip()
+            )
+        elif "STEP_X0" in line:
+            logged_dict["x0"] = float(
+                line.split("=")[1].split("#")[0].strip('"').strip()
+            )
+        elif "STEP_YMIN" in line:
+            logged_dict["ymin"] = float(
+                line.split("=")[1].split("#")[0].strip('"').strip()
+            )
+        elif "STEP_YMAX" in line:
+            logged_dict["ymax"] = float(
+                line.split("=")[1].split("#")[0].strip('"').strip()
+            )
+        elif "DIFFICULTY_FACTOR" in line:
             logged_dict["difficulty_factor"] = float(
                 line.split("=")[1].split("#")[0].strip('"').strip()
             )

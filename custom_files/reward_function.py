@@ -2,7 +2,11 @@ import math
 import time
 
 TRACK_NAME = "caecer_gp"
-DIFFICULTY_FACTOR = 2.0
+STEP_K = -2
+STEP_X0 = 5.5
+STEP_YMIN = 0.0
+STEP_YMAX = 1.7394709392167267  # The max difficulty value
+DIFFICULTY_FACTOR = 5.0
 
 # Other globals
 LAST_PROGRESS = 0.0
@@ -177,31 +181,30 @@ def reward_function(params):
         # We reward projected_steps based on each step's progress.
         # The sigmoid saturates outliers to a reward equivalent to the target
         # projected_steps, which is ~2.5 (or 250 actual steps) in our case.
-        # @500 steps, ~41 reward
-        # @450 steps, ~93 reward
-        # @400 steps, ~187 reward
-        # @350 steps, ~304 reward
-        # @300 steps, ~382 reward
-        # @250 steps, ~383 reward
+        # @650 steps, ~135 reward
+        # @600 steps, ~281 reward
+        # @550 steps, ~435 reward
+        # @500 steps, ~635 reward
+        # @450 steps, ~689 reward
         step_reward = sigmoid(
             projected_steps,
-            k=-2,
-            x0=3.5,
-            ymin=0.0,
-            ymax=1.7394709392167267,  # The max difficulty value
+            k=-STEP_K,
+            x0=STEP_X0,
+            ymin=STEP_YMIN,
+            ymax=STEP_YMAX,
         )
     else:
         # We are going backwards
         step_reward = -sigmoid(
             -projected_steps,
-            k=-2,
-            x0=3.5,
-            ymin=0.0,
-            ymax=1.7394709392167267,  # The max difficulty value
+            k=-STEP_K,
+            x0=STEP_X0,
+            ymin=STEP_YMIN,
+            ymax=STEP_YMAX,
         )
 
     # When DIFFICULTY_FACTOR is 1.0, step_reward and difficulty are equally weighted
-    reward = float(step_reward + difficulty)
+    reward = float((step_reward + difficulty) / DIFFICULTY_FACTOR)
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:
