@@ -2,7 +2,7 @@ import math
 import time
 
 TRACK_NAME = "caecer_gp"
-DIFFICULTY_FACTOR = 1.0
+DIFFICULTY_FACTOR = 2.0
 
 # Other globals
 LAST_PROGRESS = 0.0
