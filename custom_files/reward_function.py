@@ -2,10 +2,10 @@ import math
 import time
 
 TRACK_NAME = "caecer_gp"
-STEP_K = -0.0045
+STEP_K = -0.004
 STEP_X0 = 0.0
 STEP_YMIN = 0.0
-STEP_YMAX = 6
+STEP_YMAX = 3
 DIFFICULTY_FACTOR = 1.0
 
 # Other globals
@@ -179,7 +179,7 @@ def reward_function(params):
     if step_progress >= 0.0:
         # We reward projected_steps based on each step's progress.
         # The sigmoid saturates the reward to a maximum value below the
-        # projected_steps, which is ~370@290 steps in our case.
+        # projected_steps, which is ~209@320 steps in our case.
         step_reward = sigmoid(
             projected_steps,
             k=STEP_K,
