@@ -6,7 +6,9 @@ STEP_K = -0.004
 STEP_X0 = 0.0
 STEP_YMIN = 0.0
 STEP_YMAX = 3
-DIFFICULTY_FACTOR = 1.0
+# The difficulty factor is used to scale the difficulty of the track. If indicates how
+# many times the hardest difficulty is harder than the easiest difficulty.
+DIFFICULTY_FACTOR = 2.0
 
 # Other globals
 LAST_PROGRESS = 0.0
@@ -67,7 +69,7 @@ def get_direction_change(i, waypoints):
     return (diff1 + diff0) / 2.0
 
 
-def get_difficulty(i, waypoints, max_val=1.0):
+def get_waypoint_difficulty(i, waypoints, max_val=1.0):
     """
     Get difficulty at waypoint i
     """
@@ -78,6 +80,48 @@ def get_difficulty(i, waypoints, max_val=1.0):
     d = math.sqrt(dx**2 + dy**2)
     return (difficulty / d) / max_val
 
+def get_waypoint_weight(i, waypoints):
+    """
+    Get waypoint weight based on how common the direction change is in the entire track.
+    This can be used to give more weight to waypoints that are less likely to occur during
+    training, and therefore are more important to learn.
+    """
+    histogram = {
+        "weights": [
+            1.0,
+            0.38461538461538464,
+            0.4166666666666667,
+            0.3333333333333333,
+            0.625,
+            0.1724137931034483,
+            0.13157894736842105,
+            0.1388888888888889,
+            0.16666666666666666,
+            0.20833333333333334,
+            0.625,
+            0.38461538461538464,
+        ],
+        "edges": [
+            -0.2504581665466262,
+            -0.20836239417644217,
+            -0.16626662180625812,
+            -0.1241708494360741,
+            -0.08207507706589004,
+            -0.039979304695705986,
+            0.0021164676744780397,
+            0.04421224004466212,
+            0.08630801241484615,
+            0.12840378478503017,
+            0.17049955715521425,
+            0.21259532952539828,
+            0.25469110189558236,
+        ],
+    }
+    for j in range(len(histogram["weights"])):
+        change = get_direction_change(i, waypoints)
+        if change >= histogram["edges"][j] and change < histogram["edges"][j + 1]:
+            return histogram["weights"][j]
+    return histogram["weights"][j] # when change is equal to the last edge
 
 def gaussian(x, a, b, c):
     """_summary_
@@ -167,10 +211,6 @@ def reward_function(params):
 
     this_waypoint = params["closest_waypoints"][0]
 
-    difficulty = get_difficulty(
-        this_waypoint, params["waypoints"], max_val=1.7394709392167267
-    )
-
     if step_progress == 0.0:
         projected_steps = 10000.0
     else:
@@ -197,7 +237,12 @@ def reward_function(params):
             ymax=STEP_YMAX,
         )
 
-    reward = float(step_reward + (difficulty * DIFFICULTY_FACTOR))
+    # max_val is the maximum absolute difficulty value for the track
+    difficulty = 1.0 + (get_waypoint_difficulty(
+        this_waypoint, params["waypoints"], max_val=1.7394709392167267
+    ) * (DIFFICULTY_FACTOR - 1.0))
+    weighpoint_weight = get_waypoint_weight(this_waypoint, params["waypoints"])
+    reward = float(step_reward * weighpoint_weight * difficulty)
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:
