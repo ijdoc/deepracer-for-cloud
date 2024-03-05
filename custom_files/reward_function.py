@@ -8,7 +8,7 @@ STEP_YMIN = 0.0
 STEP_YMAX = 3
 # The difficulty factor is used to scale the difficulty of the track. If indicates how
 # many times the hardest difficulty is harder than the easiest difficulty.
-DIFFICULTY_FACTOR = 2.0
+DIFFICULTY_FACTOR = 3.0
 
 # Other globals
 LAST_PROGRESS = 0.0
