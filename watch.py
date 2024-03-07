@@ -68,7 +68,7 @@ def reset_tables():
         "throttle",
         "steer",
         "projected_steps",
-        "difficulty",
+        "factor",
         "reward",
     ]
     return {
@@ -167,6 +167,10 @@ with open("./custom_files/reward_function.py", "r") as py_file:
             logged_dict["ymax"] = float(
                 line.split("=")[1].split("#")[0].strip('"').strip()
             )
+        elif "MAX_IMPORTANCE" in line:
+            logged_dict["max_importance"] = float(
+                line.split("=")[1].split("#")[0].strip('"').strip()
+            )
         elif "DIFFICULTY_FACTOR" in line:
             logged_dict["difficulty_factor"] = float(
                 line.split("=")[1].split("#")[0].strip('"').strip()
@@ -226,7 +230,7 @@ def process_line(line):
         throttle = float(parts[3])
         steer = float(parts[4])
         projected_steps = float(parts[5])
-        difficulty = float(parts[6])
+        factor = float(parts[6])
         reward = float(parts[7])
         is_finished = int(parts[8])
         job = "train"
@@ -241,7 +245,7 @@ def process_line(line):
                 throttle,
                 steer,
                 projected_steps,
-                difficulty,
+                factor,
                 reward,
             )
         step_metrics[job]["reward"].append(reward)

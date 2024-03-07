@@ -6,9 +6,10 @@ STEP_K = -0.004
 STEP_X0 = 0.0
 STEP_YMIN = 0.0
 STEP_YMAX = 3
+MAX_IMPORTANCE = 7.6
 # The difficulty factor is used to scale the difficulty of the track. If indicates how
 # many times the hardest difficulty is harder than the easiest difficulty.
-DIFFICULTY_FACTOR = 3.0
+DIFFICULTY_FACTOR = 7.6
 
 # Other globals
 LAST_PROGRESS = 0.0
@@ -69,7 +70,7 @@ def get_direction_change(i, waypoints):
     return (diff1 + diff0) / 2.0
 
 
-def get_waypoint_difficulty(i, waypoints, max_val=1.0):
+def get_waypoint_difficulty(i, waypoints, max_val=1.0, factor=1.0):
     """
     Get difficulty at waypoint i
     """
@@ -78,9 +79,10 @@ def get_waypoint_difficulty(i, waypoints, max_val=1.0):
     dx = waypoints[next_idx][0] - waypoints[i][0]
     dy = waypoints[next_idx][1] - waypoints[i][1]
     d = math.sqrt(dx**2 + dy**2)
-    return (difficulty / d) / max_val
+    return 1.0 + ((difficulty / d) / max_val) * (factor - 1.0)
 
-def get_waypoint_weight(i, waypoints):
+
+def get_waypoint_importance(i, waypoints):
     """
     Get waypoint weight based on how common the direction change is in the entire track.
     This can be used to give more weight to waypoints that are less likely to occur during
@@ -88,18 +90,18 @@ def get_waypoint_weight(i, waypoints):
     """
     histogram = {
         "weights": [
+            7.600000000000001,
+            2.9230769230769234,
+            3.166666666666667,
+            2.5333333333333337,
+            4.75,
+            1.310344827586207,
             1.0,
-            0.38461538461538464,
-            0.4166666666666667,
-            0.3333333333333333,
-            0.625,
-            0.1724137931034483,
-            0.13157894736842105,
-            0.1388888888888889,
-            0.16666666666666666,
-            0.20833333333333334,
-            0.625,
-            0.38461538461538464,
+            1.0555555555555556,
+            1.2666666666666668,
+            1.5833333333333335,
+            4.75,
+            2.9230769230769234,
         ],
         "edges": [
             -0.2504581665466262,
@@ -121,7 +123,8 @@ def get_waypoint_weight(i, waypoints):
         change = get_direction_change(i, waypoints)
         if change >= histogram["edges"][j] and change < histogram["edges"][j + 1]:
             return histogram["weights"][j]
-    return histogram["weights"][j] # when change is equal to the last edge
+    return histogram["weights"][j]  # when change is equal to the last edge
+
 
 def gaussian(x, a, b, c):
     """_summary_
@@ -238,11 +241,15 @@ def reward_function(params):
         )
 
     # max_val is the maximum absolute difficulty value for the track
-    difficulty = 1.0 + (get_waypoint_difficulty(
-        this_waypoint, params["waypoints"], max_val=1.7394709392167267
-    ) * (DIFFICULTY_FACTOR - 1.0))
-    weighpoint_weight = get_waypoint_weight(this_waypoint, params["waypoints"])
-    reward = float(step_reward * weighpoint_weight * difficulty)
+    difficulty = get_waypoint_difficulty(
+        this_waypoint,
+        params["waypoints"],
+        max_val=1.7394709392167267,
+        factor=DIFFICULTY_FACTOR,
+    )
+    importance = get_waypoint_importance(this_waypoint, params["waypoints"])
+    factor = (importance + difficulty) / (MAX_IMPORTANCE + DIFFICULTY_FACTOR)
+    reward = float(step_reward * factor)
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:
@@ -252,7 +259,7 @@ def reward_function(params):
 
     # This trace is needed for test logging
     print(
-        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{params['speed']},{params['steering_angle']},{projected_steps},{difficulty},{reward},{is_finished}"
+        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{params['speed']},{params['steering_angle']},{projected_steps},{factor},{reward},{is_finished}"
     )
 
     return reward

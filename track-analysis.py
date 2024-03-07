@@ -24,7 +24,7 @@ def download(track):
     return npy_data, waypoint_count
 
 
-def print_numbered_line(line):
+def plot_numbered_line(line):
     x = [point[0] for point in line]
     y = [point[1] for point in line]
     plt.plot(x, y, linestyle="-", color="red")
@@ -38,25 +38,30 @@ def main(track):
     inner_line = list([tuple(sublist[2:4]) for sublist in npy_data])
     outer_line = list([tuple(sublist[4:6]) for sublist in npy_data])
     limits = {
-        "ahead": 2,
-        "max": -1000,
-        "min": 1000,
+        "max_importance": -1000,
+        "min_importance": 1000,
+        "max_difficulty": -1000,
+        "min_difficulty": 1000,
+        "max_factor": -1000,
+        "min_factor": 1000,
     }
 
-    print_numbered_line(inner_line)
-    print_numbered_line(outer_line)
+    plot_numbered_line(inner_line)
+    plot_numbered_line(outer_line)
     plt.xlabel("X")
     plt.ylabel("Y")
     plt.grid(True)
 
+    importance = [0 for _ in range(len(waypoints))]
     difficulty = [0 for _ in range(len(waypoints))]
+    change = [0 for _ in range(len(waypoints))]
     for i in range(waypoint_count):
         # Plot cross-waypoint lines
         plt.plot(
             [inner_line[i][0], outer_line[i][0]],
             [inner_line[i][1], outer_line[i][1]],
             linestyle="-",
-            color="black",
+            color="gray",
         )
         # Plot waypoint direction
         direction = reward_function.get_direction(i, waypoints)
@@ -81,15 +86,27 @@ def main(track):
         # Calculate cumulative direction change
         # j = i
         # difficulty[i] = direction
-        difficulty[i] = reward_function.get_difficulty(i, waypoints)
+        change[i] = reward_function.get_direction_change(i, waypoints)
+        difficulty[i] = reward_function.get_waypoint_difficulty(
+            i, waypoints, max_val=1.7394709392167267, factor=7.6
+        )
+        importance[i] = reward_function.get_waypoint_importance(i, waypoints)
         # for _ in range(limits["ahead"]):
         #     j = reward_function.get_next_distinct_index(j, waypoints)
         # difficulty[i] = abs(difficulty[i])
         # Calculate limits
-        if difficulty[i] > limits["max"]:
-            limits["max"] = difficulty[i]
-        if difficulty[i] < limits["min"]:
-            limits["min"] = difficulty[i]
+        if difficulty[i] > limits["max_difficulty"]:
+            limits["max_difficulty"] = difficulty[i]
+        if difficulty[i] < limits["min_difficulty"]:
+            limits["min_difficulty"] = difficulty[i]
+        if importance[i] > limits["max_importance"]:
+            limits["max_importance"] = importance[i]
+        if importance[i] < limits["min_importance"]:
+            limits["min_importance"] = importance[i]
+        if importance[i] + difficulty[i] > limits["max_factor"]:
+            limits["max_factor"] = importance[i] + difficulty[i]
+        if importance[i] + difficulty[i] < limits["min_factor"]:
+            limits["min_factor"] = importance[i] + difficulty[i]
         # x_start = waypoints[i][0]
         # y_start = waypoints[i][1]
         # x_end = x_start + length * math.cos(difficulty[i])
@@ -107,10 +124,27 @@ def main(track):
         #     color="green",
         #     width=0.001,
         # )
-        print(i, difficulty[i])
+        print(
+            i,
+            f"{change[i]:0.02f}",
+            f"{difficulty[i]:0.02f}",
+            f"{importance[i]:0.02f}",
+            f"{importance[i] + difficulty[i]:0.02f}",
+        )
+        # print(
+        #     i, f"{change[i]:0.02f}", f"{difficulty[i]:0.02f}"
+        # )
     print(limits)
 
-    plt.show()
+    # Calculate bin counts and bin edges
+    counts, bin_edges = np.histogram(change, bins="auto")
+    factors = sum(counts) / counts
+    factors = (factors / min(factors))
+    print(f"Counts: \t{counts}")
+    print(f"Factors:\t{factors}")
+    print(f"Bins:   \t{bin_edges}")
+    print({"weights": factors.tolist(), "edges": bin_edges.tolist()})
+    # plt.show()
 
 
 if __name__ == "__main__":
