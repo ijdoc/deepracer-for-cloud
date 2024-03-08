@@ -169,9 +169,12 @@ def get_waypoint_batch_rank(i, trial_start, trial_count, factor):
     """
     starts = TRACK["trial_starts"][str(trial_count)]
     idx = starts.index(trial_start)
-    # FIXME: Last start limit should be the end of the track
+    # Last start limit should be the end of the track
     if idx + 1 == len(starts):
         trial_end = TRACK["waypoint_count"]
+        if i < trial_start:
+            # Assume we crossed the finish line, so continue the count.
+            i += trial_end
     else:
         trial_end = starts[idx + 1]
     batch_progress = (i - trial_start) / (trial_end - trial_start)
