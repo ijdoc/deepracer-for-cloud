@@ -1,18 +1,80 @@
 import math
 import time
 
-TRACK_NAME = "caecer_gp"
-STEP_K = -0.004
-STEP_X0 = 0.0
-STEP_YMIN = 0.0
-STEP_YMAX = 3
-MAX_IMPORTANCE = 7.6
-# The difficulty factor is used to scale the difficulty of the track. If indicates how
-# many times the hardest difficulty is harder than the easiest difficulty.
-DIFFICULTY_FACTOR = 7.6
+TRACK = {
+    "name": "caecer_gp",
+    "step_progress": {
+        "k": -0.004,
+        "x0": 0.0,
+        "ymin": 0.0,
+        "ymax": 3,
+    },
+    "max_importance": 7.6,  # Actual value from track-analysis.py
+    "max_difficulty": 1.7394709392167267,  # Actual value from track-analysis.py
+    "difficulty_factor": 7.6,
+    "progress_factor": 7.6,
+    "aggregate_divisor": 7.6,
+    # These arrays can be obtained by running training for two epochs
+    "trial_starts": {
+        "10": [
+            0,
+            4,
+            14,
+            24,
+            30,
+            36,
+            51,
+            56,
+            60,
+            73,
+            89,
+            98,
+            111,
+            126,
+            148,
+            167,
+            181,
+            193,
+            199,
+            218,
+        ]
+    },
+    "histogram": {
+        "weights": [
+            7.6,
+            2.923,
+            3.167,
+            2.533,
+            4.75,
+            1.31,
+            1.0,
+            1.056,
+            1.267,
+            1.583,
+            4.75,
+            2.923,
+        ],
+        "edges": [
+            -0.2504581665466262,
+            -0.20836239417644217,
+            -0.16626662180625812,
+            -0.1241708494360741,
+            -0.08207507706589004,
+            -0.039979304695705986,
+            0.0021164676744780397,
+            0.04421224004466212,
+            0.08630801241484615,
+            0.12840378478503017,
+            0.17049955715521425,
+            0.21259532952539828,
+            0.25469110189558236,
+        ],
+    },
+}
 
 # Other globals
 LAST_PROGRESS = 0.0
+TRIAL_START = 0
 
 
 def get_next_distinct_index(i, waypoints):
@@ -72,58 +134,46 @@ def get_direction_change(i, waypoints):
 
 def get_waypoint_difficulty(i, waypoints, max_val=1.0, factor=1.0):
     """
-    Get difficulty at waypoint i
+    Get difficulty at waypoint i, calculated as the absolute amount of direction change,
+    divided by the distance to the next distinct waypoint (i.e. the waypoint length).
+    The final value is normalized to a range between 1.0 and factor.
     """
     difficulty = abs(get_direction_change(i, waypoints))
     next_idx = get_next_distinct_index(i, waypoints)
     dx = waypoints[next_idx][0] - waypoints[i][0]
     dy = waypoints[next_idx][1] - waypoints[i][1]
     d = math.sqrt(dx**2 + dy**2)
-    return 1.0 + ((difficulty / d) / max_val) * (factor - 1.0)
+    return 1.0 + (((difficulty / d) / max_val) * (factor - 1.0))
 
 
-def get_waypoint_importance(i, waypoints):
+def get_waypoint_importance(i, waypoints, histogram):
     """
     Get waypoint weight based on how common the direction change is in the entire track.
     This can be used to give more weight to waypoints that are less likely to occur during
     training, and therefore are more important to learn.
     """
-    histogram = {
-        "weights": [
-            7.600000000000001,
-            2.9230769230769234,
-            3.166666666666667,
-            2.5333333333333337,
-            4.75,
-            1.310344827586207,
-            1.0,
-            1.0555555555555556,
-            1.2666666666666668,
-            1.5833333333333335,
-            4.75,
-            2.9230769230769234,
-        ],
-        "edges": [
-            -0.2504581665466262,
-            -0.20836239417644217,
-            -0.16626662180625812,
-            -0.1241708494360741,
-            -0.08207507706589004,
-            -0.039979304695705986,
-            0.0021164676744780397,
-            0.04421224004466212,
-            0.08630801241484615,
-            0.12840378478503017,
-            0.17049955715521425,
-            0.21259532952539828,
-            0.25469110189558236,
-        ],
-    }
     for j in range(len(histogram["weights"])):
         change = get_direction_change(i, waypoints)
         if change >= histogram["edges"][j] and change < histogram["edges"][j + 1]:
             return histogram["weights"][j]
     return histogram["weights"][j]  # when change is equal to the last edge
+
+
+def get_waypoint_batch_rank(i, trial_start, trial_count, factor):
+    """
+    Get a waypoint progress rank based on the order in which the agent will encounter it.
+    This can be used to give more weight to waypoints that occur later in a trial, and are
+    therefore more important to reach.
+    """
+    starts = TRACK["trial_starts"][str(trial_count)]
+    idx = starts.index(trial_start)
+    trial_length = starts[idx + 1] - trial_start
+    progress = (i - trial_start) / trial_length
+    if progress > 1.0:
+        rank = 1.0
+    else:
+        rank = progress
+    return 1.0 + (rank * (factor - 1.0))
 
 
 def gaussian(x, a, b, c):
@@ -203,16 +253,18 @@ def sigmoid(x, k=3.9, x0=0.6, ymin=0.0, ymax=1.2):
 
 def reward_function(params):
     global LAST_PROGRESS
+    global TRIAL_START
+
+    this_waypoint = params["closest_waypoints"][0]
 
     if params["steps"] <= 2:
         # Reset progress at the beginning of the episode
         LAST_PROGRESS = 0.0
+        TRIAL_START = this_waypoint
 
     # Get the step progress
     step_progress = params["progress"] - LAST_PROGRESS
     LAST_PROGRESS = params["progress"]
-
-    this_waypoint = params["closest_waypoints"][0]
 
     if step_progress == 0.0:
         projected_steps = 10000.0
@@ -225,41 +277,47 @@ def reward_function(params):
         # projected_steps, which is ~209@320 steps in our case.
         step_reward = sigmoid(
             projected_steps,
-            k=STEP_K,
-            x0=STEP_X0,
-            ymin=STEP_YMIN,
-            ymax=STEP_YMAX,
+            k=TRACK["step_progress"]["k"],
+            x0=TRACK["step_progress"]["x0"],
+            ymin=TRACK["step_progress"]["ymin"],
+            ymax=TRACK["step_progress"]["ymax"],
         )
     else:
         # We are going backwards
         step_reward = -sigmoid(
             -projected_steps,
-            k=-STEP_K,
-            x0=STEP_X0,
-            ymin=STEP_YMIN,
-            ymax=STEP_YMAX,
+            k=TRACK["step_progress"]["k"],
+            x0=TRACK["step_progress"]["x0"],
+            ymin=TRACK["step_progress"]["ymin"],
+            ymax=TRACK["step_progress"]["ymax"],
         )
 
     # max_val is the maximum absolute difficulty value for the track
     difficulty = get_waypoint_difficulty(
         this_waypoint,
         params["waypoints"],
-        max_val=1.7394709392167267,
-        factor=DIFFICULTY_FACTOR,
+        max_val=TRACK["max_difficulty"],
+        factor=TRACK["difficulty_factor"],
     )
-    importance = get_waypoint_importance(this_waypoint, params["waypoints"])
-    factor = (importance + difficulty) / (MAX_IMPORTANCE + DIFFICULTY_FACTOR)
+    importance = get_waypoint_importance(this_waypoint, params["waypoints"], TRACK["waypoints"])
+    rank = get_waypoint_batch_rank(
+        this_waypoint,
+        TRIAL_START,
+        TRACK["trial_count"],
+        TRACK["progress_factor"],
+    )
+    factor = (importance + difficulty + rank) / TRACK["aggregate_divisor"]
     reward = float(step_reward * factor)
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:
         is_finished = 1
         if params["is_offtrack"]:
-            reward /= 1000.0
+            reward = float(-reward)
 
     # This trace is needed for test logging
     print(
-        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{params['speed']},{params['steering_angle']},{projected_steps},{factor},{reward},{is_finished}"
+        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{projected_steps},{step_reward},{importance},{rank},{difficulty},{factor},{reward},{is_finished}"
     )
 
     return reward

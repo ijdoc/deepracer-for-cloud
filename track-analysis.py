@@ -143,7 +143,8 @@ def main(track):
     print(f"Counts: \t{counts}")
     print(f"Factors:\t{factors}")
     print(f"Bins:   \t{bin_edges}")
-    print({"weights": factors.tolist(), "edges": bin_edges.tolist()})
+    factors = [round(num, 3) for num in factors.tolist()]
+    print({"weights": factors, "edges": bin_edges.tolist()})
     # plt.show()
 
 

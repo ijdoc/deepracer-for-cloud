@@ -65,9 +65,11 @@ def reset_tables():
         "step",
         "waypoint",
         "progress",
-        "throttle",
-        "steer",
         "projected_steps",
+        "step_reward",
+        "importance",
+        "rank",
+        "difficulty",
         "factor",
         "reward",
     ]
@@ -147,37 +149,6 @@ with open("./custom_files/model_metadata.json", "r") as json_file:
     config_dict["m"] = logged_dict
 
 
-# Open reward file for reading
-with open("./custom_files/reward_function.py", "r") as py_file:
-    logged_dict = {}
-    for line in py_file.readlines():
-        if "STEP_K" in line:
-            logged_dict["k"] = float(
-                line.split("=")[1].split("#")[0].strip('"').strip()
-            )
-        elif "STEP_X0" in line:
-            logged_dict["x0"] = float(
-                line.split("=")[1].split("#")[0].strip('"').strip()
-            )
-        elif "STEP_YMIN" in line:
-            logged_dict["ymin"] = float(
-                line.split("=")[1].split("#")[0].strip('"').strip()
-            )
-        elif "STEP_YMAX" in line:
-            logged_dict["ymax"] = float(
-                line.split("=")[1].split("#")[0].strip('"').strip()
-            )
-        elif "MAX_IMPORTANCE" in line:
-            logged_dict["max_importance"] = float(
-                line.split("=")[1].split("#")[0].strip('"').strip()
-            )
-        elif "DIFFICULTY_FACTOR" in line:
-            logged_dict["difficulty_factor"] = float(
-                line.split("=")[1].split("#")[0].strip('"').strip()
-            )
-            break
-    config_dict["r"] = logged_dict
-
 # Open env file for reading
 with open("./run.env", "r") as run_file:
     # Open the file in read mode
@@ -227,12 +198,14 @@ def process_line(line):
         steps = int(float(parts[0]))
         waypoint = int(float(parts[1]))
         progress = float(parts[2])
-        throttle = float(parts[3])
-        steer = float(parts[4])
-        projected_steps = float(parts[5])
-        factor = float(parts[6])
-        reward = float(parts[7])
-        is_finished = int(parts[8])
+        projected_steps = float(parts[3])
+        step_reward = float(parts[4])
+        importance = float(parts[5])
+        rank = float(parts[6])
+        difficulty = float(parts[7])
+        factor = float(parts[8])
+        reward = float(parts[9])
+        is_finished = int(parts[10])
         job = "train"
         if is_testing:
             job = "test"
@@ -242,9 +215,11 @@ def process_line(line):
                 steps,
                 waypoint,
                 progress,
-                throttle,
-                steer,
                 projected_steps,
+                step_reward,
+                importance,
+                rank,
+                difficulty,
                 factor,
                 reward,
             )
