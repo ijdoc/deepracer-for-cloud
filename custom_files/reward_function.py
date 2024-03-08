@@ -9,11 +9,13 @@ TRACK = {
         "ymin": 0.0,
         "ymax": 3,
     },
-    "max_importance": 7.6,  # Actual value from track-analysis.py
-    "max_difficulty": 1.7394709392167267,  # Actual value from track-analysis.py
-    "difficulty_factor": 7.6,
-    "progress_factor": 7.6,
-    "aggregate_divisor": 7.6,
+    "importance": {
+        "max": 7.6,
+    },
+    "difficulty": {
+        "max": 1.7394709392167267,  # Actual value from track-analysis.py
+    },
+    "waypoint_count": 231,
     # These arrays can be obtained by running training for two epochs
     "trial_starts": {
         "10": [
@@ -167,12 +169,16 @@ def get_waypoint_batch_rank(i, trial_start, trial_count, factor):
     """
     starts = TRACK["trial_starts"][str(trial_count)]
     idx = starts.index(trial_start)
-    trial_length = starts[idx + 1] - trial_start
-    progress = (i - trial_start) / trial_length
-    if progress > 1.0:
+    # FIXME: Last start limit should be the end of the track
+    if idx + 1 == len(starts):
+        trial_end = TRACK["waypoint_count"]
+    else:
+        trial_end = starts[idx + 1]
+    batch_progress = (i - trial_start) / (trial_end - trial_start)
+    if batch_progress > 1.0:
         rank = 1.0
     else:
-        rank = progress
+        rank = batch_progress
     return 1.0 + (rank * (factor - 1.0))
 
 
@@ -296,17 +302,17 @@ def reward_function(params):
     difficulty = get_waypoint_difficulty(
         this_waypoint,
         params["waypoints"],
-        max_val=TRACK["max_difficulty"],
-        factor=TRACK["difficulty_factor"],
+        max_val=TRACK["difficulty"]["max"],
+        factor=TRACK["importance"]["max"],
     )
-    importance = get_waypoint_importance(this_waypoint, params["waypoints"], TRACK["waypoints"])
+    importance = get_waypoint_importance(this_waypoint, params["waypoints"], TRACK["histogram"])
     rank = get_waypoint_batch_rank(
         this_waypoint,
         TRIAL_START,
-        TRACK["trial_count"],
-        TRACK["progress_factor"],
+        10,
+        TRACK["importance"]["max"],
     )
-    factor = (importance + difficulty + rank) / TRACK["aggregate_divisor"]
+    factor = (importance + difficulty + rank) / TRACK["importance"]["max"]
     reward = float(step_reward * factor)
 
     is_finished = 0
