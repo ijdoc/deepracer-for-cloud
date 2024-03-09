@@ -38,11 +38,12 @@ TRACK = {
     },
     "difficulty": {"max": 1.7394709392167267},
     "waypoint_count": 231,
+    # Cumulative max is ~150@400 steps in our case
     "step_progress": {
-        "k": -0.004,
-        "x0": 0.0,
+        "ymax": 0.5,
         "ymin": 0.0,
-        "ymax": 3,
+        "k": -0.01,
+        "x0": 510,
     },
     # These arrays can be obtained by running training for two epochs
     "trial_starts": [
@@ -279,7 +280,7 @@ def reward_function(params):
     if step_progress >= 0.0:
         # We reward projected_steps based on each step's progress.
         # The sigmoid saturates the reward to a maximum value below the
-        # projected_steps, which is ~209@320 steps in our case.
+        # projected_steps.
         step_reward = sigmoid(
             projected_steps,
             k=TRACK["step_progress"]["k"],
@@ -321,7 +322,8 @@ def reward_function(params):
     if params["is_offtrack"] or params["progress"] == 100.0:
         is_finished = 1
         if params["is_offtrack"]:
-            reward = float(-reward)
+            if reward > 0.0:
+                reward = float(-reward)
 
     # This trace is needed for test logging
     print(
