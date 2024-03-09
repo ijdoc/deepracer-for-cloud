@@ -182,6 +182,19 @@ def get_waypoint_batch_rank(i, trial_start, factor):
     return 1.0 + (rank * (factor - 1.0))
 
 
+def get_waypoint_progress_rank(i, trial_start, factor):
+    """
+    Get a waypoint rank based on the progress of the agent. This can be used to encourage
+    the agent to remain in the track, since the reward will be higher for waypoints that
+    are closer to the current trial's finish line.
+    """
+    if i < trial_start:
+        # Assume we crossed the finish line, so loop the count.
+        i += TRACK["waypoint_count"]
+    trial_progress = (i - trial_start) / (TRACK["waypoint_count"] - 1)
+    return 1.0 + (trial_progress * (factor - 1.0))
+
+
 def gaussian(x, a, b, c):
     """_summary_
 
@@ -310,7 +323,7 @@ def reward_function(params):
     importance = get_waypoint_importance(
         this_waypoint, params["waypoints"], TRACK["importance"]["histogram"]
     )
-    rank = get_waypoint_batch_rank(
+    rank = get_waypoint_progress_rank(
         this_waypoint,
         TRIAL_START,
         max_importance_weight,

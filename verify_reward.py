@@ -83,7 +83,9 @@ def main(track):
             row.append(normalized_difficulty)
             for j in reward_function.TRACK["trial_starts"]:
                 row.append(
-                    reward_function.get_waypoint_batch_rank(i, j, max_importance_weight)
+                    reward_function.get_waypoint_progress_rank(
+                        i, j, max_importance_weight
+                    )
                 )
             factor_table.add_data(*row)
 
