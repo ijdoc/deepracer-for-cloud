@@ -40,15 +40,8 @@ s3 = boto3.client(
     endpoint_url="http://localhost:9000",
 )
 
-# Configure project path
-os.environ["WANDB_ENTITY"] = "iamjdoc"
-os.environ["WANDB_PROJECT"] = "dr-reborn"
-
 # Don't litter the console
 os.environ["WANDB_SILENT"] = "true"
-
-# Make sure it is possible to resume & auto-create runs
-os.environ["WANDB_RESUME"] = "allow"
 
 
 def reset_iter_metrics():
@@ -160,9 +153,16 @@ with open("./run.env", "r") as run_file:
 # Start training job
 if not DEBUG:
     if args.pretrained:
-        wandb.init(config=config_dict, job_type="retrain")
+        wandb.init(
+            config=config_dict,
+            entity="iamjdoc",
+            project="dr-reborn",
+            job_type="retrain",
+        )
     else:
-        wandb.init(config=config_dict, job_type="train")
+        wandb.init(
+            config=config_dict, entity="iamjdoc", project="dr-reborn", job_type="train"
+        )
     # Log input files
     config_files = wandb.Artifact(name="config", type="inputs")
     env_files = wandb.Artifact(name="env", type="inputs")

@@ -3,75 +3,70 @@ import time
 
 TRACK = {
     "name": "caecer_gp",
+    "importance": {
+        "histogram": {
+            "weights": [
+                7.6,
+                2.923,
+                3.167,
+                2.533,
+                4.75,
+                1.31,
+                1.0,
+                1.056,
+                1.267,
+                1.583,
+                4.75,
+                2.923,
+            ],
+            "edges": [
+                -0.2504581665466262,
+                -0.20836239417644217,
+                -0.16626662180625812,
+                -0.1241708494360741,
+                -0.08207507706589004,
+                -0.039979304695705986,
+                0.0021164676744780397,
+                0.04421224004466212,
+                0.08630801241484615,
+                0.12840378478503017,
+                0.17049955715521425,
+                0.21259532952539828,
+                0.25469110189558236,
+            ],
+        }
+    },
+    "difficulty": {"max": 1.7394709392167267},
+    "waypoint_count": 231,
     "step_progress": {
         "k": -0.004,
         "x0": 0.0,
         "ymin": 0.0,
         "ymax": 3,
     },
-    "importance": {
-        "max": 7.6,
-    },
-    "difficulty": {
-        "max": 1.7394709392167267,  # Actual value from track-analysis.py
-    },
-    "waypoint_count": 231,
     # These arrays can be obtained by running training for two epochs
-    "trial_starts": {
-        "10": [
-            0,
-            4,
-            14,
-            24,
-            30,
-            36,
-            51,
-            56,
-            60,
-            73,
-            89,
-            98,
-            111,
-            126,
-            148,
-            167,
-            181,
-            193,
-            199,
-            218,
-        ]
-    },
-    "histogram": {
-        "weights": [
-            7.6,
-            2.923,
-            3.167,
-            2.533,
-            4.75,
-            1.31,
-            1.0,
-            1.056,
-            1.267,
-            1.583,
-            4.75,
-            2.923,
-        ],
-        "edges": [
-            -0.2504581665466262,
-            -0.20836239417644217,
-            -0.16626662180625812,
-            -0.1241708494360741,
-            -0.08207507706589004,
-            -0.039979304695705986,
-            0.0021164676744780397,
-            0.04421224004466212,
-            0.08630801241484615,
-            0.12840378478503017,
-            0.17049955715521425,
-            0.21259532952539828,
-            0.25469110189558236,
-        ],
-    },
+    "trial_starts": [
+        0,
+        4,
+        14,
+        24,
+        30,
+        36,
+        51,
+        56,
+        60,
+        73,
+        89,
+        98,
+        111,
+        126,
+        148,
+        167,
+        181,
+        193,
+        199,
+        218,
+    ],
 }
 
 # Other globals
@@ -145,7 +140,8 @@ def get_waypoint_difficulty(i, waypoints, max_val=1.0, factor=1.0):
     dx = waypoints[next_idx][0] - waypoints[i][0]
     dy = waypoints[next_idx][1] - waypoints[i][1]
     d = math.sqrt(dx**2 + dy**2)
-    return 1.0 + (((difficulty / d) / max_val) * (factor - 1.0))
+    difficulty = difficulty / d
+    return difficulty, 1.0 + ((difficulty / max_val) * (factor - 1.0))
 
 
 def get_waypoint_importance(i, waypoints, histogram):
@@ -161,22 +157,22 @@ def get_waypoint_importance(i, waypoints, histogram):
     return histogram["weights"][j]  # when change is equal to the last edge
 
 
-def get_waypoint_batch_rank(i, trial_start, trial_count, factor):
+def get_waypoint_batch_rank(i, trial_start, factor):
     """
     Get a waypoint progress rank based on the order in which the agent will encounter it.
     This can be used to give more weight to waypoints that occur later in a trial, and are
     therefore more important to reach.
     """
-    starts = TRACK["trial_starts"][str(trial_count)]
+    starts = TRACK["trial_starts"]
     idx = starts.index(trial_start)
     # Last start limit should be the end of the track
     if idx + 1 == len(starts):
-        trial_end = TRACK["waypoint_count"]
-        if i < trial_start:
-            # Assume we crossed the finish line, so continue the count.
-            i += trial_end
+        trial_end = TRACK["waypoint_count"] - 1
     else:
         trial_end = starts[idx + 1]
+    if i < trial_start:
+        # Assume we crossed the finish line, so loop the count.
+        i += trial_end
     batch_progress = (i - trial_start) / (trial_end - trial_start)
     if batch_progress > 1.0:
         rank = 1.0
@@ -301,21 +297,24 @@ def reward_function(params):
             ymax=TRACK["step_progress"]["ymax"],
         )
 
+    max_importance_weight = max(TRACK["importance"]["histogram"]["weights"])
+
     # max_val is the maximum absolute difficulty value for the track
-    difficulty = get_waypoint_difficulty(
+    _, difficulty = get_waypoint_difficulty(
         this_waypoint,
         params["waypoints"],
-        max_val=TRACK["difficulty"]["max"],
-        factor=TRACK["importance"]["max"],
+        TRACK["difficulty"]["max"],
+        max_importance_weight,
     )
-    importance = get_waypoint_importance(this_waypoint, params["waypoints"], TRACK["histogram"])
+    importance = get_waypoint_importance(
+        this_waypoint, params["waypoints"], TRACK["importance"]["histogram"]
+    )
     rank = get_waypoint_batch_rank(
         this_waypoint,
         TRIAL_START,
-        10,
-        TRACK["importance"]["max"],
+        max_importance_weight,
     )
-    factor = (importance + difficulty + rank) / TRACK["importance"]["max"]
+    factor = (importance + difficulty + rank) / max_importance_weight
     reward = float(step_reward * factor)
 
     is_finished = 0
