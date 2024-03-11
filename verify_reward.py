@@ -39,15 +39,49 @@ def main(debug=False):
         run = wandb.init(
             entity="iamjdoc", project="dr-reborn", job_type="verify_reward"
         )
+
+    # Download the track
     track = reward_function.TRACK["name"]
     npy_data, waypoint_count = download(track)
     waypoints = list([tuple(sublist[0:2]) for sublist in npy_data])
     inner_line = list([tuple(sublist[2:4]) for sublist in npy_data])
     outer_line = list([tuple(sublist[4:6]) for sublist in npy_data])
 
-    dir_change = [0 for _ in range(len(waypoints))]
-    difficulty = [0 for _ in range(len(waypoints))]
-    polygons = []
+    # Obtain track histogram
+    changes = []
+    for i in range(waypoint_count):
+        changes.append(reward_function.get_direction_change(i, waypoints))
+    counts, bin_edges = np.histogram(
+        changes,
+        bins=reward_function.TRACK["importance"]["histogram"]["bin_count"],
+    )
+    print("Bin counts: ", counts)
+    factors = sum(counts) / counts
+    factors = factors / min(factors)
+    f_min = min(factors)
+    f_max = max(factors)
+    factors = [round((num - f_min) / (f_max - f_min), 4) for num in factors.tolist()]
+    abs_dir_change = [abs(num) for num in changes]
+    # TODO: Edit reward_function.py directly instead of printing & waiting for input
+    print(
+        {
+            "name": track,
+            "waypoint_count": waypoint_count,
+            "importance": {
+                "histogram": {
+                    "bin_count": reward_function.TRACK["importance"]["histogram"][
+                        "bin_count"
+                    ],
+                    "weights": factors,
+                    "edges": bin_edges.tolist(),
+                }
+            },
+            "difficulty": {"max": max(abs_dir_change), "min": min(abs_dir_change)},
+        }
+    )
+    if debug:
+        input("Copy this into reward_function.py and press Enter to continue...")
+
     columns = [
         "waypoint",
         "direction",
@@ -61,19 +95,22 @@ def main(debug=False):
     for i in range(waypoint_count):
         row = [i]
         row.append(reward_function.get_direction(i, waypoints))
-        dir_change[i] = reward_function.get_direction_change(i, waypoints)
-        row.append(dir_change[i])
-        difficulty[i] = reward_function.get_waypoint_difficulty(
+        dir_change = reward_function.get_direction_change(i, waypoints)
+        difficulty = reward_function.get_waypoint_difficulty(
             i,
             waypoints,
         )
         importance = reward_function.get_waypoint_importance(i, waypoints)
         # location = i / (waypoint_count - 1.0)
         # aggregate = (difficulty[i] + importance + location) / 3.0
-        aggregate = (difficulty[i] + importance) / 2.0
+        importance_factor = 1.0
+        aggregate = (difficulty + (importance_factor * importance)) / (
+            1.0 + importance_factor
+        )
         next_waypoint = reward_function.get_next_distinct_index(i, waypoints)
 
-        row.append(difficulty[i])
+        row.append(dir_change)
+        row.append(difficulty)
         row.append(importance)
         # row.append(location)
         row.append(aggregate)
@@ -89,7 +126,7 @@ def main(debug=False):
         ]
 
         # Create the polygon with the vertices, set the alpha for the fill color
-        polygons.append(
+        plt.gca().add_patch(
             Polygon(
                 vertices,
                 closed=True,
@@ -99,47 +136,23 @@ def main(debug=False):
             )
         )
 
-    # Calculate bin counts and bin edges
-    bin_count = round(waypoint_count / 10.0)
-    counts, bin_edges = np.histogram(
-        dir_change,
-        bins=bin_count,
-    )
-    print(counts)
-    factors = sum(counts) / counts
-    factors = factors / min(factors)
-    f_min = min(factors)
-    f_max = max(factors)
-    factors = [round((num - f_min) / (f_max - f_min), 4) for num in factors.tolist()]
-    abs_dir_change = [abs(num) for num in dir_change]
-    print(
-        {
-            "name": track,
-            "waypoint_count": waypoint_count,
-            "importance": {
-                "histogram": {
-                    "weights": factors,
-                    "edges": bin_edges.tolist(),
-                }
-            },
-            "difficulty": {"max": max(abs_dir_change), "min": min(abs_dir_change)},
-        }
-    )
     # Start track plot
     plot_numbered_line(inner_line)
     plot_numbered_line(outer_line)
     plt.xlabel("X")
     plt.ylabel("Y")
     plt.grid(True)
-    for polygon in polygons:
-        plt.gca().add_patch(polygon)
 
     if debug:
         plt.show()
     else:
         # TODO: Plot and log the step progress curve
-        run.log({"factor_table": factor_table})
-        run.log({"track": plt})
+        plt.savefig("track.png")
+        run.log({"factor_table": factor_table, "track": wandb.Image("track.png")})
+        artifact = wandb.Artifact(f"{track}", type="reward_artifacts")
+        artifact.add_file("track.png")
+        artifact.add_file("custom_files/reward_function.py")
+        run.log_artifact(artifact).wait()
 
 
 if __name__ == "__main__":
