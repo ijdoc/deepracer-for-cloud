@@ -61,7 +61,6 @@ def reset_tables():
         "projected_steps",
         "step_reward",
         "importance",
-        "rank",
         "difficulty",
         "factor",
         "reward",
@@ -201,11 +200,10 @@ def process_line(line):
         projected_steps = float(parts[3])
         step_reward = float(parts[4])
         importance = float(parts[5])
-        rank = float(parts[6])
-        difficulty = float(parts[7])
-        factor = float(parts[8])
-        reward = float(parts[9])
-        is_finished = int(parts[10])
+        difficulty = float(parts[6])
+        factor = float(parts[7])
+        reward = float(parts[8])
+        is_finished = int(parts[9])
         job = "train"
         if is_testing:
             job = "test"
@@ -218,7 +216,6 @@ def process_line(line):
                 projected_steps,
                 step_reward,
                 importance,
-                rank,
                 difficulty,
                 factor,
                 reward,

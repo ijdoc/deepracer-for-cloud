@@ -7,37 +7,59 @@ TRACK = {
     "importance": {
         "histogram": {
             "weights": [
+                0.6377,
+                0.3478,
+                0.2236,
+                0.2754,
+                0.2754,
+                0.6377,
+                0.1107,
+                0.3478,
                 1.0,
-                0.2914,
-                0.3283,
-                0.2323,
-                0.5682,
-                0.047,
+                0.0942,
+                0.0489,
+                0.0338,
                 0.0,
-                0.0084,
-                0.0404,
-                0.0884,
-                0.5682,
-                0.2914,
+                0.0409,
+                0.0217,
+                0.058,
+                0.0409,
+                0.058,
+                0.6377,
+                0.1848,
+                0.3478,
+                0.1304,
+                1.0,
             ],
             "edges": [
-                -0.2504581665466262,
-                -0.20836239417644217,
-                -0.16626662180625812,
-                -0.1241708494360741,
-                -0.08207507706589004,
-                -0.039979304695705986,
-                0.0021164676744780397,
-                0.04421224004466212,
-                0.08630801241484615,
-                0.12840378478503017,
-                0.17049955715521425,
-                0.21259532952539828,
-                0.25469110189558236,
+                -0.2513188520107108,
+                -0.22900564302840146,
+                -0.2066924340460921,
+                -0.18437922506378276,
+                -0.16206601608147342,
+                -0.13975280709916407,
+                -0.11743959811685473,
+                -0.09512638913454538,
+                -0.07281318015223603,
+                -0.05049997116992669,
+                -0.028186762187617342,
+                -0.005873553205307996,
+                0.01643965577700135,
+                0.03875286475931072,
+                0.06106607374162004,
+                0.08337928272392936,
+                0.10569249170623873,
+                0.1280057006885481,
+                0.15031890967085743,
+                0.17263211865316674,
+                0.19494532763547612,
+                0.2172585366177855,
+                0.2395717456000948,
+                0.26188495458240413,
             ],
         }
     },
-    "difficulty": {"max": 0.25469110189558236, "min": 0.0},
+    "difficulty": {"max": 0.26188495458240413, "min": 0.0},
     # Cumulative max is ~150@400 steps in our case
     "step_progress": {
         "ymax": 0.5,
@@ -120,14 +142,11 @@ def get_direction(i, waypoints):
 
 
 def get_direction_change(i, waypoints):
-    behind = get_prev_distinct_index(i, waypoints)
     ahead = get_next_distinct_index(i, waypoints)
     this_direction = get_direction(i, waypoints)
-    diff0 = this_direction - get_direction(behind, waypoints)
-    diff1 = get_direction(ahead, waypoints) - this_direction
-    diff0 = math.atan2(math.sin(diff0), math.cos(diff0))
-    diff1 = math.atan2(math.sin(diff1), math.cos(diff1))
-    return (diff1 + diff0) / 2.0
+    diff = get_direction(ahead, waypoints) - this_direction
+    diff = math.atan2(math.sin(diff), math.cos(diff))
+    return diff
 
 
 def get_waypoint_difficulty(i, waypoints):
@@ -307,23 +326,13 @@ def reward_function(params):
             ymax=TRACK["step_progress"]["ymax"],
         )
 
-    max_importance_weight = max(TRACK["importance"]["histogram"]["weights"])
-
-    # max_val is the maximum absolute difficulty value for the track
     difficulty = get_waypoint_difficulty(
         this_waypoint,
         params["waypoints"],
-        TRACK["difficulty"]["max"],
-        max_importance_weight,
     )
     importance = get_waypoint_importance(this_waypoint, params["waypoints"])
-    rank = get_waypoint_progress_rank(
-        this_waypoint,
-        TRIAL_START,
-        max_importance_weight,
-    )
-    factor = (importance + difficulty + rank) / max_importance_weight
-    reward = float(step_reward * factor)
+    factor = (importance + difficulty) / 2.0
+    reward = float(step_reward * (1.0 + (3.0 * factor)))
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:
@@ -334,7 +343,7 @@ def reward_function(params):
 
     # This trace is needed for test logging
     print(
-        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{projected_steps},{step_reward},{importance},{rank},{difficulty},{factor},{reward},{is_finished}"
+        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{projected_steps},{step_reward},{importance},{difficulty},{factor},{reward},{is_finished}"
     )
 
     return reward
