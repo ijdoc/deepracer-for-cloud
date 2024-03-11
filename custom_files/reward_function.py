@@ -3,21 +3,22 @@ import time
 
 TRACK = {
     "name": "caecer_gp",
+    "waypoint_count": 231,
     "importance": {
         "histogram": {
             "weights": [
-                7.6,
-                2.923,
-                3.167,
-                2.533,
-                4.75,
-                1.31,
                 1.0,
-                1.056,
-                1.267,
-                1.583,
-                4.75,
-                2.923,
+                0.2914,
+                0.3283,
+                0.2323,
+                0.5682,
+                0.047,
+                0.0,
+                0.0084,
+                0.0404,
+                0.0884,
+                0.5682,
+                0.2914,
             ],
             "edges": [
                 -0.2504581665466262,
@@ -36,8 +37,7 @@ TRACK = {
             ],
         }
     },
-    "difficulty": {"max": 1.7394709392167267},
-    "waypoint_count": 231,
+    "difficulty": {"max": 0.25469110189558236, "min": 0.0},
     # Cumulative max is ~150@400 steps in our case
     "step_progress": {
         "ymax": 0.5,
@@ -130,27 +130,23 @@ def get_direction_change(i, waypoints):
     return (diff1 + diff0) / 2.0
 
 
-def get_waypoint_difficulty(i, waypoints, max_val=1.0, factor=1.0):
+def get_waypoint_difficulty(i, waypoints):
     """
-    Get difficulty at waypoint i, calculated as the absolute amount of direction change,
-    divided by the distance to the next distinct waypoint (i.e. the waypoint length).
-    The final value is normalized to a range between 1.0 and factor.
+    Get difficulty at waypoint i, calculated as the normalized amount of direction change.
     """
     difficulty = abs(get_direction_change(i, waypoints))
-    next_idx = get_next_distinct_index(i, waypoints)
-    dx = waypoints[next_idx][0] - waypoints[i][0]
-    dy = waypoints[next_idx][1] - waypoints[i][1]
-    d = math.sqrt(dx**2 + dy**2)
-    difficulty = difficulty / d
-    return difficulty, 1.0 + ((difficulty / max_val) * (factor - 1.0))
+    return (difficulty - TRACK["difficulty"]["min"]) / (
+        TRACK["difficulty"]["max"] - TRACK["difficulty"]["min"]
+    )
 
 
-def get_waypoint_importance(i, waypoints, histogram):
+def get_waypoint_importance(i, waypoints):
     """
     Get waypoint weight based on how common the direction change is in the entire track.
     This can be used to give more weight to waypoints that are less likely to occur during
     training, and therefore are more important to learn.
     """
+    histogram = TRACK["importance"]["histogram"]
     for j in range(len(histogram["weights"])):
         change = get_direction_change(i, waypoints)
         if change >= histogram["edges"][j] and change < histogram["edges"][j + 1]:
@@ -314,15 +310,13 @@ def reward_function(params):
     max_importance_weight = max(TRACK["importance"]["histogram"]["weights"])
 
     # max_val is the maximum absolute difficulty value for the track
-    _, difficulty = get_waypoint_difficulty(
+    difficulty = get_waypoint_difficulty(
         this_waypoint,
         params["waypoints"],
         TRACK["difficulty"]["max"],
         max_importance_weight,
     )
-    importance = get_waypoint_importance(
-        this_waypoint, params["waypoints"], TRACK["importance"]["histogram"]
-    )
+    importance = get_waypoint_importance(this_waypoint, params["waypoints"])
     rank = get_waypoint_progress_rank(
         this_waypoint,
         TRIAL_START,

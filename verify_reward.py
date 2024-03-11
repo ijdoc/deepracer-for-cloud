@@ -4,6 +4,7 @@ import numpy as np
 from io import BytesIO
 from custom_files import reward_function
 import matplotlib.pyplot as plt
+from matplotlib.patches import Polygon
 import math
 import wandb
 
@@ -33,91 +34,114 @@ def plot_numbered_line(line):
         plt.text(xi, yi, str(i), color="black", fontsize=8, ha="center", va="center")
 
 
-def main(track):
-    with wandb.init(
-        entity="iamjdoc", project="dr-reborn", job_type="verify_reward"
-    ) as run:
-        npy_data, waypoint_count = download(track)
-        waypoints = list([tuple(sublist[0:2]) for sublist in npy_data])
-        inner_line = list([tuple(sublist[2:4]) for sublist in npy_data])
-        outer_line = list([tuple(sublist[4:6]) for sublist in npy_data])
+def main(debug=False):
+    if not debug:
+        run = wandb.init(
+            entity="iamjdoc", project="dr-reborn", job_type="verify_reward"
+        )
+    track = reward_function.TRACK["name"]
+    npy_data, waypoint_count = download(track)
+    waypoints = list([tuple(sublist[0:2]) for sublist in npy_data])
+    inner_line = list([tuple(sublist[2:4]) for sublist in npy_data])
+    outer_line = list([tuple(sublist[4:6]) for sublist in npy_data])
 
-        # Start track plot
-        plot_numbered_line(inner_line)
-        plot_numbered_line(outer_line)
-        plt.xlabel("X")
-        plt.ylabel("Y")
-        plt.grid(True)
+    # Start track plot
+    plot_numbered_line(inner_line)
+    plot_numbered_line(outer_line)
+    plt.xlabel("X")
+    plt.ylabel("Y")
+    plt.grid(True)
 
-        change = [0 for _ in range(len(waypoints))]
-        difficulty = [0 for _ in range(len(waypoints))]
-        columns = ["waypoint", "direction", "dir_change", "difficulty"]
-        for i in reward_function.TRACK["trial_starts"]:
-            columns.append(f"rank_{i}")
+    dir_change = [0 for _ in range(len(waypoints))]
+    difficulty = [0 for _ in range(len(waypoints))]
+    columns = [
+        "waypoint",
+        "direction",
+        "dir_change",
+        "difficulty",
+        "importance",
+        "aggregate",
+    ]
+    if not debug:
         factor_table = wandb.Table(columns=columns)
-        for i in range(waypoint_count):
-            # Plot cross-waypoint lines
-            plt.plot(
-                [inner_line[i][0], outer_line[i][0]],
-                [inner_line[i][1], outer_line[i][1]],
-                linestyle="-",
-                color="gray",
-            )
+    for i in range(waypoint_count):
+        row = [i]
+        row.append(reward_function.get_direction(i, waypoints))
+        dir_change[i] = reward_function.get_direction_change(i, waypoints)
+        row.append(dir_change[i])
+        difficulty[i] = reward_function.get_waypoint_difficulty(
+            i,
+            waypoints,
+        )
+        importance = reward_function.get_waypoint_importance(i, waypoints)
+        # location = i / (waypoint_count - 1.0)
+        # aggregate = (difficulty[i] + importance + location) / 3.0
+        aggregate = (difficulty[i] + importance) / 2.0
+        next_waypoint = reward_function.get_next_distinct_index(i, waypoints)
+        # Define the vertices of the polygon, (x, y) pairs
+        vertices = [
+            (outer_line[i][0], outer_line[i][1]),
+            (outer_line[next_waypoint][0], outer_line[next_waypoint][1]),
+            (inner_line[next_waypoint][0], inner_line[next_waypoint][1]),
+            (inner_line[i][0], inner_line[i][1]),
+        ]
+        # print(vertices)
 
-            row = [i]
-            row.append(reward_function.get_direction(i, waypoints))
-            change[i] = reward_function.get_direction_change(i, waypoints)
-            row.append(change[i])
-            max_importance_weight = max(
-                reward_function.TRACK["importance"]["histogram"]["weights"]
-            )
-            real_difficulty, normalized_difficulty = (
-                reward_function.get_waypoint_difficulty(
-                    i,
-                    waypoints,
-                    reward_function.TRACK["difficulty"]["max"],
-                    max_importance_weight,
-                )
-            )
-            difficulty[i] = real_difficulty
-            row.append(normalized_difficulty)
-            for j in reward_function.TRACK["trial_starts"]:
-                row.append(
-                    reward_function.get_waypoint_progress_rank(
-                        i, j, max_importance_weight
-                    )
-                )
+        # Create the polygon with the vertices, set the alpha for the fill color
+        polygon = Polygon(
+            vertices,
+            closed=True,
+            color="red",
+            alpha=aggregate,
+        )  # Alpha controls transparency
+
+        # Add the polygon to the plot
+        plt.gca().add_patch(polygon)
+        row.append(difficulty[i])
+        row.append(importance)
+        # row.append(location)
+        row.append(aggregate)
+        if not debug:
             factor_table.add_data(*row)
 
-        # Calculate bin counts and bin edges
-        counts, bin_edges = np.histogram(change, bins="auto")
-        factors = sum(counts) / counts
-        factors = factors / min(factors)
-        factors = [round(num, 3) for num in factors.tolist()]
-        print(
-            {
-                "name": track,
-                "importance": {
-                    "histogram": {"weights": factors, "edges": bin_edges.tolist()}
-                },
-                "difficulty": {"max": max(difficulty)},
-                "waypoint_count": waypoint_count,
-            }
-        )
-        run.log({"factor_table": factor_table})
-        # TODO: Draw importance + difficulty weights on the track plot
+    # Calculate bin counts and bin edges
+    counts, bin_edges = np.histogram(dir_change, bins="auto")
+    print(counts)
+    factors = sum(counts) / counts
+    factors = factors / min(factors)
+    f_min = min(factors)
+    f_max = max(factors)
+    factors = [round((num - f_min) / (f_max - f_min), 4) for num in factors.tolist()]
+    abs_dir_change = [abs(num) for num in dir_change]
+    print(
+        {
+            "name": track,
+            "waypoint_count": waypoint_count,
+            "importance": {
+                "histogram": {
+                    "weights": factors,
+                    "edges": bin_edges.tolist(),
+                }
+            },
+            "difficulty": {"max": max(abs_dir_change), "min": min(abs_dir_change)},
+        }
+    )
+    if debug:
+        plt.show()
+    else:
         # TODO: Plot and log the step progress curve
+        run.log({"factor_table": factor_table})
         run.log({"track": plt})
 
 
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser()
     argparser.add_argument(
-        "--track",
-        required=True,
-        help="The name of the track (from https://github.com/aws-deepracer-community/deepracer-race-data/blob/main/raw_data/tracks/README.md - ends in '.npy')",
-        type=str,
+        "--debug",
+        action="store_true",
+        help="Debug only (do not log to W&B)",
     )
+
     args = argparser.parse_args()
 
-    main(args.track)
+    main(args.debug)
