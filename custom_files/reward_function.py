@@ -167,6 +167,12 @@ def get_waypoint_progress_rank(i, trial_start, factor):
     trial_progress = (i - trial_start) / (TRACK["waypoint_count"] - 1)
     return 1.0 + (trial_progress * (factor - 1.0))
 
+def get_aggregate_factor(difficulty, importance):
+    """
+    Get a factor that combines difficulty and importance, to be used as a weight in the
+    reward function.
+    """
+    return (difficulty + importance) / 2.0
 
 def gaussian(x, a, b, c):
     """_summary_
@@ -289,7 +295,7 @@ def reward_function(params):
         params["waypoints"],
     )
     importance = get_waypoint_importance(this_waypoint, params["waypoints"])
-    factor = (importance + difficulty) / 2.0
+    factor = get_aggregate_factor(difficulty, importance)
     reward = float(step_reward * (1.0 + (3.0 * factor)))
 
     is_finished = 0

@@ -103,10 +103,7 @@ def main(debug=False):
         importance = reward_function.get_waypoint_importance(i, waypoints)
         # location = i / (waypoint_count - 1.0)
         # aggregate = (difficulty[i] + importance + location) / 3.0
-        importance_factor = 1.0
-        aggregate = (difficulty + (importance_factor * importance)) / (
-            1.0 + importance_factor
-        )
+        aggregate = reward_function.get_aggregate_factor(difficulty, importance)
         next_waypoint = reward_function.get_next_distinct_index(i, waypoints)
 
         row.append(dir_change)

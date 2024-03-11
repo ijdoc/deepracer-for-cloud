@@ -1,3 +1,4 @@
+**/*.png
 retrain.sh
 *.tar.gz
 .wandb/**
