@@ -40,7 +40,7 @@ def plot_index(line, axs):
 
 
 def main(args):
-    fig, axs = plt.subplots(2, 1, figsize=(10, 10))
+    fig, axs = plt.subplots(2, 2, figsize=(10, 10))
     if not args.debug:
         run = wandb.init(
             entity="iamjdoc", project="dr-reborn", job_type="verify_reward"
@@ -74,31 +74,31 @@ def main(args):
     factors = [round((num - f_min) / (f_max - f_min), 4) for num in factors.tolist()]
     abs_dir_change = [abs(num) for num in changes]
     reward_config = {
+        "difficulty": {"max": max(difficulties), "min": min(difficulties)},
         "histogram": {
-            "bin_count": args.bin_count,
+            "counts": counts.tolist(),
             "weights": factors,
             "edges": bin_edges.tolist(),
         },
-        "difficulty": {"max": max(difficulties), "min": min(difficulties)},
     }
-    print(f"Absolute Difficulty (look-ahead: {args.look_ahead})")
-    print("\t- Max: ", reward_config["difficulty"]["max"])
-    print("\t- Min: ", reward_config["difficulty"]["min"])
+    print(reward_config)
 
     columns = [
         "waypoint",
         "direction",
         "dir_change",
         "difficulty",
+        "importance",
     ]
 
     # Start the plots
     for i in range(2):
-        plot_line(inner_line, axs[i])
-        plot_line(outer_line, axs[i])
-        plot_index(inner_line, axs[i])
-        plot_index(outer_line, axs[i])
-        axs[i].grid(True)
+        for j in range(2):
+            plot_line(inner_line, axs[i, j])
+            plot_line(outer_line, axs[i, j])
+            plot_index(inner_line, axs[i, j])
+            plot_index(outer_line, axs[i, j])
+            axs[i, j].grid(True)
 
     # Second pass to plot verifications
     if not args.debug:
@@ -112,16 +112,20 @@ def main(args):
             max_val=reward_config["difficulty"]["max"],
             min_val=reward_config["difficulty"]["min"],
         )
-        next_waypoint = reward_function.get_next_distinct_index(i, waypoints)
+        importance = reward_function.get_waypoint_importance(
+            dir_change, reward_config["histogram"]
+        )
 
         row = [i]
         row.append(direction)
         row.append(dir_change)
         row.append(difficulty)
+        row.append(importance)
         if not args.debug:
             factor_table.add_data(*row)
 
         # Define the vertices of the polygon, (x, y) pairs
+        next_waypoint = reward_function.get_next_distinct_index(i, waypoints)
         vertices = [
             (outer_line[i][0], outer_line[i][1]),
             (outer_line[next_waypoint][0], outer_line[next_waypoint][1]),
@@ -132,13 +136,21 @@ def main(args):
         color = "red"
         if dir_change < 0:
             color = "blue"
-        axs[0].add_patch(
+        axs[0, 0].add_patch(
             Polygon(
                 vertices,
                 closed=True,
                 color=color,
-                # alpha=0.0,  # Alpha controls transparency
-                alpha=difficulty,  # Alpha controls transparency
+                alpha=difficulty,
+                linewidth=0,
+            )
+        )
+        axs[0, 1].add_patch(
+            Polygon(
+                vertices,
+                closed=True,
+                color=color,
+                alpha=importance,
                 linewidth=0,
             )
         )
@@ -159,17 +171,16 @@ def main(args):
             (x2, y2),
         ]
 
-        axs[1].add_patch(
+        axs[1, 0].add_patch(
             Polygon(
                 vertices,
                 closed=True,
                 color=color,
-                # alpha=0.0,  # Alpha controls transparency
-                alpha=difficulty,  # Alpha controls transparency
+                alpha=difficulty,
                 linewidth=0,
             )
         )
-        axs[1].arrow(
+        axs[1, 0].arrow(
             xstart,
             ystart,
             xend - xstart,
@@ -183,8 +194,9 @@ def main(args):
             width=0.001,
         )
 
-    axs[0].set_title(f"Normalized Difficulty (look_ahead={args.look_ahead})")
-    axs[1].set_title(f"Direction & Spread")
+    axs[0, 0].set_title(f"Normalized Difficulty (look_ahead={args.look_ahead})")
+    axs[0, 1].set_title(f"Importance ({args.bin_count} bins)")
+    axs[1, 0].set_title(f"Direction & Target Heading")
 
     if args.debug:
         plt.tight_layout()

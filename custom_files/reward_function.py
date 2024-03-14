@@ -5,6 +5,19 @@ TRACK = {
     "name": "caecer_gp",
     "waypoint_count": 231,
     "difficulty": {"max": 0.7383608251836872, "min": 0.004665479885233692},
+    "histogram": {
+        "counts": [21, 23, 38, 75, 51, 23],
+        "weights": [1.0, 0.8792, 0.3787, 0.0, 0.183, 0.8792],
+        "edges": [
+            -0.7350219706491348,
+            -0.4894581713436644,
+            -0.24389437203819414,
+            0.0016694272672761468,
+            0.2472332265727465,
+            0.49279702587821683,
+            0.7383608251836872,
+        ],
+    },
     # Cumulative max is ~150@400 steps in our case
     "step_progress": {
         "ymax": 0.5,
@@ -16,7 +29,6 @@ TRACK = {
 
 # Other globals
 LAST_PROGRESS = 0.0
-TRIAL_START = 0
 
 
 def get_next_distinct_index(i, waypoints):
@@ -84,6 +96,18 @@ def get_waypoint_difficulty(i, waypoints, look_ahead=1, max_val=1.0, min_val=0.0
     return aggregate_change, (difficulty - min_val) / (max_val - min_val)
 
 
+def get_waypoint_importance(change, histogram):
+    """
+    Get waypoint weight based on how common the direction change is in the entire track.
+    This can be used to give more weight to waypoints that are less likely to occur during
+    training, and therefore are more important to learn.
+    """
+    for j in range(len(histogram["weights"])):
+        if change >= histogram["edges"][j] and change < histogram["edges"][j + 1]:
+            return histogram["weights"][j]
+    return histogram["weights"][j]  # when change is equal to the last edge
+
+
 def get_target_heading(i, waypoints):
     """
     Get heading at waypoint i (in radians)
@@ -126,14 +150,12 @@ def sigmoid(x, k=3.9, x0=0.6, ymin=0.0, ymax=1.2):
 
 def reward_function(params):
     global LAST_PROGRESS
-    global TRIAL_START
 
     this_waypoint = params["closest_waypoints"][0]
 
     if params["steps"] <= 2:
         # Reset progress at the beginning of the episode
         LAST_PROGRESS = 0.0
-        TRIAL_START = this_waypoint
 
     # Get the step progress
     step_progress = params["progress"] - LAST_PROGRESS
@@ -165,23 +187,31 @@ def reward_function(params):
             ymax=TRACK["step_progress"]["ymax"],
         )
 
-    _, difficulty = get_waypoint_difficulty(
+    dir_change, difficulty = get_waypoint_difficulty(
         this_waypoint,
         params["waypoints"],
         look_ahead=3,
         max_val=TRACK["difficulty"]["max"],
         min_val=TRACK["difficulty"]["min"],
     )
+    importance = get_waypoint_importance(dir_change, TRACK["histogram"])
     heading = get_target_heading(this_waypoint, params["waypoints"])
     heading_diff = abs(subtract_angles_rad(heading, math.radians(params["heading"])))
     heading_reward = sigmoid(
         heading_diff,
         k=-4.0 * math.pi,
-        x0=math.pi / 6,  # 30 degrees
-        ymin=0.0,
-        ymax=4.0 * step_reward,
+        x0=math.pi / 6,  # half@30deg difference
+        ymin=TRACK["step_progress"]["ymin"],
+        ymax=TRACK["step_progress"]["ymax"],
     )
-    reward = float((step_reward * (1.0 - difficulty)) + (heading_reward * difficulty))
+    importance_factor = max(TRACK["histogram"]["counts"]) / min(
+        TRACK["histogram"]["counts"]
+    )
+    importance_weight = (importance * (importance_factor - 1.0)) + 1.0
+    reward = float(
+        importance_weight
+        * ((step_reward * (1.0 - difficulty)) + (heading_reward * difficulty))
+    )
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:
