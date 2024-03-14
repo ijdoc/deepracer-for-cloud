@@ -60,9 +60,9 @@ def reset_tables():
         "progress",
         "projected_steps",
         "step_reward",
-        "importance",
+        "heading_diff",
+        "heading_reward",
         "difficulty",
-        "factor",
         "reward",
     ]
     return {
@@ -199,9 +199,9 @@ def process_line(line):
         progress = float(parts[2])
         projected_steps = float(parts[3])
         step_reward = float(parts[4])
-        importance = float(parts[5])
-        difficulty = float(parts[6])
-        factor = float(parts[7])
+        heading_diff = float(parts[5])
+        heading_reward = float(parts[6])
+        difficulty = float(parts[7])
         reward = float(parts[8])
         is_finished = int(parts[9])
         job = "train"
@@ -215,9 +215,9 @@ def process_line(line):
                 progress,
                 projected_steps,
                 step_reward,
-                importance,
+                heading_diff,
+                heading_reward,
                 difficulty,
-                factor,
                 reward,
             )
         step_metrics[job]["reward"].append(reward)

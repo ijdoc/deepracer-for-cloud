@@ -4,20 +4,7 @@ import time
 TRACK = {
     "name": "caecer_gp",
     "waypoint_count": 231,
-    "importance": {
-        "histogram": {
-            "bin_count": 4,
-            "weights": [1.0, 0.3636, 0.0, 0.6244],
-            "edges": [
-                -0.2513188520107108,
-                -0.12301790036243207,
-                0.005283051285846663,
-                0.13358400293412542,
-                0.26188495458240413,
-            ],
-        }
-    },
-    "difficulty": {"max": 0.26188495458240413, "min": 0.0},
+    "difficulty": {"max": 0.7383608251836872, "min": 0.004665479885233692},
     # Cumulative max is ~150@400 steps in our case
     "step_progress": {
         "ymax": 0.5,
@@ -25,29 +12,6 @@ TRACK = {
         "k": -0.01,
         "x0": 510,
     },
-    # These arrays can be obtained by running training for two epochs
-    "trial_starts": [
-        0,
-        4,
-        14,
-        24,
-        30,
-        36,
-        51,
-        56,
-        60,
-        73,
-        89,
-        98,
-        111,
-        126,
-        148,
-        167,
-        181,
-        193,
-        199,
-        218,
-    ],
 }
 
 # Other globals
@@ -107,121 +71,32 @@ def get_direction_change(i, waypoints):
     return diff
 
 
-def get_waypoint_difficulty(i, waypoints):
+def get_waypoint_difficulty(i, waypoints, look_ahead=1, max_val=1.0, min_val=0.0):
     """
     Get difficulty at waypoint i, calculated as the normalized amount of direction change.
     """
-    difficulty = abs(get_direction_change(i, waypoints))
-    return (difficulty - TRACK["difficulty"]["min"]) / (
-        TRACK["difficulty"]["max"] - TRACK["difficulty"]["min"]
-    )
+    next_idx = i
+    aggregate_change = get_direction_change(i, waypoints)
+    for _ in range(look_ahead - 1):
+        next_idx = get_next_distinct_index(next_idx, waypoints)
+        aggregate_change += get_direction_change(next_idx, waypoints)
+    difficulty = abs(aggregate_change)
+    return aggregate_change, (difficulty - min_val) / (max_val - min_val)
 
 
-def get_waypoint_importance(i, waypoints):
+def get_target_heading(i, waypoints):
     """
-    Get waypoint weight based on how common the direction change is in the entire track.
-    This can be used to give more weight to waypoints that are less likely to occur during
-    training, and therefore are more important to learn.
+    Get heading at waypoint i (in radians)
     """
-    histogram = TRACK["importance"]["histogram"]
-    for j in range(len(histogram["weights"])):
-        change = get_direction_change(i, waypoints)
-        if change >= histogram["edges"][j] and change < histogram["edges"][j + 1]:
-            return histogram["weights"][j]
-    return histogram["weights"][j]  # when change is equal to the last edge
+    direction = get_direction(i, waypoints)
+    dir_change = get_direction_change(i, waypoints)
+    spread = dir_change * 2.0
+    return direction + (spread * 0.6)
 
 
-def get_waypoint_batch_rank(i, trial_start, factor):
-    """
-    Get a waypoint progress rank based on the order in which the agent will encounter it.
-    This can be used to give more weight to waypoints that occur later in a trial, and are
-    therefore more important to reach.
-    """
-    starts = TRACK["trial_starts"]
-    idx = starts.index(trial_start)
-    # Last start limit should be the end of the track
-    if idx + 1 == len(starts):
-        trial_end = TRACK["waypoint_count"] - 1
-    else:
-        trial_end = starts[idx + 1]
-    if i < trial_start:
-        # Assume we crossed the finish line, so loop the count.
-        i += trial_end
-    batch_progress = (i - trial_start) / (trial_end - trial_start)
-    if batch_progress > 1.0:
-        rank = 1.0
-    else:
-        rank = batch_progress
-    return 1.0 + (rank * (factor - 1.0))
-
-
-def get_waypoint_progress_rank(i, trial_start, factor):
-    """
-    Get a waypoint rank based on the progress of the agent. This can be used to encourage
-    the agent to remain in the track, since the reward will be higher for waypoints that
-    are closer to the current trial's finish line.
-    """
-    if i < trial_start:
-        # Assume we crossed the finish line, so loop the count.
-        i += TRACK["waypoint_count"]
-    trial_progress = (i - trial_start) / (TRACK["waypoint_count"] - 1)
-    return 1.0 + (trial_progress * (factor - 1.0))
-
-def get_aggregate_factor(difficulty, importance):
-    """
-    Get a factor that combines difficulty and importance, to be used as a weight in the
-    reward function.
-    """
-    return (difficulty + importance) / 2.0
-
-def gaussian(x, a, b, c):
-    """_summary_
-
-    Args:
-        x (float): the input value
-        a (float): height of the curve's peak
-        b (float): position of the center of the peak
-        c (float): width of the “bell”
-
-    Returns:
-        float: the value of the gaussian function at x
-    """
-    return a * math.exp(-((x - b) ** 2) / (2 * c**2))
-
-
-def wrapped_bell_curve(x, center=0, width=90):
-    """
-    Generates a bell-like curve using the cosine function, centered at a specified point,
-    with a specified 'width' determining the spread of the bell curve. The curve is adjusted
-    to have a maximum of 1.0 and a minimum of 0.0.
-
-    Parameters:
-    - x: The input angle in degrees for which to evaluate the bell curve.
-    - center: The center of the bell curve on the -180 to 180 degree axis.
-    - width: The 'width' of the bell curve, affecting its spread.
-
-    Returns:
-    - The value of the bell-like curve at the given input angle, adjusted to range from 0 to 1.
-    """
-    # Convert angles from degrees to radians
-    x_rad = math.radians(x)
-    center_rad = math.radians(center)
-    width_rad = math.radians(width)
-
-    # Adjust for wrapping
-    diff = math.atan2(math.sin(x_rad - center_rad), math.cos(x_rad - center_rad))
-
-    # Ignore values beyond the main cycle
-    if diff > width_rad or diff < -width_rad:
-        return 0.0
-
-    # Use the cosine function to create a bell-like curve that wraps around
-    cosine_value = math.cos((diff * math.pi) / width_rad)
-
-    # Adjust the output to have a range from 0 to 1
-    adjusted_value = (cosine_value + 1.0) / 2.0
-
-    return adjusted_value
+def subtract_angles_rad(a, b):
+    diff = a - b
+    return math.atan2(math.sin(diff), math.cos(diff))
 
 
 def sigmoid(x, k=3.9, x0=0.6, ymin=0.0, ymax=1.2):
@@ -294,9 +169,16 @@ def reward_function(params):
         this_waypoint,
         params["waypoints"],
     )
-    importance = get_waypoint_importance(this_waypoint, params["waypoints"])
-    factor = get_aggregate_factor(difficulty, importance)
-    reward = float(step_reward * (1.0 + (3.0 * factor)))
+    heading = get_target_heading(this_waypoint, params["waypoints"])
+    heading_diff = abs(subtract_angles_rad(heading, math.radians(params["heading"])))
+    heading_reward = sigmoid(
+        heading_diff,
+        k=-2.0 * math.pi,
+        x0=math.pi / 6,  # 30 degrees
+        ymin=0.0,
+        ymax=step_reward,
+    )
+    reward = float((step_reward * (1.0 - difficulty)) + (heading_reward * difficulty))
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:
@@ -307,7 +189,7 @@ def reward_function(params):
 
     # This trace is needed for test logging
     print(
-        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{projected_steps},{step_reward},{importance},{difficulty},{factor},{reward},{is_finished}"
+        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{projected_steps},{step_reward},{math.degrees(heading_diff)},{heading_reward},{difficulty},{reward},{is_finished}"
     )
 
     return reward

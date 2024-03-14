@@ -26,92 +26,99 @@ def download(track):
     return npy_data, waypoint_count
 
 
-def plot_numbered_line(line):
+def plot_line(line, axs):
     x = [point[0] for point in line]
     y = [point[1] for point in line]
-    plt.plot(x, y, linestyle="-", color="red")
+    axs.plot(x, y, linestyle="-", color="gray")
+
+
+def plot_index(line, axs):
+    x = [point[0] for point in line]
+    y = [point[1] for point in line]
     for i, (xi, yi) in enumerate(zip(x, y)):
-        plt.text(xi, yi, str(i), color="black", fontsize=8, ha="center", va="center")
+        axs.text(xi, yi, str(i), color="black", fontsize=8, ha="center", va="center")
 
 
-def main(debug=False):
-    if not debug:
+def main(args):
+    fig, axs = plt.subplots(2, 1, figsize=(10, 10))
+    if not args.debug:
         run = wandb.init(
             entity="iamjdoc", project="dr-reborn", job_type="verify_reward"
         )
 
     # Download the track
-    track = reward_function.TRACK["name"]
-    npy_data, waypoint_count = download(track)
+    npy_data, waypoint_count = download(args.track)
     waypoints = list([tuple(sublist[0:2]) for sublist in npy_data])
     inner_line = list([tuple(sublist[2:4]) for sublist in npy_data])
     outer_line = list([tuple(sublist[4:6]) for sublist in npy_data])
 
-    # Obtain track histogram
+    # Fist pass to obtain baseline data
     changes = []
+    difficulties = []
     for i in range(waypoint_count):
-        changes.append(reward_function.get_direction_change(i, waypoints))
+        change, difficulty = reward_function.get_waypoint_difficulty(
+            i, waypoints, look_ahead=args.look_ahead
+        )
+        changes.append(change)
+        difficulties.append(difficulty)
+
+    # Obtain aggregate values/weights
     counts, bin_edges = np.histogram(
         changes,
-        bins=reward_function.TRACK["importance"]["histogram"]["bin_count"],
+        bins=args.bin_count,
     )
-    print("Bin counts: ", counts)
     factors = sum(counts) / counts
     factors = factors / min(factors)
     f_min = min(factors)
     f_max = max(factors)
     factors = [round((num - f_min) / (f_max - f_min), 4) for num in factors.tolist()]
     abs_dir_change = [abs(num) for num in changes]
-    # TODO: Edit reward_function.py directly instead of printing & waiting for input
-    print(
-        {
-            "name": track,
-            "waypoint_count": waypoint_count,
-            "importance": {
-                "histogram": {
-                    "bin_count": reward_function.TRACK["importance"]["histogram"][
-                        "bin_count"
-                    ],
-                    "weights": factors,
-                    "edges": bin_edges.tolist(),
-                }
-            },
-            "difficulty": {"max": max(abs_dir_change), "min": min(abs_dir_change)},
-        }
-    )
-    if debug:
-        input("Copy this into reward_function.py and press Enter to continue...")
+    reward_config = {
+        "histogram": {
+            "bin_count": args.bin_count,
+            "weights": factors,
+            "edges": bin_edges.tolist(),
+        },
+        "difficulty": {"max": max(difficulties), "min": min(difficulties)},
+    }
+    print(f"Absolute Difficulty (look-ahead: {args.look_ahead})")
+    print("\t- Max: ", reward_config["difficulty"]["max"])
+    print("\t- Min: ", reward_config["difficulty"]["min"])
 
     columns = [
         "waypoint",
         "direction",
         "dir_change",
         "difficulty",
-        "importance",
-        "aggregate",
     ]
-    if not debug:
+
+    # Start the plots
+    for i in range(2):
+        plot_line(inner_line, axs[i])
+        plot_line(outer_line, axs[i])
+        plot_index(inner_line, axs[i])
+        plot_index(outer_line, axs[i])
+        axs[i].grid(True)
+
+    # Second pass to plot verifications
+    if not args.debug:
         factor_table = wandb.Table(columns=columns)
     for i in range(waypoint_count):
-        row = [i]
-        row.append(reward_function.get_direction(i, waypoints))
-        dir_change = reward_function.get_direction_change(i, waypoints)
-        difficulty = reward_function.get_waypoint_difficulty(
+        direction = reward_function.get_direction(i, waypoints)
+        dir_change, difficulty = reward_function.get_waypoint_difficulty(
             i,
             waypoints,
+            look_ahead=args.look_ahead,
+            max_val=reward_config["difficulty"]["max"],
+            min_val=reward_config["difficulty"]["min"],
         )
-        importance = reward_function.get_waypoint_importance(i, waypoints)
-        # location = i / (waypoint_count - 1.0)
-        # aggregate = (difficulty[i] + importance + location) / 3.0
-        aggregate = reward_function.get_aggregate_factor(difficulty, importance)
         next_waypoint = reward_function.get_next_distinct_index(i, waypoints)
 
+        row = [i]
+        row.append(direction)
         row.append(dir_change)
         row.append(difficulty)
-        row.append(importance)
-        # row.append(location)
-        row.append(aggregate)
-        if not debug:
+        if not args.debug:
             factor_table.add_data(*row)
 
         # Define the vertices of the polygon, (x, y) pairs
@@ -122,38 +129,97 @@ def main(debug=False):
             (inner_line[i][0], inner_line[i][1]),
         ]
 
-        # Create the polygon with the vertices, set the alpha for the fill color
-        plt.gca().add_patch(
+        color = "red"
+        if dir_change < 0:
+            color = "blue"
+        axs[0].add_patch(
             Polygon(
                 vertices,
                 closed=True,
-                color="red",
+                color=color,
                 # alpha=0.0,  # Alpha controls transparency
-                alpha=aggregate,  # Alpha controls transparency
+                alpha=difficulty,  # Alpha controls transparency
+                linewidth=0,
             )
         )
 
-    # Start track plot
-    plot_numbered_line(inner_line)
-    plot_numbered_line(outer_line)
-    plt.xlabel("X")
-    plt.ylabel("Y")
-    plt.grid(True)
+        length = 0.35
+        heading = reward_function.get_target_heading(i, waypoints)
+        xstart = waypoints[i][0]
+        ystart = waypoints[i][1]
+        x1 = xstart + length * math.cos(heading + (math.pi / 6.0))
+        y1 = ystart + length * math.sin(heading + (math.pi / 6.0))
+        x2 = xstart + length * math.cos(heading - (math.pi / 6.0))
+        y2 = ystart + length * math.sin(heading - (math.pi / 6.0))
+        xend = xstart + length * math.cos(direction)
+        yend = ystart + length * math.sin(direction)
+        vertices = [
+            (xstart, ystart),
+            (x1, y1),
+            (x2, y2),
+        ]
 
-    if debug:
+        axs[1].add_patch(
+            Polygon(
+                vertices,
+                closed=True,
+                color=color,
+                # alpha=0.0,  # Alpha controls transparency
+                alpha=difficulty,  # Alpha controls transparency
+                linewidth=0,
+            )
+        )
+        axs[1].arrow(
+            xstart,
+            ystart,
+            xend - xstart,
+            yend - ystart,
+            head_width=0.025,
+            head_length=0.025,
+            fc="black",
+            ec="black",
+            linestyle="-",
+            color="black",
+            width=0.001,
+        )
+
+    axs[0].set_title(f"Normalized Difficulty (look_ahead={args.look_ahead})")
+    axs[1].set_title(f"Direction & Spread")
+
+    if args.debug:
+        plt.tight_layout()
         plt.show()
     else:
         # TODO: Plot and log the step progress curve
         plt.savefig("track.png")
         run.log({"factor_table": factor_table, "track": wandb.Image("track.png")})
         artifact = wandb.Artifact(f"{track}", type="reward_artifacts")
-        artifact.add_file("track.png")
         artifact.add_file("custom_files/reward_function.py")
         run.log_artifact(artifact).wait()
 
 
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser()
+    argparser.add_argument(
+        "--track",
+        help="The track used to verify the reward function",
+        default="caecer_gp",
+        required=False,
+    )
+    argparser.add_argument(
+        "--bin-count",
+        help="The number of bins to consider for learning importance histogram",
+        default=4,
+        required=False,
+        type=int,
+    )
+    argparser.add_argument(
+        "--look-ahead",
+        help="The number of waypoints to use to calculate look-ahead metrics",
+        default=4,
+        required=False,
+        type=int,
+    )
     argparser.add_argument(
         "--debug",
         action="store_true",
@@ -162,4 +228,4 @@ if __name__ == "__main__":
 
     args = argparser.parse_args()
 
-    main(args.debug)
+    main(args)
