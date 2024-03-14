@@ -205,9 +205,11 @@ def main(args):
         # TODO: Plot and log the step progress curve
         plt.savefig("track.png")
         run.log({"factor_table": factor_table, "track": wandb.Image("track.png")})
-        artifact = wandb.Artifact(f"{track}", type="reward_artifacts")
-        artifact.add_file("custom_files/reward_function.py")
-        run.log_artifact(artifact).wait()
+        # TODO: Automatically update reward_function.py
+        # TODO: Log reward_function.py as an artifact
+        # artifact = wandb.Artifact(f"{args.track}", type="reward_artifacts")
+        # artifact.add_file("custom_files/reward_function.py")
+        # run.log_artifact(artifact).wait()
 
 
 if __name__ == "__main__":
