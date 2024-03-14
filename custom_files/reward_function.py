@@ -90,8 +90,8 @@ def get_target_heading(i, waypoints):
     """
     direction = get_direction(i, waypoints)
     dir_change = get_direction_change(i, waypoints)
-    spread = dir_change * 2.0
-    return direction + (spread * 0.6)
+    bias = dir_change * 2.0
+    return direction + (bias * 0.6)
 
 
 def subtract_angles_rad(a, b):
@@ -165,7 +165,7 @@ def reward_function(params):
             ymax=TRACK["step_progress"]["ymax"],
         )
 
-    difficulty = get_waypoint_difficulty(
+    _, difficulty = get_waypoint_difficulty(
         this_waypoint,
         params["waypoints"],
     )
