@@ -168,15 +168,18 @@ def reward_function(params):
     _, difficulty = get_waypoint_difficulty(
         this_waypoint,
         params["waypoints"],
+        look_ahead=3,
+        max_val=TRACK["difficulty"]["max"],
+        min_val=TRACK["difficulty"]["min"],
     )
     heading = get_target_heading(this_waypoint, params["waypoints"])
     heading_diff = abs(subtract_angles_rad(heading, math.radians(params["heading"])))
     heading_reward = sigmoid(
         heading_diff,
-        k=-2.0 * math.pi,
+        k=-4.0 * math.pi,
         x0=math.pi / 6,  # 30 degrees
         ymin=0.0,
-        ymax=step_reward,
+        ymax=4.0 * step_reward,
     )
     reward = float((step_reward * (1.0 - difficulty)) + (heading_reward * difficulty))
 
