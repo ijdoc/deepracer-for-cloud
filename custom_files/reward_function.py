@@ -202,7 +202,7 @@ def reward_function(params):
         k=-4.0 * math.pi,
         x0=math.pi / 6,  # half@30deg difference
         ymin=TRACK["step_progress"]["ymin"],
-        ymax=TRACK["step_progress"]["ymax"],
+        ymax=step_reward,
     )
     importance_factor = max(TRACK["histogram"]["counts"]) / min(
         TRACK["histogram"]["counts"]
@@ -222,7 +222,7 @@ def reward_function(params):
 
     # This trace is needed for test logging
     print(
-        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{projected_steps},{step_reward},{math.degrees(heading_diff)},{heading_reward},{difficulty},{reward},{is_finished}"
+        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{projected_steps},{step_reward},{math.degrees(heading_diff)},{heading_reward},{difficulty},{importance_weight},{reward},{is_finished}"
     )
 
     return reward

@@ -63,6 +63,7 @@ def reset_tables():
         "heading_diff",
         "heading_reward",
         "difficulty",
+        "importance_weight",
         "reward",
     ]
     return {
@@ -202,8 +203,9 @@ def process_line(line):
         heading_diff = float(parts[5])
         heading_reward = float(parts[6])
         difficulty = float(parts[7])
-        reward = float(parts[8])
-        is_finished = int(parts[9])
+        importance_weight = float(parts[8])
+        reward = float(parts[9])
+        is_finished = int(parts[10])
         job = "train"
         if is_testing:
             job = "test"
@@ -218,6 +220,7 @@ def process_line(line):
                 heading_diff,
                 heading_reward,
                 difficulty,
+                importance_weight,
                 reward,
             )
         step_metrics[job]["reward"].append(reward)
