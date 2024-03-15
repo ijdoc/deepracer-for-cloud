@@ -217,7 +217,7 @@ def reward_function(params):
         min_val=TRACK["difficulty"]["min"],
     )
     importance = get_waypoint_importance(
-        get_direction_change(i, waypoints), TRACK["histogram"]
+        get_direction_change(this_waypoint, params["waypoints"]), TRACK["histogram"]
     )
     heading = get_target_heading(this_waypoint, params["waypoints"], dir_change)
     heading_diff = abs(subtract_angles_rad(heading, math.radians(params["heading"])))
