@@ -4,18 +4,22 @@ import time
 TRACK = {
     "name": "caecer_gp",
     "waypoint_count": 231,
-    "difficulty": {"max": 0.7383608251836872, "min": 0.004665479885233692},
+    "difficulty": {
+        "look-ahead": 4,
+        "max": 0.9641485889142055,
+        "min": 0.0001807377218994155,
+    },
     "histogram": {
-        "counts": [21, 23, 38, 75, 51, 23],
-        "weights": [1.0, 0.8792, 0.3787, 0.0, 0.183, 0.8792],
+        "counts": [21, 23, 38, 72, 54, 23],
+        "weights": [1.0, 0.8772, 0.3684, 0.0, 0.1373, 0.8772],
         "edges": [
-            -0.7350219706491348,
-            -0.4894581713436644,
-            -0.24389437203819414,
-            0.0016694272672761468,
-            0.2472332265727465,
-            0.49279702587821683,
-            0.7383608251836872,
+            -0.9488689236193941,
+            -0.6300326715304609,
+            -0.31119641944152765,
+            0.007639832647405642,
+            0.3264760847363388,
+            0.645312336825272,
+            0.9641485889142055,
         ],
     },
     # Cumulative max is ~150@400 steps in our case
@@ -117,8 +121,7 @@ def get_target_heading(i, waypoints):
     """
     direction = get_direction(i, waypoints)
     dir_change = get_direction_change(i, waypoints)
-    bias = dir_change * 2.0
-    return direction + (bias * 0.6)
+    return direction + (dir_change * 3.7)
 
 
 def subtract_angles_rad(a, b):
@@ -195,7 +198,7 @@ def reward_function(params):
     dir_change, difficulty = get_waypoint_difficulty(
         this_waypoint,
         params["waypoints"],
-        look_ahead=3,
+        look_ahead=TRACK["difficulty"]["look-ahead"],
         max_val=TRACK["difficulty"]["max"],
         min_val=TRACK["difficulty"]["min"],
     )
@@ -204,9 +207,9 @@ def reward_function(params):
     heading_diff = abs(subtract_angles_rad(heading, math.radians(params["heading"])))
     heading_reward = sigmoid(
         heading_diff,
-        k=-4.0 * math.pi,
-        x0=math.pi / 6,  # half@30deg difference
-        ymin=-(2.0 * step_reward),
+        k=-2.0 * math.pi,
+        x0=math.pi / 4.0,  # half@45deg difference
+        ymin=-step_reward,
         ymax=step_reward,
     )
     importance_weight = (importance * (importance_factor - 1.0)) + 1.0

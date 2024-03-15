@@ -74,7 +74,11 @@ def main(args):
     factors = [round((num - f_min) / (f_max - f_min), 4) for num in factors.tolist()]
     abs_dir_change = [abs(num) for num in changes]
     reward_config = {
-        "difficulty": {"max": max(difficulties), "min": min(difficulties)},
+        "difficulty": {
+            "look-ahead": args.look_ahead,
+            "max": max(difficulties),
+            "min": min(difficulties),
+        },
         "histogram": {
             "counts": counts.tolist(),
             "weights": factors,
@@ -108,7 +112,7 @@ def main(args):
         dir_change, difficulty = reward_function.get_waypoint_difficulty(
             i,
             waypoints,
-            look_ahead=args.look_ahead,
+            look_ahead=reward_config["difficulty"]["look-ahead"],
             max_val=reward_config["difficulty"]["max"],
             min_val=reward_config["difficulty"]["min"],
         )
@@ -159,27 +163,29 @@ def main(args):
         heading = reward_function.get_target_heading(i, waypoints)
         xstart = waypoints[i][0]
         ystart = waypoints[i][1]
-        x1 = xstart + length * math.cos(heading + (math.pi / 6.0))
-        y1 = ystart + length * math.sin(heading + (math.pi / 6.0))
-        x2 = xstart + length * math.cos(heading - (math.pi / 6.0))
-        y2 = ystart + length * math.sin(heading - (math.pi / 6.0))
-        xend = xstart + length * math.cos(direction)
-        yend = ystart + length * math.sin(direction)
+        x1 = xstart + (length * math.cos(heading + (math.pi / 6.0)))
+        y1 = ystart + (length * math.sin(heading + (math.pi / 6.0)))
+        x2 = xstart + (length * math.cos(heading - (math.pi / 6.0)))
+        y2 = ystart + (length * math.sin(heading - (math.pi / 6.0)))
+        xend = xstart + (length * math.cos(direction))
+        yend = ystart + (length * math.sin(direction))
+        xapex = xstart + (length * difficulty * 4.0 * math.cos(heading))
+        yapex = ystart + (length * difficulty * 4.0 * math.sin(heading))
         vertices = [
             (xstart, ystart),
             (x1, y1),
             (x2, y2),
         ]
 
-        axs[1, 0].add_patch(
-            Polygon(
-                vertices,
-                closed=True,
-                color=color,
-                alpha=difficulty,
-                linewidth=0,
-            )
-        )
+        # axs[1, 0].add_patch(
+        #     Polygon(
+        #         vertices,
+        #         closed=True,
+        #         color=color,
+        #         alpha=difficulty,
+        #         linewidth=0,
+        #     )
+        # )
         axs[1, 0].arrow(
             xstart,
             ystart,
@@ -187,14 +193,30 @@ def main(args):
             yend - ystart,
             head_width=0.025,
             head_length=0.025,
-            fc="black",
-            ec="black",
+            fc="gray",
+            ec="gray",
             linestyle="-",
-            color="black",
+            color="gray",
             width=0.001,
         )
+        axs[1, 0].arrow(
+            xstart,
+            ystart,
+            xapex - xstart,
+            yapex - ystart,
+            head_width=0.025,
+            head_length=0.025,
+            fc="green",
+            ec="green",
+            linestyle="-",
+            color="green",
+            width=difficulty / 100.0,
+            alpha=difficulty,
+        )
 
-    axs[0, 0].set_title(f"Normalized Difficulty (look_ahead={args.look_ahead})")
+    axs[0, 0].set_title(
+        f"Normalized Difficulty (look_ahead={reward_config['difficulty']['look-ahead']})"
+    )
     axs[0, 1].set_title(f"Importance ({args.bin_count} bins)")
     axs[1, 0].set_title(f"Direction & Target Heading")
 
