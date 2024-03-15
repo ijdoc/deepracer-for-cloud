@@ -29,6 +29,9 @@ TRACK = {
 
 # Other globals
 LAST_PROGRESS = 0.0
+importance_factor = max(TRACK["histogram"]["counts"]) / min(
+    TRACK["histogram"]["counts"]
+)
 
 
 def get_next_distinct_index(i, waypoints):
@@ -161,32 +164,34 @@ def reward_function(params):
     step_progress = params["progress"] - LAST_PROGRESS
     LAST_PROGRESS = params["progress"]
 
-    if step_progress == 0.0:
-        projected_steps = 10000.0
-    else:
-        projected_steps = 100.0 / step_progress
+    # if step_progress == 0.0:
+    #     projected_steps = 10000.0
+    # else:
+    #     projected_steps = 100.0 / step_progress
 
-    if step_progress >= 0.0:
-        # We reward projected_steps based on each step's progress.
-        # The sigmoid saturates the reward to a maximum value below the
-        # projected_steps.
-        step_reward = sigmoid(
-            projected_steps,
-            k=TRACK["step_progress"]["k"],
-            x0=TRACK["step_progress"]["x0"],
-            ymin=TRACK["step_progress"]["ymin"],
-            ymax=TRACK["step_progress"]["ymax"],
-        )
-    else:
-        # We are going backwards
-        step_reward = -sigmoid(
-            -projected_steps,
-            k=TRACK["step_progress"]["k"],
-            x0=TRACK["step_progress"]["x0"],
-            ymin=TRACK["step_progress"]["ymin"],
-            ymax=TRACK["step_progress"]["ymax"],
-        )
+    # if step_progress >= 0.0:
+    #     # We reward projected_steps based on each step's progress.
+    #     # The sigmoid saturates the reward to a maximum value below the
+    #     # projected_steps.
+    #     step_reward = sigmoid(
+    #         projected_steps,
+    #         k=TRACK["step_progress"]["k"],
+    #         x0=TRACK["step_progress"]["x0"],
+    #         ymin=TRACK["step_progress"]["ymin"],
+    #         ymax=TRACK["step_progress"]["ymax"],
+    #     )
+    # else:
+    #     # We are going backwards
+    #     step_reward = -sigmoid(
+    #         -projected_steps,
+    #         k=TRACK["step_progress"]["k"],
+    #         x0=TRACK["step_progress"]["x0"],
+    #         ymin=TRACK["step_progress"]["ymin"],
+    #         ymax=TRACK["step_progress"]["ymax"],
+    #     )
 
+    # Target average progress is 0.25% per step, so average reward is 0.5
+    step_reward = 2.0 * step_progress
     dir_change, difficulty = get_waypoint_difficulty(
         this_waypoint,
         params["waypoints"],
@@ -202,10 +207,7 @@ def reward_function(params):
         k=-4.0 * math.pi,
         x0=math.pi / 6,  # half@30deg difference
         ymin=TRACK["step_progress"]["ymin"],
-        ymax=step_reward,
-    )
-    importance_factor = max(TRACK["histogram"]["counts"]) / min(
-        TRACK["histogram"]["counts"]
+        ymax=0.5,  # Comparable to step_reward
     )
     importance_weight = (importance * (importance_factor - 1.0)) + 1.0
     reward = float(
@@ -222,7 +224,7 @@ def reward_function(params):
 
     # This trace is needed for test logging
     print(
-        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{projected_steps},{step_reward},{math.degrees(heading_diff)},{heading_reward},{difficulty},{importance_weight},{reward},{is_finished}"
+        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{step_reward},{math.degrees(heading_diff)},{heading_reward},{difficulty},{importance_weight},{reward},{is_finished}"
     )
 
     return reward
