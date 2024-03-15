@@ -206,8 +206,8 @@ def reward_function(params):
         heading_diff,
         k=-4.0 * math.pi,
         x0=math.pi / 6,  # half@30deg difference
-        ymin=TRACK["step_progress"]["ymin"],
-        ymax=0.5,  # Comparable to step_reward
+        ymin=-(2.0 * step_reward),
+        ymax=step_reward,
     )
     importance_weight = (importance * (importance_factor - 1.0)) + 1.0
     reward = float(
@@ -218,9 +218,6 @@ def reward_function(params):
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:
         is_finished = 1
-        if params["is_offtrack"]:
-            if reward > 0.0:
-                reward = float(-reward)
 
     # This trace is needed for test logging
     print(
