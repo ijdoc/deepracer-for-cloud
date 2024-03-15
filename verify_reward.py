@@ -8,6 +8,14 @@ from matplotlib.patches import Polygon
 import math
 import wandb
 
+# Cumulative max is ~150@400 steps in our case
+step_progress = {
+    "ymax": 0.5,
+    "ymin": 0.0,
+    "k": -0.01,
+    "x0": 510,
+}
+
 
 def download(track):
     # URL of the npy file
@@ -40,6 +48,22 @@ def plot_index(line, axs):
 
 
 def main(args):
+
+    projected_steps = [i for i in range(300, 1001, 10)]
+    step_reward = [
+        reward_function.sigmoid(
+            i,
+            k=step_progress["k"],
+            x0=step_progress["x0"],
+            ymin=step_progress["ymin"],
+            ymax=step_progress["ymax"],
+        )
+        for i in projected_steps
+    ]
+    aggregated_reward = [
+        projected_steps[i] * step_reward[i] for i in range(len(projected_steps))
+    ]
+
     fig, axs = plt.subplots(2, 2, figsize=(10, 10))
     if not args.debug:
         run = wandb.init(
@@ -84,6 +108,7 @@ def main(args):
             "weights": factors,
             "edges": bin_edges.tolist(),
         },
+        "step_progress": step_progress,
     }
     print(reward_config)
 
@@ -159,6 +184,10 @@ def main(args):
                 linewidth=0,
             )
         )
+        axs[1, 1].cla()
+        axs[1, 1].grid(True)
+        axs[1, 1].plot(projected_steps, step_reward, linestyle="-", color="black")
+        axs[1, 1].plot(projected_steps, aggregated_reward, linestyle="-", color="red")
 
         length = 0.35
         heading = reward_function.get_target_heading(i, waypoints, dir_change)
@@ -219,7 +248,10 @@ def main(args):
         f"Normalized Difficulty (look_ahead={reward_config['difficulty']['look-ahead']})"
     )
     axs[0, 1].set_title(f"Importance ({args.bin_count} bins)")
-    axs[1, 0].set_title(f"Direction & Target Heading")
+    axs[1, 0].set_title(
+        f"Target Heading (look_ahead={reward_config['difficulty']['look-ahead']})"
+    )
+    axs[1, 1].set_title(f"Aggregated Step Reward")
 
     if args.debug:
         plt.tight_layout()

@@ -37,13 +37,7 @@ TRACK = {
             0.26188495458240413,
         ],
     },
-    # Cumulative max is ~150@400 steps in our case
-    "step_progress": {
-        "ymax": 0.5,
-        "ymin": 0.0,
-        "k": -0.01,
-        "x0": 510,
-    },
+    "step_progress": {"ymax": 0.5, "ymin": 0.0, "k": -0.01, "x0": 510},
 }
 
 # Other globals
@@ -181,34 +175,33 @@ def reward_function(params):
     step_progress = params["progress"] - LAST_PROGRESS
     LAST_PROGRESS = params["progress"]
 
-    # if step_progress == 0.0:
-    #     projected_steps = 10000.0
-    # else:
-    #     projected_steps = 100.0 / step_progress
+    if step_progress == 0.0:
+        projected_steps = 10000.0
+    else:
+        projected_steps = 100.0 / step_progress
 
-    # if step_progress >= 0.0:
-    #     # We reward projected_steps based on each step's progress.
-    #     # The sigmoid saturates the reward to a maximum value below the
-    #     # projected_steps.
-    #     step_reward = sigmoid(
-    #         projected_steps,
-    #         k=TRACK["step_progress"]["k"],
-    #         x0=TRACK["step_progress"]["x0"],
-    #         ymin=TRACK["step_progress"]["ymin"],
-    #         ymax=TRACK["step_progress"]["ymax"],
-    #     )
-    # else:
-    #     # We are going backwards
-    #     step_reward = -sigmoid(
-    #         -projected_steps,
-    #         k=TRACK["step_progress"]["k"],
-    #         x0=TRACK["step_progress"]["x0"],
-    #         ymin=TRACK["step_progress"]["ymin"],
-    #         ymax=TRACK["step_progress"]["ymax"],
-    #     )
+    if step_progress >= 0.0:
+        # We reward projected_steps based on each step's progress.
+        # The sigmoid saturates the reward to a maximum value below the
+        # projected_steps.
+        step_reward = sigmoid(
+            projected_steps,
+            k=TRACK["step_progress"]["k"],
+            x0=TRACK["step_progress"]["x0"],
+            ymin=TRACK["step_progress"]["ymin"],
+            ymax=TRACK["step_progress"]["ymax"],
+        )
+    else:
+        # We are going backwards
+        step_reward = -sigmoid(
+            -projected_steps,
+            k=TRACK["step_progress"]["k"],
+            x0=TRACK["step_progress"]["x0"],
+            ymin=TRACK["step_progress"]["ymin"],
+            ymax=TRACK["step_progress"]["ymax"],
+        )
 
-    # Target average progress is 0.25% per step, so average reward is 0.5
-    step_reward = 2.0 * step_progress
+    # Max step_reward is 0.5
     dir_change, difficulty = get_waypoint_difficulty(
         this_waypoint,
         params["waypoints"],
@@ -221,8 +214,8 @@ def reward_function(params):
     )
     heading = get_target_heading(this_waypoint, params["waypoints"], dir_change)
     heading_diff = abs(subtract_angles_rad(heading, math.radians(params["heading"])))
-    # heading_reward is half fixed, half step progress. Should range from -0.5 to 0.5
-    heading_reward = math.cos(heading_diff) * (0.25 + step_progress)
+    # heading_reward goes from -0.5 to 0.5
+    heading_reward = math.cos(heading_diff) / 2.0
     importance_weight = (importance * (importance_factor - 1.0)) + 1.0
     reward = float(
         importance_weight
