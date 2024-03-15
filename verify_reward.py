@@ -59,7 +59,7 @@ def main(args):
         change, difficulty = reward_function.get_waypoint_difficulty(
             i, waypoints, look_ahead=args.look_ahead
         )
-        changes.append(change)
+        changes.append(reward_function.get_direction_change(i, waypoints))
         difficulties.append(difficulty)
 
     # Obtain aggregate values/weights
@@ -117,7 +117,8 @@ def main(args):
             min_val=reward_config["difficulty"]["min"],
         )
         importance = reward_function.get_waypoint_importance(
-            dir_change, reward_config["histogram"]
+            reward_function.get_direction_change(i, waypoints),
+            reward_config["histogram"],
         )
 
         row = [i]
@@ -160,7 +161,7 @@ def main(args):
         )
 
         length = 0.35
-        heading = reward_function.get_target_heading(i, waypoints)
+        heading = reward_function.get_target_heading(i, waypoints, dir_change)
         xstart = waypoints[i][0]
         ystart = waypoints[i][1]
         x1 = xstart + (length * math.cos(heading + (math.pi / 6.0)))
@@ -169,8 +170,8 @@ def main(args):
         y2 = ystart + (length * math.sin(heading - (math.pi / 6.0)))
         xend = xstart + (length * math.cos(direction))
         yend = ystart + (length * math.sin(direction))
-        xapex = xstart + (length * difficulty * 4.0 * math.cos(heading))
-        yapex = ystart + (length * difficulty * 4.0 * math.sin(heading))
+        xapex = xstart + (length * difficulty * 8.0 * math.cos(heading))
+        yapex = ystart + (length * difficulty * 8.0 * math.sin(heading))
         vertices = [
             (xstart, ystart),
             (x1, y1),

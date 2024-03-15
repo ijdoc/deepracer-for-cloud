@@ -5,21 +5,36 @@ TRACK = {
     "name": "caecer_gp",
     "waypoint_count": 231,
     "difficulty": {
-        "look-ahead": 4,
-        "max": 0.9641485889142055,
-        "min": 0.0001807377218994155,
+        "look-ahead": 3,
+        "max": 0.7383608251836872,
+        "min": 0.004665479885233692,
     },
     "histogram": {
-        "counts": [21, 23, 38, 72, 54, 23],
-        "weights": [1.0, 0.8772, 0.3684, 0.0, 0.1373, 0.8772],
+        "counts": [9, 15, 14, 12, 35, 47, 41, 31, 12, 15],
+        "weights": [
+            1.0,
+            0.5053,
+            0.5583,
+            0.6908,
+            0.0812,
+            0.0,
+            0.0347,
+            0.1222,
+            0.6908,
+            0.5053,
+        ],
         "edges": [
-            -0.9488689236193941,
-            -0.6300326715304609,
-            -0.31119641944152765,
-            0.007639832647405642,
-            0.3264760847363388,
-            0.645312336825272,
-            0.9641485889142055,
+            -0.2513188520107108,
+            -0.1999984713513993,
+            -0.14867809069208782,
+            -0.09735771003277632,
+            -0.04603732937346483,
+            0.005283051285846663,
+            0.056603431945158156,
+            0.10792381260446965,
+            0.15924419326378114,
+            0.21056457392309263,
+            0.26188495458240413,
         ],
     },
     # Cumulative max is ~150@400 steps in our case
@@ -115,13 +130,12 @@ def get_waypoint_importance(change, histogram):
     return histogram["weights"][j]  # when change is equal to the last edge
 
 
-def get_target_heading(i, waypoints):
+def get_target_heading(i, waypoints, change):
     """
     Get heading at waypoint i (in radians)
     """
     direction = get_direction(i, waypoints)
-    dir_change = get_direction_change(i, waypoints)
-    return direction + (dir_change * 3.7)
+    return direction + (change * 1.0)
 
 
 def subtract_angles_rad(a, b):
@@ -202,16 +216,13 @@ def reward_function(params):
         max_val=TRACK["difficulty"]["max"],
         min_val=TRACK["difficulty"]["min"],
     )
-    importance = get_waypoint_importance(dir_change, TRACK["histogram"])
-    heading = get_target_heading(this_waypoint, params["waypoints"])
-    heading_diff = abs(subtract_angles_rad(heading, math.radians(params["heading"])))
-    heading_reward = sigmoid(
-        heading_diff,
-        k=-2.0 * math.pi,
-        x0=math.pi / 4.0,  # half@45deg difference
-        ymin=-step_reward,
-        ymax=step_reward,
+    importance = get_waypoint_importance(
+        get_direction_change(i, waypoints), TRACK["histogram"]
     )
+    heading = get_target_heading(this_waypoint, params["waypoints"], dir_change)
+    heading_diff = abs(subtract_angles_rad(heading, math.radians(params["heading"])))
+    # heading_reward is half fixed, half step progress. Should range from -0.5 to 0.5
+    heading_reward = math.cos(heading_diff) * (0.25 + step_progress)
     importance_weight = (importance * (importance_factor - 1.0)) + 1.0
     reward = float(
         importance_weight
