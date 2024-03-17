@@ -297,7 +297,8 @@ def process_line(line):
                     #     f"TODO: Create model reference to s3://jdoc-one-deepracer-data-b5pi7cdvar/{wandb.run.name}-{checkpoint}/"
                     # )
                     wandb.log_model(
-                        f"s3://jdoc-one-deepracer-data-b5pi7cdvar/{wandb.run.name}-{checkpoint}/"
+                        path=f"s3://jdoc-one-deepracer-data-b5pi7cdvar/{wandb.run.name}-{checkpoint}/",
+                        name=f"{wandb.run.name}",
                     )
             else:
                 print(
