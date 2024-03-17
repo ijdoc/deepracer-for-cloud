@@ -215,10 +215,7 @@ def reward_function(params):
     heading = get_target_heading(this_waypoint, params["waypoints"], dir_change)
     heading_diff = abs(subtract_angles_rad(heading, math.radians(params["heading"])))
     # heading_reward goes from -0.5 to 0.5
-    # Heading should be better initially, but then step_reward should take over
-    heading_reward = max(
-        math.cos(heading_diff) * TRACK["step_progress"]["ymax"] * 0.9, step_reward
-    )
+    heading_reward = math.cos(heading_diff) / 2.0
     importance_weight = (importance * (importance_factor - 1.0)) + 1.0
     reward = float(
         importance_weight
