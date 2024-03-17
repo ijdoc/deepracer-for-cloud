@@ -37,7 +37,7 @@ TRACK = {
             0.26188495458240413,
         ],
     },
-    "step_progress": {"ymax": 0.625, "ymin": 0.0, "k": -0.01, "x0": 430},
+    "step_progress": {"ymax": 0.625, "ymin": 0.0, "k": -0.015, "x0": 400},
 }
 
 # Other globals
