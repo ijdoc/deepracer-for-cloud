@@ -8,12 +8,12 @@ from matplotlib.patches import Polygon
 import math
 import wandb
 
-# Cumulative max is ~150@400 steps in our case
+# Cumulative max is ~150@340 steps in our case
 step_progress = {
-    "ymax": 0.5,
+    "ymax": 0.625,
     "ymin": 0.0,
     "k": -0.01,
-    "x0": 510,
+    "x0": 430,
 }
 
 
