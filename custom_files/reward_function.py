@@ -42,9 +42,9 @@ TRACK = {
 
 # Other globals
 LAST_PROGRESS = 0.0
-importance_factor = max(TRACK["histogram"]["counts"]) / min(
+importance_factor = 0.5 * (max(TRACK["histogram"]["counts"]) / min(
     TRACK["histogram"]["counts"]
-)
+))
 
 
 def get_next_distinct_index(i, waypoints):
@@ -214,8 +214,8 @@ def reward_function(params):
     )
     heading = get_target_heading(this_waypoint, params["waypoints"], dir_change)
     heading_diff = abs(subtract_angles_rad(heading, math.radians(params["heading"])))
-    # heading_reward goes from -0.5 to 0.5
-    heading_reward = math.cos(heading_diff) / 2.0
+    # heading_reward max should be at least the same as step_reward max
+    heading_reward = math.cos(heading_diff) * TRACK["step_progress"]["ymax"]
     importance_weight = (importance * (importance_factor - 1.0)) + 1.0
     reward = float(
         importance_weight

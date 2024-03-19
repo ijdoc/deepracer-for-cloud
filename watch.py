@@ -77,7 +77,7 @@ ckpt_metrics = {
     "learn": {"loss": None, "KL_div": None, "entropy": None},
 }
 iter_metrics = reset_iter_metrics()
-best_metrics = {"reward": -1.0, "progress": 0.0, "steps": 100000.0, "checkpoint": -1}
+best_metrics = {"reward": -1.0, "progress": 0.0, "steps": 100000.0, "checkpoint": -1, entropy: 100.0}
 is_testing = False
 step_metrics = {
     "train": {"reward": []},
@@ -279,6 +279,7 @@ def process_line(line):
                 best_metrics["steps"] = ckpt_metrics["test"]["steps"]
                 best_metrics["progress"] = ckpt_metrics["test"]["progress"]
                 best_metrics["checkpoint"] = checkpoint
+                best_metrics["entropy"] = ckpt_metrics["learn"]["entropy"]
                 print(
                     f'{timestamp} ckpt {checkpoint}: {ckpt_metrics["test"]["reward"]:0.2f}, {ckpt_metrics["test"]["progress"]:0.2f}%, {ckpt_metrics["test"]["steps"]:0.2f} steps (improved)'
                 )
@@ -327,6 +328,7 @@ def process_line(line):
                 wandb.run.summary["test/steps"] = best_metrics["steps"]
                 wandb.run.summary["test/progress"] = best_metrics["progress"]
                 wandb.run.summary["best_checkpoint"] = best_metrics["checkpoint"]
+                wandb.run.summary["learn/entropy"] = best_metrics["entropy"]
         # Resetting tracker variables
         iter_metrics = reset_iter_metrics()
         tables = reset_tables()
