@@ -77,7 +77,13 @@ ckpt_metrics = {
     "learn": {"loss": None, "KL_div": None, "entropy": None},
 }
 iter_metrics = reset_iter_metrics()
-best_metrics = {"reward": -1.0, "progress": 0.0, "steps": 100000.0, "checkpoint": -1, entropy: 100.0}
+best_metrics = {
+    "reward": -1.0,
+    "progress": 0.0,
+    "steps": 100000.0,
+    "checkpoint": -1,
+    "entropy": 100.0,
+}
 is_testing = False
 step_metrics = {
     "train": {"reward": []},
