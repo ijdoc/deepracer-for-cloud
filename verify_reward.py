@@ -44,7 +44,7 @@ def plot_index(line, axs):
     x = [point[0] for point in line]
     y = [point[1] for point in line]
     for i, (xi, yi) in enumerate(zip(x, y)):
-        axs.text(xi, yi, str(i), color="black", fontsize=8, ha="center", va="center")
+        axs.text(xi, yi, str(i), color="black", fontsize=6, ha="center", va="center")
 
 
 def main(args):
@@ -163,15 +163,16 @@ def main(args):
             (inner_line[i][0], inner_line[i][1]),
         ]
 
+        plot_difficulty = 2.0 * (difficulty - 0.5)
         color = "red"
-        if dir_change < 0:
+        if plot_difficulty < 0:
             color = "blue"
         axs[0, 0].add_patch(
             Polygon(
                 vertices,
                 closed=True,
                 color=color,
-                alpha=difficulty,
+                alpha=abs(plot_difficulty),
                 linewidth=0,
             )
         )
@@ -190,7 +191,14 @@ def main(args):
         axs[1, 1].plot(projected_steps, aggregated_reward, linestyle="-", color="red")
 
         length = 0.35
-        heading = reward_function.get_target_heading(i, waypoints, dir_change)
+        heading = reward_function.get_target_heading(
+            i,
+            waypoints,
+            delay=5,
+            look_ahead=reward_config["difficulty"]["look-ahead"],
+            min_val=reward_config["difficulty"]["min"],
+            max_val=reward_config["difficulty"]["max"],
+        )
         xstart = waypoints[i][0]
         ystart = waypoints[i][1]
         x1 = xstart + (length * math.cos(heading + (math.pi / 6.0)))
@@ -199,8 +207,8 @@ def main(args):
         y2 = ystart + (length * math.sin(heading - (math.pi / 6.0)))
         xend = xstart + (length * math.cos(direction))
         yend = ystart + (length * math.sin(direction))
-        xapex = xstart + (length * difficulty * 8.0 * math.cos(heading))
-        yapex = ystart + (length * difficulty * 8.0 * math.sin(heading))
+        xapex = xstart + (length * difficulty * 3.0 * math.cos(heading))
+        yapex = ystart + (length * difficulty * 3.0 * math.sin(heading))
         vertices = [
             (xstart, ystart),
             (x1, y1),

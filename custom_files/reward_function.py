@@ -42,9 +42,9 @@ TRACK = {
 
 # Other globals
 LAST_PROGRESS = 0.0
-importance_factor = 0.5 * (max(TRACK["histogram"]["counts"]) / min(
+importance_factor = max(TRACK["histogram"]["counts"]) / min(
     TRACK["histogram"]["counts"]
-))
+)
 
 
 def get_next_distinct_index(i, waypoints):
@@ -99,44 +99,6 @@ def get_direction_change(i, waypoints):
     return diff
 
 
-def get_waypoint_difficulty(i, waypoints, look_ahead=1, max_val=1.0, min_val=0.0):
-    """
-    Get difficulty at waypoint i, calculated as the normalized amount of direction change.
-    """
-    next_idx = i
-    aggregate_change = get_direction_change(i, waypoints)
-    for _ in range(look_ahead - 1):
-        next_idx = get_next_distinct_index(next_idx, waypoints)
-        aggregate_change += get_direction_change(next_idx, waypoints)
-    difficulty = abs(aggregate_change)
-    return aggregate_change, (difficulty - min_val) / (max_val - min_val)
-
-
-def get_waypoint_importance(change, histogram):
-    """
-    Get waypoint weight based on how common the direction change is in the entire track.
-    This can be used to give more weight to waypoints that are less likely to occur during
-    training, and therefore are more important to learn.
-    """
-    for j in range(len(histogram["weights"])):
-        if change >= histogram["edges"][j] and change < histogram["edges"][j + 1]:
-            return histogram["weights"][j]
-    return histogram["weights"][j]  # when change is equal to the last edge
-
-
-def get_target_heading(i, waypoints, change):
-    """
-    Get heading at waypoint i (in radians)
-    """
-    direction = get_direction(i, waypoints)
-    return direction + (change * 1.0)
-
-
-def subtract_angles_rad(a, b):
-    diff = a - b
-    return math.atan2(math.sin(diff), math.cos(diff))
-
-
 def sigmoid(x, k=3.9, x0=0.6, ymin=0.0, ymax=1.2):
     """Parametrized sigmoid function as seen on:
        https://www.desmos.com/calculator/wbdyedqfwp
@@ -160,6 +122,54 @@ def sigmoid(x, k=3.9, x0=0.6, ymin=0.0, ymax=1.2):
         return ymax
 
     return ((ymax - ymin) / (1 + math.exp(-k * (x - x0)))) + ymin
+
+
+def get_waypoint_difficulty(i, waypoints, look_ahead=1, max_val=1.0, min_val=0.0):
+    """
+    Get difficulty at waypoint i, calculated as the normalized amount of direction change.
+    """
+    next_idx = i
+    aggregate_change = get_direction_change(i, waypoints)
+    for _ in range(look_ahead - 1):
+        next_idx = get_next_distinct_index(next_idx, waypoints)
+        aggregate_change += get_direction_change(next_idx, waypoints)
+    difficulty = abs(aggregate_change)
+    normalized_difficulty = (difficulty - min_val) / (max_val - min_val)
+    # Push limits away from 0.5
+    weighted_difficulty = sigmoid(
+        normalized_difficulty, k=10, x0=0.5, ymin=0.0, ymax=1.0
+    )
+    return aggregate_change, weighted_difficulty
+
+
+def get_waypoint_importance(change, histogram):
+    """
+    Get waypoint weight based on how common the direction change is in the entire track.
+    This can be used to give more weight to waypoints that are less likely to occur during
+    training, and therefore are more important to learn.
+    """
+    for j in range(len(histogram["weights"])):
+        if change >= histogram["edges"][j] and change < histogram["edges"][j + 1]:
+            return histogram["weights"][j]
+    return histogram["weights"][j]  # when change is equal to the last edge
+
+
+def get_target_heading(i, waypoints, delay=1, look_ahead=1, min_val=0.0, max_val=1.0):
+    """
+    Get heading at waypoint i (in radians)
+    """
+    for _ in range(delay):
+        i = get_prev_distinct_index(i, waypoints)
+    direction = get_direction(i, waypoints)
+    change, difficulty = get_waypoint_difficulty(
+        i, waypoints, look_ahead=look_ahead, min_val=min_val, max_val=max_val
+    )
+    return direction + (change * 2.5)
+
+
+def subtract_angles_rad(a, b):
+    diff = a - b
+    return math.atan2(math.sin(diff), math.cos(diff))
 
 
 def reward_function(params):
@@ -201,18 +211,24 @@ def reward_function(params):
             ymax=TRACK["step_progress"]["ymax"],
         )
 
-    # Max step_reward is 0.5
     dir_change, difficulty = get_waypoint_difficulty(
         this_waypoint,
         params["waypoints"],
         look_ahead=TRACK["difficulty"]["look-ahead"],
-        max_val=TRACK["difficulty"]["max"],
         min_val=TRACK["difficulty"]["min"],
+        max_val=TRACK["difficulty"]["max"],
     )
     importance = get_waypoint_importance(
         get_direction_change(this_waypoint, params["waypoints"]), TRACK["histogram"]
     )
-    heading = get_target_heading(this_waypoint, params["waypoints"], dir_change)
+    heading = get_target_heading(
+        this_waypoint,
+        params["waypoints"],
+        delay=5,
+        look_ahead=TRACK["difficulty"]["look-ahead"],
+        min_val=TRACK["difficulty"]["min"],
+        max_val=TRACK["difficulty"]["max"],
+    )
     heading_diff = abs(subtract_angles_rad(heading, math.radians(params["heading"])))
     # heading_reward max should be at least the same as step_reward max
     heading_reward = math.cos(heading_diff) * TRACK["step_progress"]["ymax"]
