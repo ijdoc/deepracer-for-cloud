@@ -230,8 +230,8 @@ def reward_function(params):
         max_val=TRACK["difficulty"]["max"],
     )
     heading_diff = abs(subtract_angles_rad(heading, math.radians(params["heading"])))
-    # heading_reward max should be at least the same as step_reward max
-    heading_reward = math.cos(heading_diff) * TRACK["step_progress"]["ymax"]
+    # heading_reward max should be at least the same as step_reward
+    heading_reward = math.cos(heading_diff) * step_reward
     importance_weight = (importance * (importance_factor - 1.0)) + 1.0
     reward = float(
         importance_weight
