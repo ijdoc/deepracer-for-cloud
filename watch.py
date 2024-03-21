@@ -344,6 +344,8 @@ def process_line(line):
 
     elif "Starting evaluation phase" in line:
         is_testing = True
+    elif "error" in line.lower() or "exception" in line.lower():
+        print(f"{timestamp} {line}")
     else:
         if DEBUG:
             print(f"{timestamp} {line}")
