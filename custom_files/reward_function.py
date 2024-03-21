@@ -231,7 +231,7 @@ def reward_function(params):
     )
     heading_diff = abs(subtract_angles_rad(heading, math.radians(params["heading"])))
     # heading_reward max should be at least the same as step_reward
-    heading_reward = math.cos(heading_diff) * step_reward
+    heading_reward = math.cos(heading_diff) * 0.5 * (step_reward + TRACK["step_progress"]["ymax"])
     importance_weight = (importance * (importance_factor - 1.0)) + 1.0
     reward = float(
         importance_weight

@@ -168,6 +168,8 @@ if not DEBUG:
         wandb.init(
             config=config_dict, entity="iamjdoc", project="dr-reborn", job_type="train"
         )
+    subprocess.run(f"git branch {wandb.run.name}", shell=True)
+    subprocess.run(f"git push -u origin {wandb.run.name}", shell=True)
     # Log input files
     config_files = wandb.Artifact(name="config", type="inputs")
     env_files = wandb.Artifact(name="env", type="inputs")
