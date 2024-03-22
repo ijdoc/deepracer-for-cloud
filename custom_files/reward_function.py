@@ -233,7 +233,7 @@ def reward_function(params):
     # heading_reward max should be at least the same as step_reward
     heading_reward = math.cos(heading_diff) * TRACK["step_reward"]["ymax"]
     importance_weight = (importance * (importance_factor - 1.0)) + 1.0
-    difficulty *= 0.85 # Max heading influence is 85%
+    difficulty *= 0.8  # Max heading influence as a percentage
     reward = float(
         importance_weight
         * ((step_reward * (1.0 - difficulty)) + (heading_reward * difficulty))
