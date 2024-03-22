@@ -9,7 +9,7 @@ import math
 import wandb
 
 # Cumulative max is ~150@312 steps in our case
-step_progress = {
+step_reward = {
     "ymax": 0.625,
     "ymin": 0.0,
     "k": -0.015,
@@ -50,18 +50,18 @@ def plot_index(line, axs):
 def main(args):
 
     projected_steps = [i for i in range(300, 1001, 10)]
-    step_reward = [
+    step_reward_plot = [
         reward_function.sigmoid(
             i,
-            k=step_progress["k"],
-            x0=step_progress["x0"],
-            ymin=step_progress["ymin"],
-            ymax=step_progress["ymax"],
+            k=step_reward["k"],
+            x0=step_reward["x0"],
+            ymin=step_reward["ymin"],
+            ymax=step_reward["ymax"],
         )
         for i in projected_steps
     ]
     aggregated_reward = [
-        projected_steps[i] * step_reward[i] for i in range(len(projected_steps))
+        projected_steps[i] * step_reward_plot[i] for i in range(len(projected_steps))
     ]
 
     fig, axs = plt.subplots(2, 2, figsize=(10, 10))
@@ -108,7 +108,7 @@ def main(args):
             "weights": factors,
             "edges": bin_edges.tolist(),
         },
-        "step_progress": step_progress,
+        "step_reward": step_reward,
     }
     print(reward_config)
 
@@ -187,7 +187,7 @@ def main(args):
         )
         axs[1, 1].cla()
         axs[1, 1].grid(True)
-        axs[1, 1].plot(projected_steps, step_reward, linestyle="-", color="black")
+        axs[1, 1].plot(projected_steps, step_reward_plot, linestyle="-", color="black")
         axs[1, 1].plot(projected_steps, aggregated_reward, linestyle="-", color="red")
 
         length = 0.35

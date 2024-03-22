@@ -37,7 +37,7 @@ TRACK = {
             0.26188495458240413,
         ],
     },
-    "step_progress": {"ymax": 0.625, "ymin": 0.0, "k": -0.015, "x0": 400},
+    "step_reward": {"ymax": 0.625, "ymin": 0.0, "k": -0.015, "x0": 400},
 }
 
 # Other globals
@@ -196,19 +196,19 @@ def reward_function(params):
         # projected_steps.
         step_reward = sigmoid(
             projected_steps,
-            k=TRACK["step_progress"]["k"],
-            x0=TRACK["step_progress"]["x0"],
-            ymin=TRACK["step_progress"]["ymin"],
-            ymax=TRACK["step_progress"]["ymax"],
+            k=TRACK["step_reward"]["k"],
+            x0=TRACK["step_reward"]["x0"],
+            ymin=TRACK["step_reward"]["ymin"],
+            ymax=TRACK["step_reward"]["ymax"],
         )
     else:
         # We are going backwards
         step_reward = -sigmoid(
             -projected_steps,
-            k=TRACK["step_progress"]["k"],
-            x0=TRACK["step_progress"]["x0"],
-            ymin=TRACK["step_progress"]["ymin"],
-            ymax=TRACK["step_progress"]["ymax"],
+            k=TRACK["step_reward"]["k"],
+            x0=TRACK["step_reward"]["x0"],
+            ymin=TRACK["step_reward"]["ymin"],
+            ymax=TRACK["step_reward"]["ymax"],
         )
 
     dir_change, difficulty = get_waypoint_difficulty(
@@ -231,10 +231,9 @@ def reward_function(params):
     )
     heading_diff = abs(subtract_angles_rad(heading, math.radians(params["heading"])))
     # heading_reward max should be at least the same as step_reward
-    heading_reward = math.cos(heading_diff) * (
-        (0.125 * max(0.0, step_reward)) + (0.875 * TRACK["step_progress"]["ymax"])
-    )
+    heading_reward = math.cos(heading_diff) * TRACK["step_reward"]["ymax"]
     importance_weight = (importance * (importance_factor - 1.0)) + 1.0
+    difficulty *= 0.85 # Max heading influence is 85%
     reward = float(
         importance_weight
         * ((step_reward * (1.0 - difficulty)) + (heading_reward * difficulty))
