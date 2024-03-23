@@ -59,9 +59,9 @@ def reset_tables():
         "waypoint",
         "progress",
         "step_reward",
-        "heading_diff",
         "heading_reward",
-        "difficulty",
+        "throttle",
+        "steer",
         "agent_change",
         "reward",
     ]
@@ -206,9 +206,9 @@ def process_line(line):
         waypoint = int(float(parts[1]))
         progress = float(parts[2])
         step_reward = float(parts[3])
-        heading_diff = float(parts[4])
-        heading_reward = float(parts[5])
-        difficulty = float(parts[6])
+        heading_reward = float(parts[4])
+        throttle = float(parts[5])
+        steer = float(parts[6])
         agent_change = float(parts[7])
         reward = float(parts[8])
         is_finished = int(parts[9])
@@ -222,9 +222,9 @@ def process_line(line):
                 waypoint,
                 progress,
                 step_reward,
-                heading_diff,
                 heading_reward,
-                difficulty,
+                throttle,
+                steer,
                 agent_change,
                 reward,
             )

@@ -5,9 +5,9 @@ TRACK = {
     "name": "caecer_gp",
     "waypoint_count": 231,
     "difficulty": {
-        "look-ahead": 3,
-        "max": 0.9993133313405961,
-        "min": 6.1664243371084164e-06,
+        "look-ahead": 2,
+        "max": 0.9915676903643459,
+        "min": 4.9837629781492294e-05,
     },
     "histogram": {
         "counts": [9, 15, 14, 12, 35, 47, 41, 31, 12, 15],
@@ -139,7 +139,7 @@ def get_waypoint_difficulty(i, waypoints, look_ahead=1, max_val=1.0, min_val=0.0
     normalized_difficulty = (difficulty - min_val) / (max_val - min_val)
     # Push limits away from 0.5
     weighted_difficulty = sigmoid(
-        normalized_difficulty, k=20, x0=0.6, ymin=0.0, ymax=1.0
+        normalized_difficulty, k=20, x0=0.5, ymin=0.0, ymax=1.0
     )
     return aggregate_change, weighted_difficulty
 
@@ -166,7 +166,7 @@ def get_target_heading(i, waypoints, delay=1, look_ahead=1, min_val=0.0, max_val
     change, difficulty = get_waypoint_difficulty(
         i, waypoints, look_ahead=look_ahead, min_val=min_val, max_val=max_val
     )
-    return direction + (change * 2.125)
+    return direction + (change * 2.75)
 
 
 def subtract_angles_rad(a, b):
@@ -196,6 +196,8 @@ def reward_function(params):
         (abs(params["steering_angle"] - LAST_STEERING) / 60.0)
         + (abs(params["speed"] - LAST_THROTTLE) / 1.6)
     ) / 2.0
+    LAST_STEERING = params["steering_angle"]
+    LAST_THROTTLE = params["speed"]
 
     if step_progress == 0.0:
         projected_steps = 10000.0
@@ -257,7 +259,7 @@ def reward_function(params):
 
     # This trace is needed for test logging
     print(
-        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{step_reward},{math.degrees(heading_diff)},{heading_reward},{difficulty},{agent_change},{reward},{is_finished}"
+        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{step_reward},{heading_reward},{LAST_THROTTLE},{LAST_STEERING},{agent_change},{reward},{is_finished}"
     )
 
     return reward
