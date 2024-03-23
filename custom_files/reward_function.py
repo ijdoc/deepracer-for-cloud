@@ -6,8 +6,8 @@ TRACK = {
     "waypoint_count": 231,
     "difficulty": {
         "look-ahead": 3,
-        "max": 0.9155687800476376,
-        "min": 0.007010262368781583,
+        "max": 0.9993133313405961,
+        "min": 6.1664243371084164e-06,
     },
     "histogram": {
         "counts": [9, 15, 14, 12, 35, 47, 41, 31, 12, 15],
@@ -42,6 +42,8 @@ TRACK = {
 
 # Other globals
 LAST_PROGRESS = 0.0
+LAST_THROTTLE = 0.0
+LAST_STEERING = 0.0
 importance_factor = max(TRACK["histogram"]["counts"]) / min(
     TRACK["histogram"]["counts"]
 )
@@ -129,15 +131,15 @@ def get_waypoint_difficulty(i, waypoints, look_ahead=1, max_val=1.0, min_val=0.0
     Get difficulty at waypoint i, calculated as the normalized amount of direction change.
     """
     next_idx = i
-    aggregate_change = get_direction_change(i, waypoints)
-    for _ in range(look_ahead - 1):
-        next_idx = get_next_distinct_index(next_idx, waypoints)
+    aggregate_change = 0.0
+    for _ in range(look_ahead + 1):
         aggregate_change += get_direction_change(next_idx, waypoints)
+        next_idx = get_next_distinct_index(next_idx, waypoints)
     difficulty = abs(aggregate_change)
     normalized_difficulty = (difficulty - min_val) / (max_val - min_val)
     # Push limits away from 0.5
     weighted_difficulty = sigmoid(
-        normalized_difficulty, k=10, x0=0.5, ymin=0.0, ymax=1.0
+        normalized_difficulty, k=20, x0=0.6, ymin=0.0, ymax=1.0
     )
     return aggregate_change, weighted_difficulty
 
@@ -164,7 +166,7 @@ def get_target_heading(i, waypoints, delay=1, look_ahead=1, min_val=0.0, max_val
     change, difficulty = get_waypoint_difficulty(
         i, waypoints, look_ahead=look_ahead, min_val=min_val, max_val=max_val
     )
-    return direction + (change * 2.5)
+    return direction + (change * 2.125)
 
 
 def subtract_angles_rad(a, b):
@@ -174,16 +176,26 @@ def subtract_angles_rad(a, b):
 
 def reward_function(params):
     global LAST_PROGRESS
+    global LAST_THROTTLE
+    global LAST_STEERING
 
     this_waypoint = params["closest_waypoints"][0]
 
     if params["steps"] <= 2:
         # Reset progress at the beginning of the episode
         LAST_PROGRESS = 0.0
+        LAST_THROTTLE = 0.0
+        LAST_STEERING = 0.0
 
     # Get the step progress
     step_progress = params["progress"] - LAST_PROGRESS
     LAST_PROGRESS = params["progress"]
+
+    # Get the action change
+    agent_change = (
+        (abs(params["steering_angle"] - LAST_STEERING) / 60.0)
+        + (abs(params["speed"] - LAST_THROTTLE) / 1.6)
+    ) / 2.0
 
     if step_progress == 0.0:
         projected_steps = 10000.0
@@ -233,7 +245,7 @@ def reward_function(params):
     # heading_reward max should be at least the same as step_reward
     heading_reward = math.cos(heading_diff) * TRACK["step_reward"]["ymax"]
     importance_weight = (importance * (importance_factor - 1.0)) + 1.0
-    difficulty *= 0.8  # Max heading influence as a percentage
+    # difficulty *= 0.85  # Max heading influence as a percentage
     reward = float(
         importance_weight
         * ((step_reward * (1.0 - difficulty)) + (heading_reward * difficulty))
@@ -245,7 +257,7 @@ def reward_function(params):
 
     # This trace is needed for test logging
     print(
-        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{step_reward},{math.degrees(heading_diff)},{heading_reward},{difficulty},{importance_weight},{reward},{is_finished}"
+        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{step_reward},{math.degrees(heading_diff)},{heading_reward},{difficulty},{agent_change},{reward},{is_finished}"
     )
 
     return reward

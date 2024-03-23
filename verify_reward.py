@@ -166,7 +166,7 @@ def main(args):
         plot_difficulty = 2.0 * (difficulty - 0.5)
         color = "red"
         if plot_difficulty < 0:
-            color = "blue"
+            color = "green"
         axs[0, 0].add_patch(
             Polygon(
                 vertices,
