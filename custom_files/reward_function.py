@@ -139,9 +139,9 @@ def get_waypoint_difficulty(i, waypoints, look_ahead=1, max_val=1.0, min_val=0.0
     difficulty = abs(aggregate_change)
     normalized_difficulty = (difficulty - min_val) / (max_val - min_val)
     # Push limits away from 0.5
-    # weighted_difficulty = sigmoid(
-    #     normalized_difficulty, k=20, x0=0.5, ymin=0.0, ymax=1.0
-    # )
+    weighted_difficulty = sigmoid(
+        normalized_difficulty, k=20, x0=0.5, ymin=0.0, ymax=1.0
+    )
     return aggregate_change, weighted_difficulty
 
 
@@ -239,9 +239,8 @@ def reward_function(params):
         min_val=TRACK["difficulty"]["min"],
         max_val=TRACK["difficulty"]["max"],
     )
-    importance = get_waypoint_importance(
-        get_direction_change(this_waypoint, params["waypoints"]), TRACK["histogram"]
-    )
+    # difficulty *= 0.85  # Max heading influence as a percentage
+
     heading = get_target_heading(
         this_waypoint,
         params["waypoints"],
@@ -253,8 +252,12 @@ def reward_function(params):
     heading_diff = abs(subtract_angles_rad(heading, math.radians(params["heading"])))
     # heading_reward max should be at least the same as step_reward
     heading_reward = math.cos(heading_diff) * TRACK["step_reward"]["ymax"]
+
+    importance = get_waypoint_importance(
+        get_direction_change(this_waypoint, params["waypoints"]), TRACK["histogram"]
+    )
     importance_weight = (importance * (importance_factor - 1.0)) + 1.0
-    # difficulty *= 0.85  # Max heading influence as a percentage
+
     reward = float((1.0 - agent_change) * importance_weight * step_reward)
 
     is_finished = 0
