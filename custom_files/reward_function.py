@@ -139,9 +139,9 @@ def get_waypoint_difficulty(i, waypoints, look_ahead=1, max_val=1.0, min_val=0.0
     difficulty = abs(aggregate_change)
     normalized_difficulty = (difficulty - min_val) / (max_val - min_val)
     # Push limits away from 0.5
-    weighted_difficulty = sigmoid(
-        normalized_difficulty, k=20, x0=0.5, ymin=0.0, ymax=1.0
-    )
+    # weighted_difficulty = sigmoid(
+    #     normalized_difficulty, k=20, x0=0.5, ymin=0.0, ymax=1.0
+    # )
     return aggregate_change, weighted_difficulty
 
 
@@ -255,11 +255,7 @@ def reward_function(params):
     heading_reward = math.cos(heading_diff) * TRACK["step_reward"]["ymax"]
     importance_weight = (importance * (importance_factor - 1.0)) + 1.0
     # difficulty *= 0.85  # Max heading influence as a percentage
-    reward = float(
-        (1.0 - agent_change)
-        * importance_weight
-        * ((step_reward * (1.0 - difficulty)) + (heading_reward * difficulty))
-    )
+    reward = float((1.0 - agent_change) * importance_weight * step_reward)
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:
