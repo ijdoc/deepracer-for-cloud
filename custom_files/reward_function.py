@@ -1,6 +1,7 @@
 import math
 import time
 
+MODEL = {"steer": {"min": -30, "max": 30}, "throttle": {"min": 0.9, "max": 2.2}}
 TRACK = {
     "name": "caecer_gp",
     "waypoint_count": 231,
@@ -193,8 +194,14 @@ def reward_function(params):
 
     # Get the action change
     agent_change = (
-        (abs(params["steering_angle"] - LAST_STEERING) / 60.0)
-        + (abs(params["speed"] - LAST_THROTTLE) / 1.6)
+        (
+            abs(params["steering_angle"] - LAST_STEERING)
+            / (MODEL["steer"]["max"] - MODEL["steer"]["min"])
+        )
+        + (
+            abs(params["speed"] - LAST_THROTTLE)
+            / (MODEL["throttle"]["max"] - MODEL["throttle"]["min"])
+        )
     ) / 2.0
     LAST_STEERING = params["steering_angle"]
     LAST_THROTTLE = params["speed"]
@@ -249,7 +256,8 @@ def reward_function(params):
     importance_weight = (importance * (importance_factor - 1.0)) + 1.0
     # difficulty *= 0.85  # Max heading influence as a percentage
     reward = float(
-        importance_weight
+        (1.0 - agent_change)
+        * importance_weight
         * ((step_reward * (1.0 - difficulty)) + (heading_reward * difficulty))
     )
 
