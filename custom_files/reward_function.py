@@ -41,7 +41,7 @@ CONFIG = {
     "heading": {"delay": 5, "offset": 1.8},
     "agent": {
         "steering_angle": {"high": 30.0, "low": -30.0},
-        "speed": {"high": 2.2, "low": 0.9},
+        "speed": {"high": 2.4, "low": 0.8},
     },
 }
 
@@ -253,12 +253,14 @@ def reward_function(params):
     importance = get_waypoint_importance(
         get_direction_change(this_waypoint, params["waypoints"]), CONFIG["histogram"]
     )
-    importance_weight = 1.0 + (importance * (importance_factor - 1.0))
-    difficulty * 0.8
+    importance_weight = 1.0 + ((importance + difficulty) * (importance_factor - 1.0))
     reward = float(
         importance_weight
-        * (1.0 - agent_change)
-        * (((1.0 - difficulty) * step_reward) + (heading_reward * difficulty))
+        * (
+            (step_reward * 0.6)
+            + (heading_reward * 0.2 * step_reward)
+            + ((1.0 - agent_change) * 0.2 * step_reward)
+        )
     )
 
     is_finished = 0

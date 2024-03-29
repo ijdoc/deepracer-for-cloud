@@ -69,6 +69,9 @@ done
 
 reward_options="--look-ahead $look_ahead_value --bin-count $bin_count_value --delay $delay_value --offset $offset_value"
 
+python reward_config_update.py $reward_options $debug_option
+python reward_config_verify.py $debug_option
+
 # Skip git check if debugging
 debug_option="--debug"
 if [ $debug_flag -ne 1 ]; then
@@ -78,9 +81,6 @@ if [ $debug_flag -ne 1 ]; then
     fi
     debug_option=""
 fi
-
-python reward_config_update.py $reward_options $debug_option
-python reward_config_verify.py $debug_option
 
 source bin/activate.sh run.env
 dr-stop-viewer && dr-stop-training
