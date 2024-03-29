@@ -1,14 +1,13 @@
 import math
 import time
 
-MODEL = {"steer": {"min": -30, "max": 30}, "throttle": {"min": 0.9, "max": 2.2}}
-TRACK = {
-    "name": "caecer_gp",
+CONFIG = {
+    "track": "caecer_gp",
     "waypoint_count": 231,
     "difficulty": {
-        "look-ahead": 2,
-        "max": 0.9915676903643459,
-        "min": 4.9837629781492294e-05,
+        "look-ahead": 3,
+        "max": 0.9641485889142055,
+        "min": 0.0001807377218994155,
     },
     "histogram": {
         "counts": [9, 15, 14, 12, 35, 47, 41, 31, 12, 15],
@@ -39,14 +38,19 @@ TRACK = {
         ],
     },
     "step_reward": {"ymax": 0.625, "ymin": 0.0, "k": -0.015, "x0": 400},
+    "heading": {"delay": 4, "offset": 1.4},
+    "agent": {
+        "steering_angle": {"high": 30.0, "low": -30.0},
+        "speed": {"high": 2.2, "low": 0.9},
+    },
 }
 
 # Other globals
 LAST_PROGRESS = 0.0
 LAST_THROTTLE = 0.0
 LAST_STEERING = 0.0
-importance_factor = max(TRACK["histogram"]["counts"]) / min(
-    TRACK["histogram"]["counts"]
+importance_factor = max(CONFIG["histogram"]["counts"]) / min(
+    CONFIG["histogram"]["counts"]
 )
 
 
@@ -127,7 +131,7 @@ def sigmoid(x, k=3.9, x0=0.6, ymin=0.0, ymax=1.2):
     return ((ymax - ymin) / (1 + math.exp(-k * (x - x0)))) + ymin
 
 
-def get_waypoint_difficulty(i, waypoints, look_ahead=1, max_val=1.0, min_val=0.0):
+def get_waypoint_difficulty(i, waypoints, look_ahead=0, min_val=0.0, max_val=1.0):
     """
     Get difficulty at waypoint i, calculated as the normalized amount of direction change.
     """
@@ -138,11 +142,7 @@ def get_waypoint_difficulty(i, waypoints, look_ahead=1, max_val=1.0, min_val=0.0
         next_idx = get_next_distinct_index(next_idx, waypoints)
     difficulty = abs(aggregate_change)
     normalized_difficulty = (difficulty - min_val) / (max_val - min_val)
-    # Push limits away from 0.5
-    weighted_difficulty = sigmoid(
-        normalized_difficulty, k=20, x0=0.5, ymin=0.0, ymax=1.0
-    )
-    return aggregate_change, weighted_difficulty
+    return aggregate_change, normalized_difficulty
 
 
 def get_waypoint_importance(change, histogram):
@@ -157,7 +157,7 @@ def get_waypoint_importance(change, histogram):
     return histogram["weights"][j]  # when change is equal to the last edge
 
 
-def get_target_heading(i, waypoints, delay=1, look_ahead=1, min_val=0.0, max_val=1.0):
+def get_target_heading(i, waypoints, delay=0, offset=0.0):
     """
     Get heading at waypoint i (in radians)
     """
@@ -165,9 +165,13 @@ def get_target_heading(i, waypoints, delay=1, look_ahead=1, min_val=0.0, max_val
         i = get_prev_distinct_index(i, waypoints)
     direction = get_direction(i, waypoints)
     change, difficulty = get_waypoint_difficulty(
-        i, waypoints, look_ahead=look_ahead, min_val=min_val, max_val=max_val
+        i,
+        waypoints,
+        look_ahead=CONFIG["difficulty"]["look-ahead"],
+        min_val=CONFIG["difficulty"]["min"],
+        max_val=CONFIG["difficulty"]["max"],
     )
-    return direction + (change * 2.75)
+    return direction + (change * offset)
 
 
 def subtract_angles_rad(a, b):
@@ -194,14 +198,13 @@ def reward_function(params):
 
     # Get the action change
     agent_change = (
-        (
-            abs(params["steering_angle"] - LAST_STEERING)
-            / (MODEL["steer"]["max"] - MODEL["steer"]["min"])
+        abs(params["steering_angle"] - LAST_STEERING)
+        / (
+            CONFIG["agent"]["steering_angle"]["high"]
+            - CONFIG["agent"]["steering_angle"]["low"]
         )
-        + (
-            abs(params["speed"] - LAST_THROTTLE)
-            / (MODEL["throttle"]["max"] - MODEL["throttle"]["min"])
-        )
+        + abs(params["speed"] - LAST_THROTTLE)
+        / (CONFIG["agent"]["speed"]["high"] - CONFIG["agent"]["speed"]["low"])
     ) / 2.0
     LAST_STEERING = params["steering_angle"]
     LAST_THROTTLE = params["speed"]
@@ -217,48 +220,36 @@ def reward_function(params):
         # projected_steps.
         step_reward = sigmoid(
             projected_steps,
-            k=TRACK["step_reward"]["k"],
-            x0=TRACK["step_reward"]["x0"],
-            ymin=TRACK["step_reward"]["ymin"],
-            ymax=TRACK["step_reward"]["ymax"],
+            k=CONFIG["step_reward"]["k"],
+            x0=CONFIG["step_reward"]["x0"],
+            ymin=CONFIG["step_reward"]["ymin"],
+            ymax=CONFIG["step_reward"]["ymax"],
         )
     else:
         # We are going backwards
         step_reward = -sigmoid(
             -projected_steps,
-            k=TRACK["step_reward"]["k"],
-            x0=TRACK["step_reward"]["x0"],
-            ymin=TRACK["step_reward"]["ymin"],
-            ymax=TRACK["step_reward"]["ymax"],
+            k=CONFIG["step_reward"]["k"],
+            x0=CONFIG["step_reward"]["x0"],
+            ymin=CONFIG["step_reward"]["ymin"],
+            ymax=CONFIG["step_reward"]["ymax"],
         )
-
-    dir_change, difficulty = get_waypoint_difficulty(
-        this_waypoint,
-        params["waypoints"],
-        look_ahead=TRACK["difficulty"]["look-ahead"],
-        min_val=TRACK["difficulty"]["min"],
-        max_val=TRACK["difficulty"]["max"],
-    )
-    # difficulty *= 0.85  # Max heading influence as a percentage
 
     heading = get_target_heading(
         this_waypoint,
         params["waypoints"],
-        delay=5,
-        look_ahead=TRACK["difficulty"]["look-ahead"],
-        min_val=TRACK["difficulty"]["min"],
-        max_val=TRACK["difficulty"]["max"],
+        delay=CONFIG["heading"]["delay"],
+        offset=CONFIG["heading"]["offset"],
     )
     heading_diff = abs(subtract_angles_rad(heading, math.radians(params["heading"])))
-    # heading_reward max should be at least the same as step_reward
-    heading_reward = math.cos(heading_diff) * TRACK["step_reward"]["ymax"]
-
+    heading_reward = math.cos(heading_diff)
     importance = get_waypoint_importance(
-        get_direction_change(this_waypoint, params["waypoints"]), TRACK["histogram"]
+        get_direction_change(this_waypoint, params["waypoints"]), CONFIG["histogram"]
     )
-    importance_weight = (importance * (importance_factor - 1.0)) + 1.0
-
-    reward = float((1.0 - agent_change) * importance_weight * step_reward)
+    importance_weight = 1.0 + (importance * (importance_factor - 1.0))
+    reward = float(
+        (1.0 - agent_change) * importance_weight * step_reward * heading_reward
+    )
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:

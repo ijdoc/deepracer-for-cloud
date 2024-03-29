@@ -2,19 +2,20 @@ import argparse
 import requests
 import numpy as np
 from io import BytesIO
-from custom_files import reward_function
+from custom_files.reward_function import (
+    CONFIG,
+    sigmoid,
+    get_waypoint_difficulty,
+    get_direction,
+    get_waypoint_importance,
+    get_direction_change,
+    get_next_distinct_index,
+    get_target_heading,
+)
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 import math
 import wandb
-
-# Cumulative max is ~150@312 steps in our case
-step_reward = {
-    "ymax": 0.625,
-    "ymin": 0.0,
-    "k": -0.015,
-    "x0": 400,
-}
 
 
 def download(track):
@@ -49,9 +50,10 @@ def plot_index(line, axs):
 
 def main(args):
 
+    step_reward = CONFIG["step_reward"]
     projected_steps = [i for i in range(300, 1001, 10)]
     step_reward_plot = [
-        reward_function.sigmoid(
+        sigmoid(
             i,
             k=step_reward["k"],
             x0=step_reward["x0"],
@@ -69,48 +71,13 @@ def main(args):
         run = wandb.init(
             entity="iamjdoc", project="dr-reborn", job_type="verify_reward"
         )
+        run.use_artifact("iamjdoc/dr-reborn/config:latest", type="inputs")
 
     # Download the track
-    npy_data, waypoint_count = download(args.track)
+    npy_data, waypoint_count = download(CONFIG["track"])
     waypoints = list([tuple(sublist[0:2]) for sublist in npy_data])
     inner_line = list([tuple(sublist[2:4]) for sublist in npy_data])
     outer_line = list([tuple(sublist[4:6]) for sublist in npy_data])
-
-    # Fist pass to obtain baseline data
-    changes = []
-    difficulties = []
-    for i in range(waypoint_count):
-        change, difficulty = reward_function.get_waypoint_difficulty(
-            i, waypoints, look_ahead=args.look_ahead
-        )
-        changes.append(reward_function.get_direction_change(i, waypoints))
-        difficulties.append(difficulty)
-
-    # Obtain aggregate values/weights
-    counts, bin_edges = np.histogram(
-        changes,
-        bins=args.bin_count,
-    )
-    factors = sum(counts) / counts
-    factors = factors / min(factors)
-    f_min = min(factors)
-    f_max = max(factors)
-    factors = [round((num - f_min) / (f_max - f_min), 4) for num in factors.tolist()]
-    abs_dir_change = [abs(num) for num in changes]
-    reward_config = {
-        "difficulty": {
-            "look-ahead": args.look_ahead,
-            "max": max(difficulties),
-            "min": min(difficulties),
-        },
-        "histogram": {
-            "counts": counts.tolist(),
-            "weights": factors,
-            "edges": bin_edges.tolist(),
-        },
-        "step_reward": step_reward,
-    }
-    print(reward_config)
 
     columns = [
         "waypoint",
@@ -118,6 +85,7 @@ def main(args):
         "dir_change",
         "difficulty",
         "importance",
+        "target_heading",
     ]
 
     # Start the plots
@@ -133,29 +101,21 @@ def main(args):
     if not args.debug:
         factor_table = wandb.Table(columns=columns)
     for i in range(waypoint_count):
-        direction = reward_function.get_direction(i, waypoints)
-        dir_change, difficulty = reward_function.get_waypoint_difficulty(
+        direction = get_direction(i, waypoints)
+        dir_change, difficulty = get_waypoint_difficulty(
             i,
             waypoints,
-            look_ahead=reward_config["difficulty"]["look-ahead"],
-            max_val=reward_config["difficulty"]["max"],
-            min_val=reward_config["difficulty"]["min"],
+            look_ahead=CONFIG["difficulty"]["look-ahead"],
+            max_val=CONFIG["difficulty"]["max"],
+            min_val=CONFIG["difficulty"]["min"],
         )
-        importance = reward_function.get_waypoint_importance(
-            reward_function.get_direction_change(i, waypoints),
-            reward_config["histogram"],
+        importance = get_waypoint_importance(
+            get_direction_change(i, waypoints),
+            CONFIG["histogram"],
         )
-
-        row = [i]
-        row.append(direction)
-        row.append(dir_change)
-        row.append(difficulty)
-        row.append(importance)
-        if not args.debug:
-            factor_table.add_data(*row)
 
         # Define the vertices of the polygon, (x, y) pairs
-        next_waypoint = reward_function.get_next_distinct_index(i, waypoints)
+        next_waypoint = get_next_distinct_index(i, waypoints)
         vertices = [
             (outer_line[i][0], outer_line[i][1]),
             (outer_line[next_waypoint][0], outer_line[next_waypoint][1]),
@@ -172,7 +132,7 @@ def main(args):
                 vertices,
                 closed=True,
                 color=color,
-                alpha=abs(plot_difficulty),
+                alpha=difficulty,
                 linewidth=0,
             )
         )
@@ -191,13 +151,11 @@ def main(args):
         axs[1, 1].plot(projected_steps, aggregated_reward, linestyle="-", color="red")
 
         length = 0.35
-        heading = reward_function.get_target_heading(
+        heading = get_target_heading(
             i,
             waypoints,
-            delay=5,
-            look_ahead=reward_config["difficulty"]["look-ahead"],
-            min_val=reward_config["difficulty"]["min"],
-            max_val=reward_config["difficulty"]["max"],
+            delay=CONFIG["heading"]["delay"],
+            offset=CONFIG["heading"]["offset"],
         )
         xstart = waypoints[i][0]
         ystart = waypoints[i][1]
@@ -251,13 +209,21 @@ def main(args):
             width=difficulty / 100.0,
             alpha=difficulty,
         )
+        row = [i]
+        row.append(direction)
+        row.append(dir_change)
+        row.append(difficulty)
+        row.append(importance)
+        row.append(heading)
+        if not args.debug:
+            factor_table.add_data(*row)
 
     axs[0, 0].set_title(
-        f"Normalized Difficulty (look_ahead={reward_config['difficulty']['look-ahead']})"
+        f"Normalized Difficulty (look_ahead={CONFIG['difficulty']['look-ahead']})"
     )
-    axs[0, 1].set_title(f"Importance ({args.bin_count} bins)")
+    axs[0, 1].set_title(f"Importance ({len(CONFIG['histogram']['counts'])} bins)")
     axs[1, 0].set_title(
-        f"Target Heading (look_ahead={reward_config['difficulty']['look-ahead']})"
+        f"Target Heading (delay={CONFIG['heading']['delay']}, offset={CONFIG['heading']['offset']})"
     )
     axs[1, 1].set_title(f"Aggregated Step Reward")
 
@@ -268,35 +234,10 @@ def main(args):
         # TODO: Plot and log the step progress curve
         plt.savefig("track.png")
         run.log({"factor_table": factor_table, "track": wandb.Image("track.png")})
-        # TODO: Automatically update reward_function.py
-        # TODO: Log reward_function.py as an artifact
-        # artifact = wandb.Artifact(f"{args.track}", type="reward_artifacts")
-        # artifact.add_file("custom_files/reward_function.py")
-        # run.log_artifact(artifact).wait()
 
 
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser()
-    argparser.add_argument(
-        "--track",
-        help="The track used to verify the reward function",
-        default="caecer_gp",
-        required=False,
-    )
-    argparser.add_argument(
-        "--bin-count",
-        help="The number of bins to consider for learning importance histogram",
-        default=4,
-        required=False,
-        type=int,
-    )
-    argparser.add_argument(
-        "--look-ahead",
-        help="The number of waypoints to use to calculate look-ahead metrics",
-        default=4,
-        required=False,
-        type=int,
-    )
     argparser.add_argument(
         "--debug",
         action="store_true",
