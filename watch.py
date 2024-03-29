@@ -9,6 +9,7 @@ import time
 import numpy as np
 import subprocess
 import argparse
+from custom_files.reward_function import CONFIG
 
 # FIXME: Define from command line arguments in parent script?
 os.environ["WANDB_RUN_GROUP"] = "2403"
@@ -23,6 +24,34 @@ parser.add_argument(
 )
 parser.add_argument(
     "--debug", action="store_true", help="Log to console instead of W&B"
+)
+parser.add_argument(
+    "--bin-count",
+    help="the number of bins to consider for learning importance histogram",
+    default=4,
+    required=False,
+    type=int,
+)
+parser.add_argument(
+    "--look-ahead",
+    help="the number of waypoints used to calculate look-ahead metrics",
+    default=4,
+    required=False,
+    type=int,
+)
+parser.add_argument(
+    "--delay",
+    help="the number of waypoints used to delay heading calculation",
+    default=4,
+    required=False,
+    type=int,
+)
+parser.add_argument(
+    "--offset",
+    help="the change factor used to calculate target heading",
+    default=1.0,
+    required=False,
+    type=float,
 )
 
 # Parse the arguments
@@ -124,27 +153,15 @@ with open("./custom_files/model_metadata.json", "r") as json_file:
     logged_dict["type"] = model_dict["action_space_type"]
     logged_dict["algo"] = model_dict["training_algorithm"]
     logged_dict["net"] = model_dict["neural_network"]
-    if logged_dict["type"] == "continuous":
-        logged_dict["steer_max"] = model_dict["action_space"]["steering_angle"]["high"]
-        logged_dict["steer_min"] = model_dict["action_space"]["steering_angle"]["low"]
-        logged_dict["speed_max"] = model_dict["action_space"]["speed"]["high"]
-        logged_dict["speed_min"] = model_dict["action_space"]["speed"]["low"]
-    else:
-        logged_dict["action_count"] = len(model_dict["action_space"])
-        steer_min = 1000.0
-        steer_max = -1000.0
-        speed_min = 1000.0
-        speed_max = -1000.0
-        for action in model_dict["action_space"]:
-            steer_min = min(steer_min, action["steering_angle"])
-            steer_max = max(steer_max, action["steering_angle"])
-            speed_min = min(speed_min, action["speed"])
-            speed_max = max(speed_max, action["speed"])
-        logged_dict["steer_max"] = steer_max
-        logged_dict["steer_min"] = steer_min
-        logged_dict["speed_max"] = speed_max
-        logged_dict["speed_min"] = speed_min
+    logged_dict["space"] = model_dict["action_space"]
     config_dict["m"] = logged_dict
+
+logged_dict = {}
+logged_dict["bin_count"] = len(CONFIG["histogram"]["counts"])
+logged_dict["look_ahead"] = CONFIG["difficulty"]["look-ahead"]
+logged_dict["heading"] = CONFIG["heading"]
+logged_dict["step"] = CONFIG["step_reward"]
+config_dict["r"] = logged_dict
 
 
 # Open env file for reading

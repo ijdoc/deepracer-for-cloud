@@ -235,6 +235,13 @@ def reward_function(params):
             ymax=CONFIG["step_reward"]["ymax"],
         )
 
+    _, difficulty = get_waypoint_difficulty(
+        this_waypoint,
+        params["waypoints"],
+        look_ahead=CONFIG["difficulty"]["look-ahead"],
+        max_val=CONFIG["difficulty"]["max"],
+        min_val=CONFIG["difficulty"]["min"],
+    )
     heading = get_target_heading(
         this_waypoint,
         params["waypoints"],
@@ -246,7 +253,7 @@ def reward_function(params):
     importance = get_waypoint_importance(
         get_direction_change(this_waypoint, params["waypoints"]), CONFIG["histogram"]
     )
-    importance_weight = 1.0 + (importance * (importance_factor - 1.0))
+    importance_weight = 1.0 + ((importance + difficulty) * (importance_factor - 1.0))
     reward = float(
         (1.0 - agent_change) * importance_weight * step_reward * heading_reward
     )
