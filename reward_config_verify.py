@@ -165,8 +165,8 @@ def main(args):
         y2 = ystart + (length * math.sin(heading - (math.pi / 6.0)))
         xend = xstart + (length * math.cos(direction))
         yend = ystart + (length * math.sin(direction))
-        xapex = xstart + (length * difficulty * 3.0 * math.cos(heading))
-        yapex = ystart + (length * difficulty * 3.0 * math.sin(heading))
+        xapex = xstart + (length * 2.0 * math.cos(heading))
+        yapex = ystart + (length * 2.0 * math.sin(heading))
         vertices = [
             (xstart, ystart),
             (x1, y1),
@@ -182,19 +182,19 @@ def main(args):
         #         linewidth=0,
         #     )
         # )
-        axs[1, 0].arrow(
-            xstart,
-            ystart,
-            xend - xstart,
-            yend - ystart,
-            head_width=0.025,
-            head_length=0.025,
-            fc="gray",
-            ec="gray",
-            linestyle="-",
-            color="gray",
-            width=0.001,
-        )
+        # axs[1, 0].arrow(
+        #     xstart,
+        #     ystart,
+        #     xend - xstart,
+        #     yend - ystart,
+        #     head_width=0.025,
+        #     head_length=0.025,
+        #     fc="gray",
+        #     ec="gray",
+        #     linestyle="-",
+        #     color="gray",
+        #     width=0.001,
+        # )
         axs[1, 0].arrow(
             xstart,
             ystart,
@@ -206,8 +206,7 @@ def main(args):
             ec="green",
             linestyle="-",
             color="green",
-            width=difficulty / 100.0,
-            alpha=difficulty,
+            width=0.001,
         )
         row = [i]
         row.append(direction)
