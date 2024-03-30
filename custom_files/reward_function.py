@@ -38,7 +38,7 @@ CONFIG = {
         ],
     },
     "step_reward": {"ymax": 0.625, "ymin": 0.0, "k": -0.015, "x0": 400},
-    "heading": {"delay": 4, "offset": 1.25},
+    "heading": {"delay": 4, "offset": 1.4},
     "agent": {
         "steering_angle": {"high": 30.0, "low": -30.0},
         "speed": {"high": 2.6, "low": 0.8},
@@ -249,7 +249,7 @@ def reward_function(params):
         offset=CONFIG["heading"]["offset"],
     )
     heading_diff = abs(subtract_angles_rad(heading, math.radians(params["heading"])))
-    heading_reward = math.cos(heading_diff)
+    heading_reward = math.cos(heading_diff) * CONFIG["step_reward"]["ymax"] / 2.0
     importance = get_waypoint_importance(
         get_direction_change(this_waypoint, params["waypoints"]), CONFIG["histogram"]
     )
@@ -257,9 +257,8 @@ def reward_function(params):
     reward = float(
         importance_weight
         * (
-            (heading_reward * 0.6 * step_reward)
-            + ((1.0 - agent_change) * 0.3 * step_reward)
-            + (step_reward * 0.1)
+            (((heading_reward * difficulty) + (step_reward * (1.0 - difficulty))) * 0.9)
+            + (0.1 * ((1.0 - agent_change) * CONFIG["step_reward"]["ymax"] / 2.0))
         )
     )
 
