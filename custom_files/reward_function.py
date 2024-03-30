@@ -245,7 +245,7 @@ def reward_function(params):
         min_val=CONFIG["difficulty"]["min"],
     )
     weighted_difficulty = sigmoid(
-        normalized_difficulty,
+        difficulty,
         k=CONFIG["difficulty"]["weighting"]["k"],
         x0=CONFIG["difficulty"]["weighting"]["x0"],
         ymin=CONFIG["difficulty"]["weighting"]["ymin"],
