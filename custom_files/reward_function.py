@@ -43,7 +43,7 @@ CONFIG = {
     "aggregated_factor": 0.8,
     "agent": {
         "steering_angle": {"high": 30.0, "low": -30.0},
-        "speed": {"high": 2.6, "low": 0.8},
+        "speed": {"high": 2.5, "low": 0.8},
     },
 }
 
