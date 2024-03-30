@@ -8,6 +8,7 @@ CONFIG = {
         "look-ahead": 3,
         "max": 0.9641485889142055,
         "min": 0.0001807377218994155,
+        "weighting": {"ymax": 1.0, "ymin": 0.0, "k": 30, "x0": 0.8},
     },
     "histogram": {
         "counts": [9, 15, 14, 12, 35, 47, 41, 31, 12, 15],
@@ -39,6 +40,7 @@ CONFIG = {
     },
     "step_reward": {"ymax": 0.625, "ymin": 0.0, "k": -0.015, "x0": 400},
     "heading": {"delay": 4, "offset": 1.4},
+    "aggregated_factor": 0.8,
     "agent": {
         "steering_angle": {"high": 30.0, "low": -30.0},
         "speed": {"high": 2.6, "low": 0.8},
@@ -242,6 +244,13 @@ def reward_function(params):
         max_val=CONFIG["difficulty"]["max"],
         min_val=CONFIG["difficulty"]["min"],
     )
+    weighted_difficulty = sigmoid(
+        normalized_difficulty,
+        k=CONFIG["difficulty"]["weighting"]["k"],
+        x0=CONFIG["difficulty"]["weighting"]["x0"],
+        ymin=CONFIG["difficulty"]["weighting"]["ymin"],
+        ymax=CONFIG["difficulty"]["weighting"]["ymax"],
+    )
     heading = get_target_heading(
         this_waypoint,
         params["waypoints"],
@@ -254,11 +263,19 @@ def reward_function(params):
         get_direction_change(this_waypoint, params["waypoints"]), CONFIG["histogram"]
     )
     importance_weight = 1.0 + (importance * (importance_factor - 1.0))
+    aggregated_reward = (heading_reward * weighted_difficulty) + (
+        step_reward * (1.0 - weighted_difficulty)
+    )
+    aggregated_importance_fraction = CONFIG["aggregated_factor"]
     reward = float(
         importance_weight
         * (
-            (((heading_reward * difficulty) + (step_reward * (1.0 - difficulty))) * 0.9)
-            + (0.1 * ((1.0 - agent_change) * CONFIG["step_reward"]["ymax"] / 2.0))
+            (aggregated_importance_fraction * aggregated_reward)
+            + (  # This part of the reward depends on the agent's smoothness
+                (1.0 - aggregated_importance_fraction)
+                * aggregated_reward
+                * (1.0 - agent_change)
+            )
         )
     )
 

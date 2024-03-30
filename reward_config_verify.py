@@ -109,6 +109,13 @@ def main(args):
             max_val=CONFIG["difficulty"]["max"],
             min_val=CONFIG["difficulty"]["min"],
         )
+        weighted_difficulty = sigmoid(
+            difficulty,
+            k=CONFIG["difficulty"]["weighting"]["k"],
+            x0=CONFIG["difficulty"]["weighting"]["x0"],
+            ymin=CONFIG["difficulty"]["weighting"]["ymin"],
+            ymax=CONFIG["difficulty"]["weighting"]["ymax"],
+        )
         importance = get_waypoint_importance(
             get_direction_change(i, waypoints),
             CONFIG["histogram"],
@@ -132,7 +139,7 @@ def main(args):
                 vertices,
                 closed=True,
                 color=color,
-                alpha=difficulty,
+                alpha=weighted_difficulty,
                 linewidth=0,
             )
         )
@@ -173,28 +180,6 @@ def main(args):
             (x2, y2),
         ]
 
-        # axs[1, 0].add_patch(
-        #     Polygon(
-        #         vertices,
-        #         closed=True,
-        #         color=color,
-        #         alpha=difficulty,
-        #         linewidth=0,
-        #     )
-        # )
-        # axs[1, 0].arrow(
-        #     xstart,
-        #     ystart,
-        #     xend - xstart,
-        #     yend - ystart,
-        #     head_width=0.025,
-        #     head_length=0.025,
-        #     fc="gray",
-        #     ec="gray",
-        #     linestyle="-",
-        #     color="gray",
-        #     width=0.001,
-        # )
         axs[1, 0].arrow(
             xstart,
             ystart,

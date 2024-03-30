@@ -161,6 +161,8 @@ logged_dict["bin_count"] = len(CONFIG["histogram"]["counts"])
 logged_dict["look_ahead"] = CONFIG["difficulty"]["look-ahead"]
 logged_dict["heading"] = CONFIG["heading"]
 logged_dict["step"] = CONFIG["step_reward"]
+logged_dict["difficulty_weighting"] = CONFIG["difficulty"]["weighting"]
+logged_dict["aggregated_factor"] = CONFIG["aggregated_factor"]
 config_dict["r"] = logged_dict
 
 

@@ -16,6 +16,14 @@ step_reward = {
     "x0": 400,
 }
 
+difficulty_weighting = {
+    "ymax": 1.0,
+    "ymin": 0.0,
+    "k": 30,
+    "x0": 0.80,
+}
+
+aggregated_factor = 0.8
 
 class VariableTransformer(cst.CSTTransformer):
     def __init__(self, variable_name, new_value):
@@ -87,6 +95,7 @@ def main(args):
             "look-ahead": args.look_ahead,
             "max": max(difficulties),
             "min": min(difficulties),
+            "weighting": difficulty_weighting,
         },
         "histogram": {
             "counts": counts.tolist(),
@@ -95,6 +104,7 @@ def main(args):
         },
         "step_reward": step_reward,
         "heading": {"delay": args.delay, "offset": args.offset},
+        "aggregated_factor": aggregated_factor,
     }
     # Open the JSON file for reading
     with open("custom_files/model_metadata.json", "r") as json_file:
