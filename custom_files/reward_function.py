@@ -268,8 +268,7 @@ def reward_function(params):
     )
     aggregated_importance_fraction = CONFIG["aggregated_factor"]
     reward = float(
-        importance_weight
-        * (
+        (
             (aggregated_importance_fraction * aggregated_reward)
             + (  # This part of the reward depends on the agent's smoothness
                 (1.0 - aggregated_importance_fraction)
