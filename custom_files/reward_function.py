@@ -8,7 +8,7 @@ CONFIG = {
         "look-ahead": 3,
         "max": 0.9641485889142055,
         "min": 0.0001807377218994155,
-        "weighting": {"ymax": 1.0, "ymin": 0.0, "k": 30, "x0": 0.8},
+        "weighting": {"ymax": 1.0, "ymin": 0.0, "k": 30, "x0": 0.5},
     },
     "histogram": {
         "counts": [9, 15, 14, 12, 35, 47, 41, 31, 12, 15],
@@ -39,8 +39,8 @@ CONFIG = {
         ],
     },
     "step_reward": {"ymax": 0.625, "ymin": 0.0, "k": -0.015, "x0": 400},
-    "heading": {"delay": 4, "offset": 1.4},
-    "aggregated_factor": 0.8,
+    "heading": {"delay": 4, "offset": 1.3},
+    "aggregated_factor": 0.5,
     "agent": {
         "steering_angle": {"high": 30.0, "low": -30.0},
         "speed": {"high": 2.5, "low": 0.8},
@@ -263,8 +263,8 @@ def reward_function(params):
         get_direction_change(this_waypoint, params["waypoints"]), CONFIG["histogram"]
     )
     importance_weight = 1.0 + (importance * (importance_factor - 1.0))
-    aggregated_reward = (heading_reward * weighted_difficulty) + (
-        step_reward * (1.0 - weighted_difficulty)
+    aggregated_reward = (heading_reward * importance) + (
+        step_reward * (1.0 - importance)
     )
     aggregated_importance_fraction = CONFIG["aggregated_factor"]
     reward = float(

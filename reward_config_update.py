@@ -20,10 +20,10 @@ difficulty_weighting = {
     "ymax": 1.0,
     "ymin": 0.0,
     "k": 30,
-    "x0": 0.80,
+    "x0": 0.50,
 }
 
-aggregated_factor = 0.8
+aggregated_factor = 0.5
 
 class VariableTransformer(cst.CSTTransformer):
     def __init__(self, variable_name, new_value):
