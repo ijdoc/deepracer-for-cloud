@@ -355,6 +355,8 @@ def process_line(line):
                 wandb.run.summary["test/progress"] = best_metrics["progress"]
                 wandb.run.summary["best_checkpoint"] = best_metrics["checkpoint"]
                 wandb.run.summary["learn/entropy"] = best_metrics["entropy"]
+            if checkpoint == 98:
+                subprocess.run("./stop-training.sh", shell=True)
         # Resetting tracker variables
         iter_metrics = reset_iter_metrics()
         tables = reset_tables()

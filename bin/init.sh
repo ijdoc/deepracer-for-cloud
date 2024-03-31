@@ -170,7 +170,7 @@ SAGEMAKER_NW='sagemaker-local'
 
 if [[ "${OPT_STYLE}" == "swarm" ]]; then
 
-    docker swarm init
+    docker swarm init --advertise-addr $(ifconfig | grep $(route | awk '/^default/ {print $8}') -a1 | grep -o -P '(?<=inet ).*(?= netmask)')
     SWARM_NODE=$(docker node inspect self | jq .[0].ID -r)
     docker node update --label-add Sagemaker=true $SWARM_NODE >/dev/null 2>/dev/null
     docker node update --label-add Robomaker=true $SWARM_NODE >/dev/null 2>/dev/null

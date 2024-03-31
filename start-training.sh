@@ -69,17 +69,20 @@ done
 
 reward_options="--look-ahead $look_ahead_value --bin-count $bin_count_value --delay $delay_value --offset $offset_value"
 
+# Skip git check if debugging
+debug_option="--debug"
+if [ $debug_flag -ne 1 ]; then
+    debug_option=""
+fi
+
 python reward_config_update.py $reward_options $debug_option
 python reward_config_verify.py $debug_option
 
-# Skip git check if debugging
-debug_option="--debug"
 if [ $debug_flag -ne 1 ]; then
     # Check if the branch is dirty
     if [[ -n $(git status --porcelain) ]]; then
       error "Your Git branch is dirty. Please commit your changes."
     fi
-    debug_option=""
 fi
 
 source bin/activate.sh run.env

@@ -55,11 +55,15 @@ DRfC supports a wide set of features to ensure that you can focus on creating th
 	 sudo systemctl restart docker
 	 sudo docker run --rm --runtime=nvidia --gpus all nvidia/cuda:11.6.2-base-ubuntu20.04 nvidia-smi
 	 ```
-7. Initialize repo
+7. `sudoers` configuration:
+	 ```
+	 jdoc    ALL=(ALL) NOPASSWD: /usr/bin/find
+   jdoc    ALL=(ALL) NOPASSWD: /usr/bin/docker
+	 ```
+8. Initialize repo
    ```shell
 	 bin/init.sh -c local -a gpu
-	 source bin/activate.sh run.env
-	 dr-start-training -w
+	 ./start-training.sh
 	 ```
 
 
