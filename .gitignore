@@ -1,3 +1,4 @@
+**/*.npy
 **/*.png
 retrain.sh
 *.tar.gz

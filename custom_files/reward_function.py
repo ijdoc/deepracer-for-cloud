@@ -2,44 +2,48 @@ import math
 import time
 
 CONFIG = {
-    "track": "caecer_gp",
-    "waypoint_count": 231,
+    "track": "dubai_open_ccw",
+    "waypoint_count": 138,
     "difficulty": {
-        "look-ahead": 3,
-        "max": 0.9641485889142055,
-        "min": 0.0001807377218994155,
+        "look-ahead": 0,
+        "max": 0.5466957475920301,
+        "min": 0.00011722494281351734,
         "weighting": {"ymax": 1.0, "ymin": 0.0, "k": 30, "x0": 0.5},
     },
     "histogram": {
-        "counts": [9, 15, 14, 12, 35, 47, 41, 31, 12, 15],
+        "counts": [3, 3, 3, 2, 4, 63, 19, 14, 11, 7, 7, 2],
         "weights": [
+            0.6557,
+            0.6557,
+            0.6557,
             1.0,
-            0.5053,
-            0.5583,
-            0.6908,
-            0.0812,
+            0.4836,
             0.0,
-            0.0347,
-            0.1222,
-            0.6908,
-            0.5053,
+            0.0759,
+            0.1148,
+            0.155,
+            0.2623,
+            0.2623,
+            1.0,
         ],
         "edges": [
-            -0.2513188520107108,
-            -0.1999984713513993,
-            -0.14867809069208782,
-            -0.09735771003277632,
-            -0.04603732937346483,
-            0.005283051285846663,
-            0.056603431945158156,
-            0.10792381260446965,
-            0.15924419326378114,
-            0.21056457392309263,
-            0.26188495458240413,
+            -0.5316530778825277,
+            -0.44179067575964787,
+            -0.35192827363676804,
+            -0.26206587151388827,
+            -0.17220346939100845,
+            -0.08234106726812862,
+            0.007521334854751149,
+            0.09738373697763103,
+            0.1872461391005108,
+            0.27710854122339057,
+            0.36697094334627045,
+            0.4568333454691502,
+            0.5466957475920301,
         ],
     },
-    "step_reward": {"ymax": 0.625, "ymin": 0.0, "k": -0.015, "x0": 400},
-    "heading": {"delay": 4, "offset": 1.3},
+    "step_reward": {"ymax": 1, "ymin": 0.0, "k": -0.05, "x0": 200},
+    "heading": {"delay": 0, "offset": 0.0},
     "aggregated_factor": 0.5,
     "agent": {
         "steering_angle": {"high": 30.0, "low": -30.0},
@@ -267,16 +271,7 @@ def reward_function(params):
         step_reward * (1.0 - importance)
     )
     aggregated_importance_fraction = CONFIG["aggregated_factor"]
-    reward = float(
-        (
-            (aggregated_importance_fraction * aggregated_reward)
-            + (  # This part of the reward depends on the agent's smoothness
-                (1.0 - aggregated_importance_fraction)
-                * aggregated_reward
-                * (1.0 - agent_change)
-            )
-        )
-    )
+    reward = float(importance_weight * step_progress)
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:

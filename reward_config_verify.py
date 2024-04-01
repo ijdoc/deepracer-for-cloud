@@ -1,7 +1,6 @@
+import os
 import argparse
-import requests
 import numpy as np
-from io import BytesIO
 from custom_files.reward_function import (
     CONFIG,
     sigmoid,
@@ -16,24 +15,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 import math
 import wandb
-
-
-def download(track):
-    # URL of the npy file
-    npy_url = f"https://github.com/aws-deepracer-community/deepracer-race-data/raw/main/raw_data/tracks/npy/{track}.npy"
-
-    # Download the npy file
-    response = requests.get(npy_url)
-    if response.status_code == 200:
-        # Load the npy file and count the number of inner_line
-        npy_data = np.load(BytesIO(response.content))
-        waypoint_count = npy_data.shape[0]
-    else:
-        waypoint_count = "Error downloading npy file"
-
-    print(f"Downloaded {track} with {waypoint_count} waypoints.")
-    return npy_data, waypoint_count
-
+from utils import reward_config_utils as rcu
 
 def plot_line(line, axs):
     x = [point[0] for point in line]
@@ -51,7 +33,7 @@ def plot_index(line, axs):
 def main(args):
 
     step_reward = CONFIG["step_reward"]
-    projected_steps = [i for i in range(300, 1001, 10)]
+    projected_steps = [i for i in range(100, 501, 10)]
     step_reward_plot = [
         sigmoid(
             i,
@@ -73,8 +55,14 @@ def main(args):
         )
         run.use_artifact("iamjdoc/dr-reborn/config:latest", type="inputs")
 
-    # Download the track
-    npy_data, waypoint_count = download(CONFIG["track"])
+    # Check if the track file exists
+    if os.path.exists(f"{CONFIG['track']}.npy"):
+        npy_data = np.load(f"{CONFIG['track']}.npy")
+    else:
+        # Download the track
+        npy_data = rcu.download(CONFIG["track"])
+
+    waypoint_count = npy_data.shape[0]
     waypoints = list([tuple(sublist[0:2]) for sublist in npy_data])
     inner_line = list([tuple(sublist[2:4]) for sublist in npy_data])
     outer_line = list([tuple(sublist[4:6]) for sublist in npy_data])
@@ -130,15 +118,11 @@ def main(args):
             (inner_line[i][0], inner_line[i][1]),
         ]
 
-        plot_difficulty = 2.0 * (difficulty - 0.5)
-        color = "red"
-        if plot_difficulty < 0:
-            color = "green"
         axs[0, 0].add_patch(
             Polygon(
                 vertices,
                 closed=True,
-                color=color,
+                color="red",
                 alpha=weighted_difficulty,
                 linewidth=0,
             )
@@ -147,7 +131,7 @@ def main(args):
             Polygon(
                 vertices,
                 closed=True,
-                color=color,
+                color="red",
                 alpha=importance,
                 linewidth=0,
             )

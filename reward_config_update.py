@@ -1,19 +1,19 @@
+import os
 import argparse
-import requests
 import numpy as np
-from io import BytesIO
 from custom_files.reward_function import get_direction_change, get_waypoint_difficulty
 import wandb
 import libcst as cst
 from black import FileMode, format_str
 import json
+from utils import reward_config_utils as rcu
 
-# Cumulative max is ~150@312 steps in our case
+# Cumulative max is ~141@161 steps in our case
 step_reward = {
-    "ymax": 0.625,
+    "ymax": 1,
     "ymin": 0.0,
-    "k": -0.015,
-    "x0": 400,
+    "k": -0.05,
+    "x0": 200,
 }
 
 difficulty_weighting = {
@@ -24,6 +24,7 @@ difficulty_weighting = {
 }
 
 aggregated_factor = 0.5
+
 
 class VariableTransformer(cst.CSTTransformer):
     def __init__(self, variable_name, new_value):
@@ -41,30 +42,19 @@ class VariableTransformer(cst.CSTTransformer):
         return updated_node
 
 
-def download(track):
-    # URL of the npy file
-    npy_url = f"https://github.com/aws-deepracer-community/deepracer-race-data/raw/main/raw_data/tracks/npy/{track}.npy"
-
-    # Download the npy file
-    response = requests.get(npy_url)
-    if response.status_code == 200:
-        # Load the npy file and count the number of inner_line
-        npy_data = np.load(BytesIO(response.content))
-        waypoint_count = npy_data.shape[0]
-    else:
-        waypoint_count = "Error downloading npy file"
-
-    print(f"Downloaded {track} with {waypoint_count} waypoints.")
-    return npy_data, waypoint_count
-
-
 def main(args):
 
     if not args.debug:
         wandb.init(entity="iamjdoc", project="dr-reborn", job_type="update_reward")
 
-    # Download the track
-    npy_data, waypoint_count = download(args.track)
+    # Check if the track file exists
+    if os.path.exists(f"{args.track}.npy"):
+        npy_data = np.load(f"{args.track}.npy")
+    else:
+        # Download the track
+        npy_data = rcu.download(args.track)
+
+    waypoint_count = npy_data.shape[0]
     waypoints = list([tuple(sublist[0:2]) for sublist in npy_data])
     inner_line = list([tuple(sublist[2:4]) for sublist in npy_data])
     outer_line = list([tuple(sublist[4:6]) for sublist in npy_data])
@@ -147,20 +137,20 @@ if __name__ == "__main__":
     argparser.add_argument(
         "--track",
         help="the track used to verify the reward function",
-        default="caecer_gp",
+        default="dubai_open_ccw",
         required=False,
-    )
-    argparser.add_argument(
-        "--bin-count",
-        help="the number of bins to consider for learning importance histogram",
-        default=4,
-        required=False,
-        type=int,
     )
     argparser.add_argument(
         "--look-ahead",
         help="the number of waypoints used to calculate look-ahead metrics",
-        default=4,
+        default=0,
+        required=False,
+        type=int,
+    )
+    argparser.add_argument(
+        "--bin-count",
+        help="the number of bins to consider for learning importance histogram",
+        default=12,
         required=False,
         type=int,
     )
