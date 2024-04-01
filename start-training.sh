@@ -25,7 +25,10 @@ while getopts ":h-:" opt; do
             exit 0
             ;;
         -)
-            case "$OPTARG" in
+            # Splitting the argument into the name and value parts
+            option="${OPTARG%%=*}" # Extract the option name
+            value="${OPTARG#*=}" # Extract the value
+            case "$option" in
                 help)
                     display_help
                     exit 0
@@ -34,40 +37,28 @@ while getopts ":h-:" opt; do
                     debug_flag=1
                     ;;
                 agent-speed-high)
-                    # The next argument to $OPTARG will be the value
-                    agent_speed_high_value="${!OPTIND}" # Use indirect variable expansion to get the next argument
-                    OPTIND=$((OPTIND + 1)) # Increment the option index to consume the value
+                    agent_speed_high_value="$value" # Directly use the parsed value
                     ;;
                 agent-speed-low)
-                    # The next argument to $OPTARG will be the value
-                    agent_speed_low_value="${!OPTIND}" # Use indirect variable expansion to get the next argument
-                    OPTIND=$((OPTIND + 1)) # Increment the option index to consume the value
+                    agent_speed_low_value="$value" # Directly use the parsed value
                     ;;
                 look-ahead)
-                    # The next argument to $OPTARG will be the value
-                    look_ahead_value="${!OPTIND}" # Use indirect variable expansion to get the next argument
-                    OPTIND=$((OPTIND + 1)) # Increment the option index to consume the value
+                    look_ahead_value="$value" # Directly use the parsed value
                     ;;
                 bin-count)
-                    # The next argument to $OPTARG will be the value
-                    bin_count_value="${!OPTIND}" # Use indirect variable expansion to get the next argument
-                    OPTIND=$((OPTIND + 1)) # Increment the option index to consume the value
+                    bin_count_value="$value" # Directly use the parsed value
                     ;;
                 delay)
-                    # The next argument to $OPTARG will be the value
-                    delay_value="${!OPTIND}" # Use indirect variable expansion to get the next argument
-                    OPTIND=$((OPTIND + 1)) # Increment the option index to consume the value
+                    delay_value="$value" # Directly use the parsed value
                     ;;
                 offset)
-                    # The next argument to $OPTARG will be the value
-                    offset_value="${!OPTIND}" # Use indirect variable expansion to get the next argument
-                    OPTIND=$((OPTIND + 1)) # Increment the option index to consume the value
+                    offset_value="$value" # Directly use the parsed value
                     ;;
                 pretrained)
                     pretrained_flag=1
                     ;;
                 *)
-                    echo "Invalid option: --$OPTARG"
+                    echo "Invalid option: --$option"
                     exit 1
                     ;;
             esac
@@ -78,6 +69,7 @@ while getopts ":h-:" opt; do
             ;;
     esac
 done
+
 
 config_options="--agent-speed-high $agent_speed_high_value"
 config_options="$config_options --agent-speed-low $agent_speed_low_value"
