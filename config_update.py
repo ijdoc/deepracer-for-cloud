@@ -96,10 +96,17 @@ def main(args):
         "heading": {"delay": args.delay, "offset": args.offset},
         "aggregated_factor": aggregated_factor,
     }
-    # Open the JSON file for reading
+    # Open the agent file for reading
     with open("custom_files/model_metadata.json", "r") as json_file:
         # Load the JSON data into a Python dictionary
         model_dict = json.load(json_file)
+
+    model_dict["action_space"]["speed"]["high"] = args.agent_speed_high
+    model_dict["action_space"]["speed"]["low"] = args.agent_speed_low
+
+    # Overwrite the agent speed values
+    with open("custom_files/model_metadata.json", "w") as json_file:
+        json.dump(model_dict, json_file, indent=4)
         reward_config["agent"] = model_dict["action_space"]
 
     # Replace in reward_function.py
@@ -129,11 +136,25 @@ def main(args):
         # Log reward_function.py as an artifact
         artifact = wandb.Artifact("config", type="inputs")
         artifact.add_dir("custom_files")
+        artifact.add_file("run.env")
+        artifact.add_file("system.env")
         wandb.log_artifact(artifact)
 
 
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser()
+    argparser.add_argument(
+        "--agent-speed-high",
+        help="the maximum speed of the agent",
+        required=True,
+        type=float,
+    )
+    argparser.add_argument(
+        "--agent-speed-low",
+        help="the minimum speed of the agent",
+        required=True,
+        type=float,
+    )
     argparser.add_argument(
         "--track",
         help="the track used to verify the reward function",

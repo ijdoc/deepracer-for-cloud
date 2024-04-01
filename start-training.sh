@@ -14,6 +14,8 @@ look_ahead_value=3
 bin_count_value=10
 delay_value=4
 offset_value=1.4
+agent_speed_high_value=2.4
+agent_speed_low_value=0.8
 
 # Parse command-line options
 while getopts ":h-:" opt; do
@@ -31,25 +33,35 @@ while getopts ":h-:" opt; do
                 debug)
                     debug_flag=1
                     ;;
+                agent-speed-high)
+                    # The next argument to $OPTARG will be the value
+                    agent_speed_high_value="${!OPTIND}" # Use indirect variable expansion to get the next argument
+                    OPTIND=$((OPTIND + 1)) # Increment the option index to consume the value
+                    ;;
+                agent-speed-low)
+                    # The next argument to $OPTARG will be the value
+                    agent_speed_low_value="${!OPTIND}" # Use indirect variable expansion to get the next argument
+                    OPTIND=$((OPTIND + 1)) # Increment the option index to consume the value
+                    ;;
                 look-ahead)
-                    # The next argument to $OPTARG will be the value for look-ahead
+                    # The next argument to $OPTARG will be the value
                     look_ahead_value="${!OPTIND}" # Use indirect variable expansion to get the next argument
-                    OPTIND=$((OPTIND + 1)) # Increment the option index to consume the value for look-ahead
+                    OPTIND=$((OPTIND + 1)) # Increment the option index to consume the value
                     ;;
                 bin-count)
-                    # The next argument to $OPTARG will be the value for look-ahead
+                    # The next argument to $OPTARG will be the value
                     bin_count_value="${!OPTIND}" # Use indirect variable expansion to get the next argument
-                    OPTIND=$((OPTIND + 1)) # Increment the option index to consume the value for look-ahead
+                    OPTIND=$((OPTIND + 1)) # Increment the option index to consume the value
                     ;;
                 delay)
-                    # The next argument to $OPTARG will be the value for look-ahead
+                    # The next argument to $OPTARG will be the value
                     delay_value="${!OPTIND}" # Use indirect variable expansion to get the next argument
-                    OPTIND=$((OPTIND + 1)) # Increment the option index to consume the value for look-ahead
+                    OPTIND=$((OPTIND + 1)) # Increment the option index to consume the value
                     ;;
                 offset)
-                    # The next argument to $OPTARG will be the value for look-ahead
+                    # The next argument to $OPTARG will be the value
                     offset_value="${!OPTIND}" # Use indirect variable expansion to get the next argument
-                    OPTIND=$((OPTIND + 1)) # Increment the option index to consume the value for look-ahead
+                    OPTIND=$((OPTIND + 1)) # Increment the option index to consume the value
                     ;;
                 pretrained)
                     pretrained_flag=1
@@ -67,7 +79,10 @@ while getopts ":h-:" opt; do
     esac
 done
 
-reward_options="--look-ahead $look_ahead_value --bin-count $bin_count_value --delay $delay_value --offset $offset_value"
+config_options="--agent-speed-high $agent_speed_high_value"
+config_options="$config_options --agent-speed-low $agent_speed_low_value"
+config_options="$config_options --look-ahead $look_ahead_value --bin-count $bin_count_value"
+config_options="$config_options --delay $delay_value --offset $offset_value"
 
 # Skip git check if debugging
 debug_option="--debug"
@@ -75,8 +90,8 @@ if [ $debug_flag -ne 1 ]; then
     debug_option=""
 fi
 
-python reward_config_update.py $reward_options $debug_option
-python reward_config_verify.py $debug_option
+python config_update.py $config_options $debug_option
+python config_verify.py $debug_option
 
 if [ $debug_flag -ne 1 ]; then
     # Check if the branch is dirty

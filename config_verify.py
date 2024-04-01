@@ -17,6 +17,7 @@ import math
 import wandb
 from utils import reward_config_utils as rcu
 
+
 def plot_line(line, axs):
     x = [point[0] for point in line]
     y = [point[1] for point in line]

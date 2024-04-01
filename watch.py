@@ -189,10 +189,6 @@ if not DEBUG:
         )
         # Log input files
         wandb.use_artifact("iamjdoc/dr-reborn/config:latest", type="inputs")
-        env_files = wandb.Artifact(name="env", type="inputs")
-        env_files.add_file("./run.env")
-        env_files.add_file("./system.env")
-        wandb.use_artifact(env_files)
     subprocess.run(f"git branch {wandb.run.name}", shell=True)
     subprocess.run(f"git push -u origin {wandb.run.name}", shell=True)
 
