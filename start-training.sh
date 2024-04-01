@@ -76,22 +76,29 @@ config_options="$config_options --agent-speed-low $agent_speed_low_value"
 config_options="$config_options --look-ahead $look_ahead_value --bin-count $bin_count_value"
 config_options="$config_options --delay $delay_value --offset $offset_value"
 
-# Skip git check if debugging
 debug_option="--debug"
 if [ $debug_flag -ne 1 ]; then
     debug_option=""
 fi
 
-if [ $debug_flag -ne 1 ]; then
-    # Check if the branch is dirty
-    if [[ -n $(git status --porcelain) ]]; then
-      error "Your Git branch is dirty. Please commit your changes."
-    fi
+pretrained_option="--pretrained"
+if [ $pretrained_flag -ne 1 ]; then
+    pretrained_option=""
 fi
 
-# Edited to be sweep compatible (only run config_update.py in debug mode)
+# Sweep compatible edits:
+# 1. Run config_update.py in debug mode
+# 2. Do not run config_verify.py
+# 3. Do not check for dirty Git branch
 python config_update.py $config_options --debug
 # python config_verify.py $debug_option
+
+# if [ $debug_flag -ne 1 ]; then
+#     # Check if the branch is dirty
+#     if [[ -n $(git status --porcelain) ]]; then
+#       error "Your Git branch is dirty. Please commit your changes."
+#     fi
+# fi
 
 source bin/activate.sh run.env
 dr-stop-viewer && dr-stop-training
@@ -115,4 +122,4 @@ else
 fi
 
 sleep 5
-python watch.py "$@"
+python watch.py $debug_option $pretrained_option

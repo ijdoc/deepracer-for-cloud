@@ -25,34 +25,6 @@ parser.add_argument(
 parser.add_argument(
     "--debug", action="store_true", help="Log to console instead of W&B"
 )
-parser.add_argument(
-    "--bin-count",
-    help="the number of bins to consider for learning importance histogram",
-    default=4,
-    required=False,
-    type=int,
-)
-parser.add_argument(
-    "--look-ahead",
-    help="the number of waypoints used to calculate look-ahead metrics",
-    default=4,
-    required=False,
-    type=int,
-)
-parser.add_argument(
-    "--delay",
-    help="the number of waypoints used to delay heading calculation",
-    default=4,
-    required=False,
-    type=int,
-)
-parser.add_argument(
-    "--offset",
-    help="the change factor used to calculate target heading",
-    default=1.0,
-    required=False,
-    type=float,
-)
 
 # Parse the arguments
 args = parser.parse_args()
