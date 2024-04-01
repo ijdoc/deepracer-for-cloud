@@ -90,15 +90,16 @@ if [ $debug_flag -ne 1 ]; then
     debug_option=""
 fi
 
-python config_update.py $config_options $debug_option
-python config_verify.py $debug_option
-
 if [ $debug_flag -ne 1 ]; then
     # Check if the branch is dirty
     if [[ -n $(git status --porcelain) ]]; then
       error "Your Git branch is dirty. Please commit your changes."
     fi
 fi
+
+# Edited to be sweep compatible (only run config_update.py in debug mode)
+python config_update.py $config_options --debug
+# python config_verify.py $debug_option
 
 source bin/activate.sh run.env
 dr-stop-viewer && dr-stop-training

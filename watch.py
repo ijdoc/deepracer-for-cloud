@@ -187,8 +187,12 @@ if not DEBUG:
         wandb.init(
             config=config_dict, entity="iamjdoc", project="dr-reborn", job_type="train"
         )
-        # Log input files
-        wandb.use_artifact("iamjdoc/dr-reborn/config:latest", type="inputs")
+        # Log input configurations
+        artifact = wandb.Artifact("config", type="inputs")
+        artifact.add_dir("custom_files")
+        artifact.add_file("run.env")
+        artifact.add_file("system.env")
+        wandb.use_artifact(artifact)
     subprocess.run(f"git branch {wandb.run.name}", shell=True)
     subprocess.run(f"git push -u origin {wandb.run.name}", shell=True)
 

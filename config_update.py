@@ -132,14 +132,6 @@ def main(args):
     with open(filename, "w") as file:
         file.write(formatted_code)
 
-    if not args.debug:
-        # Log reward_function.py as an artifact
-        artifact = wandb.Artifact("config", type="inputs")
-        artifact.add_dir("custom_files")
-        artifact.add_file("run.env")
-        artifact.add_file("system.env")
-        wandb.log_artifact(artifact)
-
 
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser()
