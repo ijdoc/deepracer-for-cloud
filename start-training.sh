@@ -86,13 +86,13 @@ if [ $pretrained_flag -ne 1 ]; then
     pretrained_option=""
 fi
 
-# Sweep compatible edits:
+# Sweep compatible changes ahead:
 # 1. Run config_update.py in debug mode
-# 2. Do not run config_verify.py
-# 3. Do not check for dirty Git branch
 python config_update.py $config_options --debug
+# 2. Do not run config_verify.py
 # python config_verify.py $debug_option
 
+# 3. Do not check for dirty Git branch
 # if [ $debug_flag -ne 1 ]; then
 #     # Check if the branch is dirty
 #     if [[ -n $(git status --porcelain) ]]; then
@@ -100,6 +100,10 @@ python config_update.py $config_options --debug
 #     fi
 # fi
 
+# 4. Resent run.env (in case a model was uploaded in previous run)
+git checkout -- run.env
+
+# Go ahead and start actual training
 source bin/activate.sh run.env
 dr-stop-viewer && dr-stop-training
 test_command_outcome "[$0] Stop previous training"
