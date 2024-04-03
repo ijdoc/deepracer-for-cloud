@@ -47,7 +47,7 @@ CONFIG = {
     "aggregated_factor": 0.5,
     "agent": {
         "steering_angle": {"high": 30.0, "low": -30.0},
-        "speed": {"high": 2.5, "low": 0.8},
+        "speed": {"high": 2.619548947814496, "low": 0.8652574644311152},
     },
 }
 
@@ -215,6 +215,9 @@ def reward_function(params):
     LAST_STEERING = params["steering_angle"]
     LAST_THROTTLE = params["speed"]
 
+    # Smoothness ranges from -1 to 1, where 1 is the smoothest
+    smoothness = 2.0 * (0.5 - agent_change)
+
     if step_progress == 0.0:
         projected_steps = 10000.0
     else:
@@ -271,7 +274,8 @@ def reward_function(params):
         step_reward * (1.0 - importance)
     )
     aggregated_importance_fraction = CONFIG["aggregated_factor"]
-    reward = float(importance_weight * step_progress)
+
+    reward = float(importance_weight * step_reward)
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:
