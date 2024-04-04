@@ -47,7 +47,7 @@ CONFIG = {
     "aggregated_factor": 0.5,
     "agent": {
         "steering_angle": {"high": 30.0, "low": -30.0},
-        "speed": {"high": 2.619548947814496, "low": 0.8652574644311152},
+        "speed": {"high": 2.5906677183857014, "low": 1.0959408413227485},
     },
 }
 
@@ -275,13 +275,31 @@ def reward_function(params):
     )
     aggregated_importance_fraction = CONFIG["aggregated_factor"]
 
-    reward = float(importance_weight * step_reward)
+    reward_type = CONFIG["reward_type"]
+
+    if reward_type <= 1:
+        # Both smoothness and step_reward can't be negative
+        if step_reward < 0.0 and smoothness < 0.0:
+            smoothness = -smoothness
+
+    if reward_type == 0:
+        reward = float(importance_weight * (smoothness * step_reward))
+    if reward_type == 1:
+        reward = float(smoothness * step_reward)
+    if reward_type == 2:
+        reward = float(importance_weight * step_reward)
+    if reward_type == 3:
+        reward = float(importance_weight * (smoothness * step_progress))
+    if reward_type == 4:
+        reward = float(smoothness * step_progress)
+    if reward_type == 5:
+        reward = float(importance_weight * step_progress)
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:
         is_finished = 1
 
-    # This trace is needed for test logging
+    # This trace is needed for train & test logging
     print(
         f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{step_reward},{heading_reward},{LAST_THROTTLE},{LAST_STEERING},{agent_change},{reward},{is_finished}"
     )

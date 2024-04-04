@@ -178,7 +178,7 @@ if not DEBUG:
     subprocess.run(f"git branch {wandb.run.name}", shell=True)
     subprocess.run(f"git push -u origin {wandb.run.name}", shell=True)
 
-    tables = reset_tables()
+    # tables = reset_tables()
 
 
 def get_float(string):
@@ -196,7 +196,7 @@ def process_line(line):
     global is_testing
     global best_metrics
     global checkpoint
-    global tables
+    # global tables
     global step_metrics
 
     timestamp = datetime.now()
@@ -215,19 +215,19 @@ def process_line(line):
         job = "train"
         if is_testing:
             job = "test"
-        if not DEBUG:
-            tables[job].add_data(
-                episode[job],
-                steps,
-                waypoint,
-                progress,
-                step_reward,
-                heading_reward,
-                throttle,
-                steer,
-                agent_change,
-                reward,
-            )
+        # if not DEBUG:
+        #     tables[job].add_data(
+        #         episode[job],
+        #         steps,
+        #         waypoint,
+        #         progress,
+        #         step_reward,
+        #         heading_reward,
+        #         throttle,
+        #         steer,
+        #         agent_change,
+        #         reward,
+        #     )
         step_metrics[job]["reward"].append(reward)
         if is_finished == 1:
             reward = np.sum(step_metrics[job]["reward"])
@@ -327,8 +327,8 @@ def process_line(line):
                         "test/reward": ckpt_metrics["test"]["reward"],
                         "test/steps": ckpt_metrics["test"]["steps"],
                         "test/progress": ckpt_metrics["test"]["progress"],
-                        "train_trace": tables["train"],
-                        "test_trace": tables["test"],
+                        # "train_trace": tables["train"],
+                        # "test_trace": tables["test"],
                     }
                 )
                 # Update test metrics summary
@@ -341,7 +341,7 @@ def process_line(line):
                 subprocess.run("./stop-training.sh", shell=True)
         # Resetting tracker variables
         iter_metrics = reset_iter_metrics()
-        tables = reset_tables()
+        # tables = reset_tables()
         is_testing = False
 
     elif "Starting evaluation phase" in line:

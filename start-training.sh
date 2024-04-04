@@ -16,6 +16,7 @@ delay_value=4
 offset_value=1.4
 agent_speed_high_value=2.4
 agent_speed_low_value=0.8
+reward_type_value=0
 
 # Parse command-line options
 while getopts ":h-:" opt; do
@@ -41,6 +42,9 @@ while getopts ":h-:" opt; do
                     ;;
                 agent-speed-low)
                     agent_speed_low_value="$value" # Directly use the parsed value
+                    ;;
+                reward-type)
+                    reward_type_value="$value" # Directly use the parsed value
                     ;;
                 look-ahead)
                     look_ahead_value="$value" # Directly use the parsed value
@@ -75,6 +79,7 @@ config_options="--agent-speed-high $agent_speed_high_value"
 config_options="$config_options --agent-speed-low $agent_speed_low_value"
 config_options="$config_options --look-ahead $look_ahead_value --bin-count $bin_count_value"
 config_options="$config_options --delay $delay_value --offset $offset_value"
+config_options="$config_options --reward-type $reward_type_value"
 
 debug_option="--debug"
 if [ $debug_flag -ne 1 ]; then

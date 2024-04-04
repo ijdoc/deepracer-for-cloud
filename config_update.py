@@ -80,6 +80,7 @@ def main(args):
     factors = [round((num - f_min) / (f_max - f_min), 4) for num in factors.tolist()]
     reward_config = {
         "track": args.track,
+        "reward_type": args.reward_type,
         "waypoint_count": len(waypoints),
         "difficulty": {
             "look-ahead": args.look_ahead,
@@ -184,7 +185,12 @@ if __name__ == "__main__":
     argparser.add_argument(
         "--debug",
         action="store_true",
-        help="Debug only (do not log to W&B)",
+        help="debug only (do not log to W&B)",
+    )
+    argparser.add_argument(
+        "--reward-type",
+        help="the reward function to use",
+        type=int,
     )
 
     args = argparser.parse_args()
