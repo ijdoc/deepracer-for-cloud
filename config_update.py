@@ -97,6 +97,7 @@ def main(args):
         "heading": {"delay": args.delay, "offset": args.offset},
         "aggregated_factor": aggregated_factor,
     }
+
     # Open the agent file for reading
     with open("custom_files/model_metadata.json", "r") as json_file:
         # Load the JSON data into a Python dictionary
@@ -108,7 +109,21 @@ def main(args):
     # Overwrite the agent speed values
     with open("custom_files/model_metadata.json", "w") as json_file:
         json.dump(model_dict, json_file, indent=4)
-        reward_config["agent"] = model_dict["action_space"]
+    
+    # Update agent params in reward_config
+    reward_config["agent"] = model_dict["action_space"]
+
+    # Open the hyperparameters file for reading
+    with open("custom_files/hyperparameters.json", "r") as json_file:
+        # Load the JSON data into a Python dictionary
+        params_dict = json.load(json_file)
+
+    # Replace learning rate
+    params_dict["lr"] = args.learning_rate
+
+    # Overwrite hyperparameters
+    with open("custom_files/hyperparameters.json", "w") as json_file:
+        json.dump(params_dict, json_file, indent=4)
 
     # Replace in reward_function.py
     filename = "custom_files/reward_function.py"
@@ -137,6 +152,12 @@ def main(args):
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser()
     argparser.add_argument(
+        "--track",
+        help="the track used to verify the reward function",
+        default="dubai_open_ccw",
+        required=False,
+    )
+    argparser.add_argument(
         "--agent-speed-high",
         help="the maximum speed of the agent",
         required=True,
@@ -149,10 +170,10 @@ if __name__ == "__main__":
         type=float,
     )
     argparser.add_argument(
-        "--track",
-        help="the track used to verify the reward function",
-        default="dubai_open_ccw",
-        required=False,
+        "--learning-rate",
+        help="the learning rate of the agent",
+        required=True,
+        type=float,
     )
     argparser.add_argument(
         "--look-ahead",
