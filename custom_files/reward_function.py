@@ -278,9 +278,13 @@ def reward_function(params):
 
     reward_type = CONFIG["reward_type"]
 
-    if reward_type <= 1:
-        # Both smoothness and step_reward can't be negative
+    if reward_type == 0 or reward_type == 1:
+        # Both smoothness and step_ can't be negative
         if step_reward < 0.0 and smoothness < 0.0:
+            smoothness = -smoothness
+    if reward_type == 3 or reward_type == 4:
+        # Both smoothness and step_ can't be negative
+        if step_progress < 0.0 and smoothness < 0.0:
             smoothness = -smoothness
 
     if reward_type == 0:
