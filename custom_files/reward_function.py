@@ -3,6 +3,7 @@ import time
 
 CONFIG = {
     "track": "dubai_open_ccw",
+    "reward_type": 2,
     "waypoint_count": 138,
     "difficulty": {
         "look-ahead": 0,
@@ -47,7 +48,7 @@ CONFIG = {
     "aggregated_factor": 0.5,
     "agent": {
         "steering_angle": {"high": 30.0, "low": -30.0},
-        "speed": {"high": 2.5906677183857014, "low": 1.0959408413227485},
+        "speed": {"high": 2.0, "low": 1.2},
     },
 }
 

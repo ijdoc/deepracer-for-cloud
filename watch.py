@@ -73,7 +73,7 @@ def reset_tables():
 
 
 ckpt_metrics = {
-    "test": {"reward": None, "steps": None, "progress": None},
+    "test": {"reward": None, "steps": None, "progress": None, "combo": None},
     "train": {"reward": None, "steps": None, "progress": None},
     "learn": {"loss": None, "KL_div": None, "entropy": None},
 }
@@ -84,6 +84,7 @@ best_metrics = {
     "steps": 100000.0,
     "checkpoint": -1,
     "entropy": 100.0,
+    "combo": 0.0,
 }
 is_testing = False
 step_metrics = {
@@ -278,18 +279,37 @@ def process_line(line):
             ckpt_metrics["learn"]["KL_div"] = np.mean(iter_metrics["learn"]["KL_div"])
             ckpt_metrics["learn"]["entropy"] = np.mean(iter_metrics["learn"]["entropy"])
 
+            # Progress component of combo metric
+            ckpt_metrics["test"]["combo"] = (ckpt_metrics["test"]["progress"] / 100.0)
+            if ckpt_metrics["test"]["combo"] == 1.0:
+                # Trial completed, continue with steps.
+                # Consider that higher entropy reduces likelihood of completion
+                projected_exits = ckpt_metrics["learn"]["entropy"] + 0.5
+                if projected_exits > 0.0:
+                    projected_steps = ckpt_metrics["test"]["steps"] + (
+                        projected_exits * 150.0 # Each exit costs 150 steps
+                    )
+                else:
+                    projected_steps = ckpt_metrics["test"]["steps"]
+                step_diff = projected_steps - 200.0  # Ideal steps for 100% progress
+                diff_baseline = 500.0
+                if step_diff > diff_baseline:
+                    steps_gain = 0.0
+                else:
+                    steps_gain = 1.0 - (step_diff / diff_baseline)
+
+                ckpt_metrics["test"]["combo"] += steps_gain
+
             # Update best metrics & summary
-            if ckpt_metrics["test"]["progress"] > best_metrics["progress"] or (
-                ckpt_metrics["test"]["progress"] >= best_metrics["progress"]
-                and ckpt_metrics["test"]["steps"] < best_metrics["steps"]
-            ):
+            if ckpt_metrics["test"]["combo"] > best_metrics["combo"]:
                 best_metrics["reward"] = ckpt_metrics["test"]["reward"]
                 best_metrics["steps"] = ckpt_metrics["test"]["steps"]
                 best_metrics["progress"] = ckpt_metrics["test"]["progress"]
                 best_metrics["checkpoint"] = checkpoint
                 best_metrics["entropy"] = ckpt_metrics["learn"]["entropy"]
+                best_metrics["combo"] = ckpt_metrics["test"]["combo"]
                 print(
-                    f'{timestamp} ckpt {checkpoint}: {ckpt_metrics["test"]["reward"]:0.2f}, {ckpt_metrics["test"]["progress"]:0.2f}%, {ckpt_metrics["test"]["steps"]:0.2f} steps (improved)'
+                    f'{timestamp} ckpt {checkpoint}: {ckpt_metrics["test"]["progress"]:0.2f}% in {ckpt_metrics["test"]["steps"]:0.2f} steps with {ckpt_metrics["test"]["reward"]:0.2f} reward ({ckpt_metrics["test"]["combo"]:0.2f} combo) → improved 👍🏼'
                 )
                 if (
                     not DEBUG
@@ -311,7 +331,7 @@ def process_line(line):
                     )
             else:
                 print(
-                    f'{timestamp} ckpt {checkpoint}: {ckpt_metrics["test"]["reward"]:0.2f}, {ckpt_metrics["test"]["progress"]:0.2f}%, {ckpt_metrics["test"]["steps"]:0.2f} steps'
+                    f'{timestamp} ckpt {checkpoint}: {ckpt_metrics["test"]["progress"]:0.2f}% in {ckpt_metrics["test"]["steps"]:0.2f} steps with {ckpt_metrics["test"]["reward"]:0.2f} reward ({ckpt_metrics["test"]["combo"]:0.2f} combo)'
                 )
             if DEBUG:
                 print(f"{timestamp} {ckpt_metrics}")
@@ -327,6 +347,7 @@ def process_line(line):
                         "test/reward": ckpt_metrics["test"]["reward"],
                         "test/steps": ckpt_metrics["test"]["steps"],
                         "test/progress": ckpt_metrics["test"]["progress"],
+                        "test/combo": ckpt_metrics["test"]["combo"],
                         # "train_trace": tables["train"],
                         # "test_trace": tables["test"],
                     }
@@ -335,6 +356,7 @@ def process_line(line):
                 wandb.run.summary["test/reward"] = best_metrics["reward"]
                 wandb.run.summary["test/steps"] = best_metrics["steps"]
                 wandb.run.summary["test/progress"] = best_metrics["progress"]
+                wandb.run.summary["test/combo"] = best_metrics["combo"]
                 wandb.run.summary["best_checkpoint"] = best_metrics["checkpoint"]
                 wandb.run.summary["learn/entropy"] = best_metrics["entropy"]
             if checkpoint == 98:
