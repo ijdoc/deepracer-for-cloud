@@ -1,0 +1,8 @@
+{
+    "args": [
+      "--reward-type=5",
+      "--learning-rate=0.0003",
+      "--agent-speed-high=2.0",
+      "--agent-speed-low=1.375"
+    ]
+}

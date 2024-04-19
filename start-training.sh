@@ -8,16 +8,16 @@ display_help() {
 }
 
 # Define default values for command-line options
-debug_flag=0
-pretrained_flag=0
-look_ahead_value=3
-bin_count_value=10
-delay_value=4
-offset_value=1.4
 agent_speed_high_value=2.4
 agent_speed_low_value=0.8
 reward_type_value=0
 learning_rate_value=0.0003
+debug_flag=0
+pretrained_flag=0
+look_ahead_value=0
+bin_count_value=12
+delay_value=0
+offset_value=0.0
 
 # Parse command-line options
 while getopts ":h-:" opt; do
@@ -82,9 +82,9 @@ done
 config_options="--agent-speed-high $agent_speed_high_value"
 config_options="$config_options --agent-speed-low $agent_speed_low_value"
 config_options="$config_options --learning-rate $learning_rate_value"
+config_options="$config_options --reward-type $reward_type_value"
 config_options="$config_options --look-ahead $look_ahead_value --bin-count $bin_count_value"
 config_options="$config_options --delay $delay_value --offset $offset_value"
-config_options="$config_options --reward-type $reward_type_value"
 
 debug_option="--debug"
 if [ $debug_flag -ne 1 ]; then
@@ -95,6 +95,8 @@ pretrained_option="--pretrained"
 if [ $pretrained_flag -ne 1 ]; then
     pretrained_option=""
 fi
+
+echo "Config options: $config_options"
 
 # Sweep compatible changes ahead:
 # 1. Run config_update.py in debug mode

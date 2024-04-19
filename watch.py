@@ -309,7 +309,7 @@ def process_line(line):
                 best_metrics["entropy"] = ckpt_metrics["learn"]["entropy"]
                 best_metrics["combo"] = ckpt_metrics["test"]["combo"]
                 print(
-                    f'{timestamp} ckpt {checkpoint}: {ckpt_metrics["test"]["progress"]:0.2f}% in {ckpt_metrics["test"]["steps"]:0.2f} steps with {ckpt_metrics["test"]["reward"]:0.2f} reward ({ckpt_metrics["test"]["combo"]:0.2f} combo) → improved 👍🏼'
+                    f'{timestamp} ckpt {checkpoint}: {ckpt_metrics["test"]["progress"]:0.2f}% in {ckpt_metrics["test"]["steps"]:0.2f} steps with {ckpt_metrics["test"]["reward"]:0.2f} reward ({ckpt_metrics["test"]["combo"]:0.2f} combo) → improved 👍'
                 )
                 if (
                     not DEBUG
