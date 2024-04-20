@@ -18,9 +18,9 @@ ssh -i /root/.ssh/id_ed25519 jdoc@workhorse \
    && export WANDB_LAUNCH_TRACE_ID='$WANDB_LAUNCH_TRACE_ID' \
    && export WANDB_CONFIG=\"$ESCAPED_WANDB_CONFIG\" \
    && export WANDB_ARTIFACTS=\"$ESCAPED_WANDB_ARTIFACTS\" \
-   source ~/.sshbashrc && \
-   cd ~/repos/deepracer-for-cloud && \
-   ./start-training.sh $@"
+   && source ~/.sshbashrc \
+   && cd ~/repos/deepracer-for-cloud \
+   && ./start-training.sh $@"
 
 # Skipping variables that mess up the call
 #  WANDB_ARTIFACTS=$WANDB_ARTIFACTS \
