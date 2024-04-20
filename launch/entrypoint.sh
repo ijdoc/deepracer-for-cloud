@@ -12,12 +12,10 @@ ssh -i /root/.ssh/id_ed25519 jdoc@workhorse \
    WANDB_LAUNCH_QUEUE_ENTITY=$WANDB_LAUNCH_QUEUE_ENTITY \
    WANDB_LAUNCH_TRACE_ID=$WANDB_LAUNCH_TRACE_ID \
    WANDB_CONFIG=\"$WANDB_CONFIG\" \
-   WANDB_ARTIFACTS=\"$WANDB_ARTIFACTS\" \
    source ~/.sshbashrc && \
    cd ~/repos/deepracer-for-cloud && \
    ./start-training.sh $@"
 
 # Skipping variables that mess up the call
 #  WANDB_ARTIFACTS=$WANDB_ARTIFACTS \
-#  WANDB_CONFIG=$WANDB_CONFIG \
 #  WANDB_API_KEY=$WANDB_API_KEY \

@@ -155,11 +155,14 @@ if not DEBUG:
             entity="iamjdoc",
             project="dr-reborn",
             job_type="retrain",
-            resume="allow", # Needed to assume the launch-provided id
         )
     else:
         wandb.init(
-            config=config_dict, entity="iamjdoc", project="dr-reborn", job_type="train"
+            config=config_dict,
+            entity="iamjdoc",
+            project="dr-reborn",
+            job_type="train",
+            resume="allow",  # Needed to assume the launch-provided id
         )
         # Log input configurations
         params_art = wandb.Artifact("hyperparams", type="inputs")
@@ -293,7 +296,7 @@ def process_line(line):
                 else:
                     projected_steps = ckpt_metrics["test"]["steps"]
                 step_diff = projected_steps - 200.0  # Ideal steps for 100% progress
-                diff_baseline = 500.0
+                diff_baseline = 650.0
                 if step_diff > diff_baseline:
                     steps_gain = 0.0
                 else:
