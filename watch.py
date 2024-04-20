@@ -155,6 +155,7 @@ if not DEBUG:
             entity="iamjdoc",
             project="dr-reborn",
             job_type="retrain",
+            resume="allow", # Needed to assume the launch-provided id
         )
     else:
         wandb.init(
