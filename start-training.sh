@@ -96,6 +96,10 @@ if [ $pretrained_flag -ne 1 ]; then
     pretrained_option=""
 fi
 
+
+echo "WANDB_RUN_ID: $WANDB_RUN_ID"
+echo "WANDB_CONFIG: $WANDB_CONFIG"
+echo "WANDB_ARTIFACTS: $WANDB_ARTIFACTS"
 echo "Config options: $config_options"
 
 # Sweep compatible changes ahead:
