@@ -273,16 +273,26 @@ def process_line(line):
             # Aggregate metrics and log everything!!
             checkpoint += 1
             for job in ["test", "train"]:
-                ckpt_metrics[job]["reward"] = np.mean(iter_metrics[job]["reward"])
-                ckpt_metrics[job]["progress"] = np.mean(iter_metrics[job]["progress"])
-                ckpt_metrics[job]["steps"] = np.mean(iter_metrics[job]["steps"])
+                for metric in ["reward", "progress", "steps"]:
+                    if len(iter_metrics[job][metric]):
+                        ckpt_metrics[job][metric] = np.mean(iter_metrics[job][metric])
+                    else:
+                        print(
+                            f'{timestamp} WARNING: Empty list. Skipped {metric} mean calculation for ckpt {checkpoint}'
+                        )
+
             # print(
             #     f'{timestamp} Same? {ckpt_metrics["test"]["reward"]:0.3f}, {float(test_reward):0.3f}'
             # )
 
-            ckpt_metrics["learn"]["loss"] = np.mean(iter_metrics["learn"]["loss"])
-            ckpt_metrics["learn"]["KL_div"] = np.mean(iter_metrics["learn"]["KL_div"])
-            ckpt_metrics["learn"]["entropy"] = np.mean(iter_metrics["learn"]["entropy"])
+            
+            for metric in ["loss", "KL_div", "entropy"]:
+                if len(iter_metrics["learn"][metric]):
+                    ckpt_metrics["learn"][metric] = np.mean(iter_metrics["learn"][metric])
+                else:
+                    print(
+                        f'{timestamp} WARNING: Empty list. Skipped {metric} mean calculation for ckpt {checkpoint}'
+                    )
 
             # Progress component of combo metric
             ckpt_metrics["test"]["combo"] = (ckpt_metrics["test"]["progress"] / 100.0)
