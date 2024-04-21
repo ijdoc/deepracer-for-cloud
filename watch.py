@@ -324,7 +324,7 @@ def process_line(line):
                 best_metrics["entropy"] = ckpt_metrics["learn"]["entropy"]
                 best_metrics["combo"] = ckpt_metrics["test"]["combo"]
                 print(
-                    f'{timestamp} ckpt {checkpoint}: {ckpt_metrics["test"]["progress"]:0.2f}% in {ckpt_metrics["test"]["steps"]:0.2f} steps with {ckpt_metrics["test"]["reward"]:0.2f} reward ({ckpt_metrics["test"]["combo"]:0.2f} combo) → improved 👍'
+                    f'{timestamp} ckpt {checkpoint}: {ckpt_metrics["test"]["progress"]:0.2f}% in {ckpt_metrics["test"]["steps"]:0.2f} steps with {ckpt_metrics["test"]["reward"]:0.2f} reward and {ckpt_metrics["learn"]["entropy"]} entropy ({ckpt_metrics["test"]["combo"]:0.2f} combo) → improved 👍'
                 )
                 if (
                     not DEBUG
@@ -346,7 +346,7 @@ def process_line(line):
                     )
             else:
                 print(
-                    f'{timestamp} ckpt {checkpoint}: {ckpt_metrics["test"]["progress"]:0.2f}% in {ckpt_metrics["test"]["steps"]:0.2f} steps with {ckpt_metrics["test"]["reward"]:0.2f} reward ({ckpt_metrics["test"]["combo"]:0.2f} combo)'
+                    f'{timestamp} ckpt {checkpoint}: {ckpt_metrics["test"]["progress"]:0.2f}% in {ckpt_metrics["test"]["steps"]:0.2f} steps with {ckpt_metrics["test"]["reward"]:0.2f} reward and {ckpt_metrics["learn"]["entropy"]} entropy ({ckpt_metrics["test"]["combo"]:0.2f} combo)'
                 )
             if DEBUG:
                 print(f"{timestamp} {ckpt_metrics}")
@@ -374,7 +374,7 @@ def process_line(line):
                 wandb.run.summary["test/combo"] = best_metrics["combo"]
                 wandb.run.summary["best_checkpoint"] = best_metrics["checkpoint"]
                 wandb.run.summary["learn/entropy"] = best_metrics["entropy"]
-            if checkpoint == 98:
+            if best_metrics["entropy"] <= -0.5:
                 subprocess.run("./stop-training.sh", shell=True)
         # Resetting tracker variables
         iter_metrics = reset_iter_metrics()

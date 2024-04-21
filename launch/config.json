@@ -1,0 +1,10 @@
+{
+    "overrides": {
+        "args": [
+            "--reward-type=3",
+            "--learning-rate=0.0002",
+            "--agent-speed-high=1.9",
+            "--agent-speed-low=1.45"
+        ]
+    }
+}
