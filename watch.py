@@ -13,7 +13,7 @@ from custom_files.reward_function import CONFIG
 
 # FIXME: Define from command line arguments in parent script?
 os.environ["WANDB_RUN_GROUP"] = "2404"
-GLOBAL_MIN_STEPS = 300.0
+GLOBAL_MIN_STEPS = 325.0
 
 # Create ArgumentParser
 parser = argparse.ArgumentParser(description="Log testing metrics")
@@ -329,7 +329,7 @@ def process_line(line):
                 if (
                     not DEBUG
                     and best_metrics["progress"] >= 100.0
-                    # and ckpt_metrics["test"]["steps"] <= GLOBAL_MIN_STEPS
+                    and ckpt_metrics["test"]["steps"] <= GLOBAL_MIN_STEPS
                 ):
                     print(
                         f'{timestamp} 🚀 Uploading full progress checkpoint {checkpoint} expecting {best_metrics["steps"]:0.2f} steps)'
