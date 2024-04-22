@@ -285,7 +285,6 @@ def process_line(line):
             #     f'{timestamp} Same? {ckpt_metrics["test"]["reward"]:0.3f}, {float(test_reward):0.3f}'
             # )
 
-            
             for metric in ["loss", "KL_div", "entropy"]:
                 if len(iter_metrics["learn"][metric]):
                     ckpt_metrics["learn"][metric] = np.mean(iter_metrics["learn"][metric])
@@ -324,7 +323,7 @@ def process_line(line):
                 best_metrics["entropy"] = ckpt_metrics["learn"]["entropy"]
                 best_metrics["combo"] = ckpt_metrics["test"]["combo"]
                 print(
-                    f'{timestamp} ckpt {checkpoint}: {ckpt_metrics["test"]["progress"]:0.2f}% in {ckpt_metrics["test"]["steps"]:0.2f} steps with {ckpt_metrics["test"]["reward"]:0.2f} reward and {ckpt_metrics["learn"]["entropy"]} entropy ({ckpt_metrics["test"]["combo"]:0.2f} combo) → improved 👍'
+                    f'{timestamp} ckpt {checkpoint}: {ckpt_metrics["test"]["progress"]:0.2f}% in {ckpt_metrics["test"]["steps"]:0.2f} steps with {ckpt_metrics["test"]["reward"]:0.2f} reward and {ckpt_metrics["learn"]["entropy"]:0.2f} entropy ({ckpt_metrics["test"]["combo"]:0.2f} combo) → improved 👍'
                 )
                 if (
                     not DEBUG
@@ -346,7 +345,7 @@ def process_line(line):
                     )
             else:
                 print(
-                    f'{timestamp} ckpt {checkpoint}: {ckpt_metrics["test"]["progress"]:0.2f}% in {ckpt_metrics["test"]["steps"]:0.2f} steps with {ckpt_metrics["test"]["reward"]:0.2f} reward and {ckpt_metrics["learn"]["entropy"]} entropy ({ckpt_metrics["test"]["combo"]:0.2f} combo)'
+                    f'{timestamp} ckpt {checkpoint}: {ckpt_metrics["test"]["progress"]:0.2f}% in {ckpt_metrics["test"]["steps"]:0.2f} steps with {ckpt_metrics["test"]["reward"]:0.2f} reward and {ckpt_metrics["learn"]["entropy"]:0.2f} entropy ({ckpt_metrics["test"]["combo"]:0.2f} combo)'
                 )
             if DEBUG:
                 print(f"{timestamp} {ckpt_metrics}")
