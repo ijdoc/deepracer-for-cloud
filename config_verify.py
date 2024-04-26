@@ -9,7 +9,6 @@ from custom_files.reward_function import (
     get_waypoint_importance,
     get_direction_change,
     get_next_distinct_index,
-    get_target_heading,
 )
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
@@ -50,11 +49,6 @@ def main(args):
     ]
 
     fig, axs = plt.subplots(2, 2, figsize=(10, 10))
-    if not args.debug:
-        run = wandb.init(
-            entity="iamjdoc", project="dr-reborn", job_type="verify_reward"
-        )
-        run.use_artifact("iamjdoc/dr-reborn/config:latest", type="inputs")
 
     # Check if the track file exists
     if os.path.exists(f"{CONFIG['track']}.npy"):
@@ -68,15 +62,6 @@ def main(args):
     inner_line = list([tuple(sublist[2:4]) for sublist in npy_data])
     outer_line = list([tuple(sublist[4:6]) for sublist in npy_data])
 
-    columns = [
-        "waypoint",
-        "direction",
-        "dir_change",
-        "difficulty",
-        "importance",
-        "target_heading",
-    ]
-
     # Start the plots
     for i in range(2):
         for j in range(2):
@@ -87,13 +72,12 @@ def main(args):
             axs[i, j].grid(True)
 
     # Second pass to plot verifications
-    if not args.debug:
-        factor_table = wandb.Table(columns=columns)
     for i in range(waypoint_count):
         direction = get_direction(i, waypoints)
         dir_change, difficulty = get_waypoint_difficulty(
             i,
             waypoints,
+            skip_ahead=CONFIG["difficulty"]["skip-ahead"],
             look_ahead=CONFIG["difficulty"]["look-ahead"],
             max_val=CONFIG["difficulty"]["max"],
             min_val=CONFIG["difficulty"]["min"],
@@ -119,12 +103,16 @@ def main(args):
             (inner_line[i][0], inner_line[i][1]),
         ]
 
+        color = "red"
+        if difficulty < 0.5:
+            color = "green"
+        plot_difficulty = abs((difficulty * 2) - 1)
         axs[0, 0].add_patch(
             Polygon(
                 vertices,
                 closed=True,
-                color="red",
-                alpha=weighted_difficulty,
+                color=color,
+                alpha=plot_difficulty,
                 linewidth=0,
             )
         )
@@ -142,77 +130,18 @@ def main(args):
         axs[1, 1].plot(projected_steps, step_reward_plot, linestyle="-", color="black")
         axs[1, 1].plot(projected_steps, aggregated_reward, linestyle="-", color="red")
 
-        length = 0.35
-        heading = get_target_heading(
-            i,
-            waypoints,
-            delay=CONFIG["heading"]["delay"],
-            offset=CONFIG["heading"]["offset"],
-        )
-        xstart = waypoints[i][0]
-        ystart = waypoints[i][1]
-        x1 = xstart + (length * math.cos(heading + (math.pi / 6.0)))
-        y1 = ystart + (length * math.sin(heading + (math.pi / 6.0)))
-        x2 = xstart + (length * math.cos(heading - (math.pi / 6.0)))
-        y2 = ystart + (length * math.sin(heading - (math.pi / 6.0)))
-        xend = xstart + (length * math.cos(direction))
-        yend = ystart + (length * math.sin(direction))
-        xapex = xstart + (length * 2.0 * math.cos(heading))
-        yapex = ystart + (length * 2.0 * math.sin(heading))
-        vertices = [
-            (xstart, ystart),
-            (x1, y1),
-            (x2, y2),
-        ]
-
-        axs[1, 0].arrow(
-            xstart,
-            ystart,
-            xapex - xstart,
-            yapex - ystart,
-            head_width=0.025,
-            head_length=0.025,
-            fc="green",
-            ec="green",
-            linestyle="-",
-            color="green",
-            width=0.001,
-        )
-        row = [i]
-        row.append(direction)
-        row.append(dir_change)
-        row.append(difficulty)
-        row.append(importance)
-        row.append(heading)
-        if not args.debug:
-            factor_table.add_data(*row)
-
     axs[0, 0].set_title(
         f"Normalized Difficulty (look_ahead={CONFIG['difficulty']['look-ahead']})"
     )
     axs[0, 1].set_title(f"Importance ({len(CONFIG['histogram']['counts'])} bins)")
-    axs[1, 0].set_title(
-        f"Target Heading (delay={CONFIG['heading']['delay']}, offset={CONFIG['heading']['offset']})"
-    )
     axs[1, 1].set_title(f"Aggregated Step Reward")
 
-    if args.debug:
-        plt.tight_layout()
-        plt.show()
-    else:
-        # TODO: Plot and log the step progress curve
-        plt.savefig("track.png")
-        run.log({"factor_table": factor_table, "track": wandb.Image("track.png")})
+    plt.tight_layout()
+    plt.show()
 
 
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser()
-    argparser.add_argument(
-        "--debug",
-        action="store_true",
-        help="Debug only (do not log to W&B)",
-    )
-
     args = argparser.parse_args()
 
     main(args)

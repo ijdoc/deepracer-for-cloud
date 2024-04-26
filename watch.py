@@ -53,23 +53,19 @@ def reset_iter_metrics():
     }
 
 
-def reset_tables():
-    columns = [
-        "episode",
-        "step",
-        "waypoint",
-        "progress",
-        "step_reward",
-        "heading_reward",
-        "throttle",
-        "steer",
-        "agent_change",
-        "reward",
-    ]
-    return {
-        "test": wandb.Table(columns=columns),
-        "train": wandb.Table(columns=columns),
-    }
+# def reset_tables():
+#     columns = [
+#         "episode",
+#         "step",
+#         "waypoint",
+#         "progress",
+#         "step_reward",
+#         "reward",
+#     ]
+#     return {
+#         "test": wandb.Table(columns=columns),
+#         "train": wandb.Table(columns=columns),
+#     }
 
 
 ckpt_metrics = {
@@ -130,13 +126,12 @@ with open("./custom_files/model_metadata.json", "r") as json_file:
     config_dict["m"] = logged_dict
 
 logged_dict = {}
-logged_dict["heading"] = CONFIG["heading"]
 logged_dict["step"] = CONFIG["step_reward"]
 logged_dict["difficulty_weighting"] = CONFIG["difficulty"]["weighting"]
-logged_dict["aggregated_factor"] = CONFIG["aggregated_factor"]
 config_dict["r"] = logged_dict
 config_dict["reward-type"] = CONFIG["reward_type"]
 config_dict["bin-count"] = len(CONFIG["histogram"]["counts"])
+config_dict["skip-ahead"] = CONFIG["difficulty"]["skip-ahead"]
 config_dict["look-ahead"] = CONFIG["difficulty"]["look-ahead"]
 
 
@@ -212,12 +207,8 @@ def process_line(line):
         waypoint = int(float(parts[1]))
         progress = float(parts[2])
         step_reward = float(parts[3])
-        heading_reward = float(parts[4])
-        throttle = float(parts[5])
-        steer = float(parts[6])
-        agent_change = float(parts[7])
-        reward = float(parts[8])
-        is_finished = int(parts[9])
+        reward = float(parts[4])
+        is_finished = int(parts[5])
         job = "train"
         if is_testing:
             job = "test"
@@ -228,10 +219,6 @@ def process_line(line):
         #         waypoint,
         #         progress,
         #         step_reward,
-        #         heading_reward,
-        #         throttle,
-        #         steer,
-        #         agent_change,
         #         reward,
         #     )
         step_metrics[job]["reward"].append(reward)

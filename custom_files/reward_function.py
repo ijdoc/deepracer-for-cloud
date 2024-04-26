@@ -3,12 +3,13 @@ import time
 
 CONFIG = {
     "track": "dubai_open_ccw",
-    "reward_type": 2,
+    "reward_type": 6,
     "waypoint_count": 138,
     "difficulty": {
-        "look-ahead": 0,
-        "max": 0.5466957475920301,
-        "min": 0.00011722494281351734,
+        "skip-ahead": 0,
+        "look-ahead": 5,
+        "max": 2.225092993796437,
+        "min": 0.00022620948126441428,
         "weighting": {"ymax": 1.0, "ymin": 0.0, "k": 30, "x0": 0.5},
     },
     "histogram": {
@@ -31,31 +32,29 @@ CONFIG = {
             -0.5316530778825277,
             -0.44179067575964787,
             -0.35192827363676804,
-            -0.26206587151388827,
-            -0.17220346939100845,
-            -0.08234106726812862,
-            0.007521334854751149,
-            0.09738373697763103,
-            0.1872461391005108,
-            0.27710854122339057,
-            0.36697094334627045,
-            0.4568333454691502,
-            0.5466957475920301,
+            -0.26206587151388816,
+            -0.17220346939100833,
+            -0.08234106726812851,
+            0.007521334854751371,
+            0.09738373697763114,
+            0.18724613910051102,
+            0.2771085412233909,
+            0.3669709433462707,
+            0.45683334546915055,
+            0.5466957475920303,
         ],
     },
     "step_reward": {"ymax": 1, "ymin": 0.0, "k": -0.05, "x0": 200},
-    "heading": {"delay": 0, "offset": 0.0},
-    "aggregated_factor": 0.5,
     "agent": {
         "steering_angle": {"high": 30.0, "low": -30.0},
-        "speed": {"high": 2.0, "low": 1.2},
+        "speed": {"high": 2.0, "low": 1.56},
     },
 }
 
 # Other globals
 LAST_PROGRESS = 0.0
-LAST_THROTTLE = 0.0
-LAST_STEERING = 0.0
+# LAST_THROTTLE = 0.0
+# LAST_STEERING = 0.0
 importance_factor = max(CONFIG["histogram"]["counts"]) / min(
     CONFIG["histogram"]["counts"]
 )
@@ -138,13 +137,17 @@ def sigmoid(x, k=3.9, x0=0.6, ymin=0.0, ymax=1.2):
     return ((ymax - ymin) / (1 + math.exp(-k * (x - x0)))) + ymin
 
 
-def get_waypoint_difficulty(i, waypoints, look_ahead=0, min_val=0.0, max_val=1.0):
+def get_waypoint_difficulty(
+    i, waypoints, skip_ahead=1, look_ahead=3, min_val=0.0, max_val=1.0
+):
     """
     Get difficulty at waypoint i, calculated as the normalized amount of direction change.
     """
     next_idx = i
-    aggregate_change = 0.0
-    for _ in range(look_ahead + 1):
+    for _ in range(skip_ahead):
+        next_idx = get_next_distinct_index(next_idx, waypoints)
+    aggregate_change = get_direction_change(next_idx, waypoints)
+    for _ in range(look_ahead):
         aggregate_change += get_direction_change(next_idx, waypoints)
         next_idx = get_next_distinct_index(next_idx, waypoints)
     difficulty = abs(aggregate_change)
@@ -164,23 +167,6 @@ def get_waypoint_importance(change, histogram):
     return histogram["weights"][j]  # when change is equal to the last edge
 
 
-def get_target_heading(i, waypoints, delay=0, offset=0.0):
-    """
-    Get heading at waypoint i (in radians)
-    """
-    for _ in range(delay):
-        i = get_prev_distinct_index(i, waypoints)
-    direction = get_direction(i, waypoints)
-    change, difficulty = get_waypoint_difficulty(
-        i,
-        waypoints,
-        look_ahead=CONFIG["difficulty"]["look-ahead"],
-        min_val=CONFIG["difficulty"]["min"],
-        max_val=CONFIG["difficulty"]["max"],
-    )
-    return direction + (change * offset)
-
-
 def subtract_angles_rad(a, b):
     diff = a - b
     return math.atan2(math.sin(diff), math.cos(diff))
@@ -188,36 +174,36 @@ def subtract_angles_rad(a, b):
 
 def reward_function(params):
     global LAST_PROGRESS
-    global LAST_THROTTLE
-    global LAST_STEERING
+    # global LAST_THROTTLE
+    # global LAST_STEERING
 
     this_waypoint = params["closest_waypoints"][0]
 
     if params["steps"] <= 2:
         # Reset progress at the beginning of the episode
         LAST_PROGRESS = 0.0
-        LAST_THROTTLE = 0.0
-        LAST_STEERING = 0.0
+        # LAST_THROTTLE = 0.0
+        # LAST_STEERING = 0.0
 
     # Get the step progress
     step_progress = params["progress"] - LAST_PROGRESS
     LAST_PROGRESS = params["progress"]
 
     # Get the action change
-    agent_change = (
-        abs(params["steering_angle"] - LAST_STEERING)
-        / (
-            CONFIG["agent"]["steering_angle"]["high"]
-            - CONFIG["agent"]["steering_angle"]["low"]
-        )
-        + abs(params["speed"] - LAST_THROTTLE)
-        / (CONFIG["agent"]["speed"]["high"] - CONFIG["agent"]["speed"]["low"])
-    ) / 2.0
-    LAST_STEERING = params["steering_angle"]
-    LAST_THROTTLE = params["speed"]
+    # agent_change = (
+    #     abs(params["steering_angle"] - LAST_STEERING)
+    #     / (
+    #         CONFIG["agent"]["steering_angle"]["high"]
+    #         - CONFIG["agent"]["steering_angle"]["low"]
+    #     )
+    #     + abs(params["speed"] - LAST_THROTTLE)
+    #     / (CONFIG["agent"]["speed"]["high"] - CONFIG["agent"]["speed"]["low"])
+    # ) / 2.0
+    # LAST_STEERING = params["steering_angle"]
+    # LAST_THROTTLE = params["speed"]
 
     # Smoothness ranges from -1 to 1, where 1 is the smoothest
-    smoothness = 2.0 * (0.5 - agent_change)
+    # smoothness = 2.0 * (0.5 - agent_change)
 
     if step_progress == 0.0:
         projected_steps = 10000.0
@@ -248,10 +234,20 @@ def reward_function(params):
     _, difficulty = get_waypoint_difficulty(
         this_waypoint,
         params["waypoints"],
+        skip_ahead=CONFIG["difficulty"]["skip-ahead"],
         look_ahead=CONFIG["difficulty"]["look-ahead"],
         max_val=CONFIG["difficulty"]["max"],
         min_val=CONFIG["difficulty"]["min"],
     )
+
+    # Calculate difficulty-weighted target throttle and associated factor
+    throttle_range = CONFIG["agent"]["speed"]["high"] - CONFIG["agent"]["speed"]["low"]
+    target_throttle = (difficulty * throttle_range) + CONFIG["agent"]["speed"]["low"]
+    throttle_diff = abs(target_throttle - params["speed"])
+    # Trottle_factor ranges from -1 to 1, where 1 is given to the target throttle
+    throttle_factor = (2.0 * (1.0 - (throttle_diff / throttle_range))) - 1.0
+
+    # Calculate weighted difficulty
     weighted_difficulty = sigmoid(
         difficulty,
         k=CONFIG["difficulty"]["weighting"]["k"],
@@ -259,46 +255,52 @@ def reward_function(params):
         ymin=CONFIG["difficulty"]["weighting"]["ymin"],
         ymax=CONFIG["difficulty"]["weighting"]["ymax"],
     )
-    heading = get_target_heading(
-        this_waypoint,
-        params["waypoints"],
-        delay=CONFIG["heading"]["delay"],
-        offset=CONFIG["heading"]["offset"],
-    )
-    heading_diff = abs(subtract_angles_rad(heading, math.radians(params["heading"])))
-    heading_reward = math.cos(heading_diff) * CONFIG["step_reward"]["ymax"] / 2.0
+
+    # Calculate importance weight
     importance = get_waypoint_importance(
         get_direction_change(this_waypoint, params["waypoints"]), CONFIG["histogram"]
     )
     importance_weight = 1.0 + (importance * (importance_factor - 1.0))
-    aggregated_reward = (heading_reward * importance) + (
-        step_reward * (1.0 - importance)
-    )
-    aggregated_importance_fraction = CONFIG["aggregated_factor"]
 
     reward_type = CONFIG["reward_type"]
 
-    if reward_type == 0 or reward_type == 1:
-        # Both smoothness and step_ can't be negative
-        if step_reward < 0.0 and smoothness < 0.0:
-            smoothness = -smoothness
-    if reward_type == 3 or reward_type == 4:
-        # Both smoothness and step_ can't be negative
-        if step_progress < 0.0 and smoothness < 0.0:
-            smoothness = -smoothness
+    # if reward_type == 0 or reward_type == 1:
+    #     # Both smoothness and step_* can't be negative
+    #     if step_reward < 0.0 and smoothness < 0.0:
+    #         smoothness = -smoothness
+    # if reward_type == 3 or reward_type == 4:
+    #     # Both smoothness and step_* can't be negative
+    #     if step_progress < 0.0 and smoothness < 0.0:
+    #         smoothness = -smoothness
+    if reward_type == 6 or reward_type == 7:
+        # Both throttle_factor and step_* can't be negative
+        if step_reward < 0.0 and throttle_factor < 0.0:
+            throttle_factor = -throttle_factor
+    if reward_type == 8 or reward_type == 9:
+        # Both throttle_factor and step_* can't be negative
+        if step_progress < 0.0 and throttle_factor < 0.0:
+            throttle_factor = -throttle_factor
 
-    if reward_type == 0:
-        reward = float(importance_weight * (smoothness * step_reward))
-    if reward_type == 1:
-        reward = float(smoothness * step_reward)
+    # if reward_type == 0:
+    #     reward = float(importance_weight * (smoothness * step_reward))
+    # if reward_type == 1:
+    #     reward = float(smoothness * step_reward)
     if reward_type == 2:
         reward = float(importance_weight * step_reward)
-    if reward_type == 3:
-        reward = float(importance_weight * (smoothness * step_progress))
-    if reward_type == 4:
-        reward = float(smoothness * step_progress)
+    # if reward_type == 3:
+    #     reward = float(importance_weight * (smoothness * step_progress))
+    # if reward_type == 4:
+    #     reward = float(smoothness * step_progress)
     if reward_type == 5:
         reward = float(importance_weight * step_progress)
+    if reward_type == 6:
+        reward = float(importance_weight * step_reward * throttle_factor)
+    if reward_type == 7:
+        reward = float(step_reward * throttle_factor)
+    if reward_type == 8:
+        reward = float(importance_weight * step_progress * throttle_factor)
+    if reward_type == 9:
+        reward = float(step_progress * throttle_factor)
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:
@@ -306,7 +308,7 @@ def reward_function(params):
 
     # This trace is needed for train & test logging
     print(
-        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{step_reward},{heading_reward},{LAST_THROTTLE},{LAST_STEERING},{agent_change},{reward},{is_finished}"
+        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{step_reward},{reward},{is_finished}"
     )
 
     return reward

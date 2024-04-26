@@ -2,7 +2,6 @@ import os
 import argparse
 import numpy as np
 from custom_files.reward_function import get_direction_change, get_waypoint_difficulty
-import wandb
 import libcst as cst
 from black import FileMode, format_str
 import json
@@ -23,9 +22,6 @@ difficulty_weighting = {
     "x0": 0.50,
 }
 
-aggregated_factor = 0.5
-
-
 class VariableTransformer(cst.CSTTransformer):
     def __init__(self, variable_name, new_value):
         self.variable_name = variable_name
@@ -44,9 +40,6 @@ class VariableTransformer(cst.CSTTransformer):
 
 def main(args):
 
-    if not args.debug:
-        wandb.init(entity="iamjdoc", project="dr-reborn", job_type="update_reward")
-
     # Check if the track file exists
     if os.path.exists(f"{args.track}.npy"):
         npy_data = np.load(f"{args.track}.npy")
@@ -63,7 +56,7 @@ def main(args):
     difficulties = []
     for i in range(waypoint_count):
         change, difficulty = get_waypoint_difficulty(
-            i, waypoints, look_ahead=args.look_ahead
+            i, waypoints, skip_ahead=args.skip_ahead, look_ahead=args.look_ahead
         )
         changes.append(get_direction_change(i, waypoints))
         difficulties.append(difficulty)
@@ -83,6 +76,7 @@ def main(args):
         "reward_type": args.reward_type,
         "waypoint_count": len(waypoints),
         "difficulty": {
+            "skip-ahead": args.skip_ahead,
             "look-ahead": args.look_ahead,
             "max": max(difficulties),
             "min": min(difficulties),
@@ -94,8 +88,6 @@ def main(args):
             "edges": bin_edges.tolist(),
         },
         "step_reward": step_reward,
-        "heading": {"delay": args.delay, "offset": args.offset},
-        "aggregated_factor": aggregated_factor,
     }
 
     # Open the agent file for reading
@@ -109,7 +101,7 @@ def main(args):
     # Overwrite the agent speed values
     with open("custom_files/model_metadata.json", "w") as json_file:
         json.dump(model_dict, json_file, indent=4)
-    
+
     # Update agent params in reward_config
     reward_config["agent"] = model_dict["action_space"]
 
@@ -176,8 +168,15 @@ if __name__ == "__main__":
         type=float,
     )
     argparser.add_argument(
+        "--skip-ahead",
+        help="the number of waypoints to skip when calculating upcoming track difficulty. 0 means start from the current waypoint.",
+        default=1,
+        required=False,
+        type=int,
+    )
+    argparser.add_argument(
         "--look-ahead",
-        help="the number of waypoints used to calculate look-ahead metrics",
+        help="the number of waypoints to consider when calculating upcoming track difficulty. 0 means consider the current waypoint only.",
         default=0,
         required=False,
         type=int,
@@ -190,28 +189,10 @@ if __name__ == "__main__":
         type=int,
     )
     argparser.add_argument(
-        "--delay",
-        help="the number of waypoints used to delay heading calculation",
-        default=4,
-        required=False,
-        type=int,
-    )
-    argparser.add_argument(
-        "--offset",
-        help="the change factor used to calculate target heading",
-        default=1.0,
-        required=False,
-        type=float,
-    )
-    argparser.add_argument(
-        "--debug",
-        action="store_true",
-        help="debug only (do not log to W&B)",
-    )
-    argparser.add_argument(
         "--reward-type",
         help="the reward function to use",
         type=int,
+        required=True,
     )
 
     args = argparser.parse_args()
