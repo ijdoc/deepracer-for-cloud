@@ -1,15 +1,49 @@
 import math
 import time
 
+
+class CircularBuffer:
+    def __init__(self, size):
+        self.size = size
+        self.buffer = [0.0] * size  # Initialize buffer with zero
+        self.index = 0  # Start index
+
+    def add_value(self, value):
+        self.buffer[self.index] = value  # Set new value at the current index
+        self.index = (self.index + 1) % self.size  # Update index circularly
+
+    def get_values(self):
+        return self.buffer
+
+    def get_mean(self):
+        return sum(self.buffer) / len(self.buffer)
+
+    def __init__(self, size):
+        self.size = size
+        self.buffer = [0.0] * size  # Initialize buffer with zero
+        self.index = 0  # Start index
+
+    def add_value(self, value):
+        self.buffer[self.index] = value  # Set new value at the current index
+        self.index = (self.index + 1) % self.size  # Update index circularly
+
+    def get_values(self):
+        return self.buffer
+
+    def get_mean(self):
+        return sum(valid_values) / len(valid_values)
+
+
+# Globals
 CONFIG = {
     "track": "dubai_open_ccw",
-    "reward_type": 6,
+    "reward_type": 8,
     "waypoint_count": 138,
     "difficulty": {
         "skip-ahead": 0,
         "look-ahead": 5,
         "max": 2.225092993796437,
-        "min": 0.00022620948126441428,
+        "min": 0.00022620948126441255,
         "weighting": {"ymax": 1.0, "ymin": 0.0, "k": 30, "x0": 0.5},
     },
     "histogram": {
@@ -32,29 +66,31 @@ CONFIG = {
             -0.5316530778825277,
             -0.44179067575964787,
             -0.35192827363676804,
-            -0.26206587151388816,
-            -0.17220346939100833,
-            -0.08234106726812851,
-            0.007521334854751371,
-            0.09738373697763114,
-            0.18724613910051102,
-            0.2771085412233909,
-            0.3669709433462707,
-            0.45683334546915055,
-            0.5466957475920303,
+            -0.26206587151388827,
+            -0.17220346939100845,
+            -0.08234106726812862,
+            0.007521334854751149,
+            0.09738373697763103,
+            0.1872461391005108,
+            0.27710854122339057,
+            0.36697094334627045,
+            0.4568333454691502,
+            0.5466957475920301,
         ],
     },
     "step_reward": {"ymax": 1, "ymin": 0.0, "k": -0.05, "x0": 200},
     "agent": {
         "steering_angle": {"high": 30.0, "low": -30.0},
-        "speed": {"high": 2.0, "low": 1.56},
+        "speed": {"high": 2.2, "low": 1.55},
     },
 }
-
-# Other globals
 LAST_PROGRESS = 0.0
+PROGRESS_BUFFER = None
 # LAST_THROTTLE = 0.0
 # LAST_STEERING = 0.0
+
+# Values we don't want to keep recalculating
+throttle_range = CONFIG["agent"]["speed"]["high"] - CONFIG["agent"]["speed"]["low"]
 importance_factor = max(CONFIG["histogram"]["counts"]) / min(
     CONFIG["histogram"]["counts"]
 )
@@ -174,6 +210,7 @@ def subtract_angles_rad(a, b):
 
 def reward_function(params):
     global LAST_PROGRESS
+    global PROGRESS_BUFFER
     # global LAST_THROTTLE
     # global LAST_STEERING
 
@@ -182,11 +219,14 @@ def reward_function(params):
     if params["steps"] <= 2:
         # Reset progress at the beginning of the episode
         LAST_PROGRESS = 0.0
+        PROGRESS_BUFFER = CircularBuffer(CONFIG["difficulty"]["look-ahead"])
         # LAST_THROTTLE = 0.0
         # LAST_STEERING = 0.0
 
     # Get the step progress
     step_progress = params["progress"] - LAST_PROGRESS
+    PROGRESS_BUFFER.add_value(step_progress)
+    mean_progress = PROGRESS_BUFFER.get_mean()
     LAST_PROGRESS = params["progress"]
 
     # Get the action change
@@ -231,6 +271,27 @@ def reward_function(params):
             ymax=CONFIG["step_reward"]["ymax"],
         )
 
+    if mean_progress >= 0.0:
+        # We reward projected_steps based on each step's progress.
+        # The sigmoid saturates the reward to a maximum value below the
+        # projected_steps.
+        mean_progress_reward = sigmoid(
+            projected_steps,
+            k=CONFIG["step_reward"]["k"],
+            x0=CONFIG["step_reward"]["x0"],
+            ymin=CONFIG["step_reward"]["ymin"],
+            ymax=CONFIG["step_reward"]["ymax"],
+        )
+    else:
+        # We are going backwards
+        mean_progress_reward = -sigmoid(
+            -projected_steps,
+            k=CONFIG["step_reward"]["k"],
+            x0=CONFIG["step_reward"]["x0"],
+            ymin=CONFIG["step_reward"]["ymin"],
+            ymax=CONFIG["step_reward"]["ymax"],
+        )
+
     _, difficulty = get_waypoint_difficulty(
         this_waypoint,
         params["waypoints"],
@@ -241,7 +302,6 @@ def reward_function(params):
     )
 
     # Calculate difficulty-weighted target throttle and associated factor
-    throttle_range = CONFIG["agent"]["speed"]["high"] - CONFIG["agent"]["speed"]["low"]
     target_throttle = (difficulty * throttle_range) + CONFIG["agent"]["speed"]["low"]
     throttle_diff = abs(target_throttle - params["speed"])
     # Trottle_factor ranges from -1 to 1, where 1 is given to the target throttle
@@ -301,6 +361,8 @@ def reward_function(params):
         reward = float(importance_weight * step_progress * throttle_factor)
     if reward_type == 9:
         reward = float(step_progress * throttle_factor)
+    if reward_type == 10:
+        reward = float(importance_weight * mean_progress_reward)
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:
