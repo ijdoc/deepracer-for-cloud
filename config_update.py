@@ -55,7 +55,7 @@ def main(args):
     changes = []
     difficulties = []
     for i in range(waypoint_count):
-        change, difficulty = get_waypoint_difficulty(
+        change, _, difficulty = get_waypoint_difficulty(
             i, waypoints, skip_ahead=args.skip_ahead, look_ahead=args.look_ahead
         )
         changes.append(get_direction_change(i, waypoints))
