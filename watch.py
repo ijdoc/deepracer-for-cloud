@@ -13,7 +13,8 @@ from custom_files.reward_function import CONFIG
 
 # FIXME: Define from command line arguments in parent script?
 os.environ["WANDB_RUN_GROUP"] = "2404"
-GLOBAL_MIN_STEPS = 325.0
+GLOBAL_MIN_STEPS = 320.0
+MIN_ENTROPY = -1.0
 
 # Create ArgumentParser
 parser = argparse.ArgumentParser(description="Log testing metrics")
@@ -280,26 +281,22 @@ def process_line(line):
                         f'{timestamp} WARNING: Empty list. Skipped {metric} mean calculation for ckpt {checkpoint}'
                     )
 
-            # Progress component of combo metric
-            ckpt_metrics["test"]["combo"] = (ckpt_metrics["test"]["progress"] / 100.0)
-            if ckpt_metrics["test"]["combo"] == 1.0:
-                # Trial completed, continue with steps.
-                # Consider that higher entropy reduces likelihood of completion
-                projected_exits = ckpt_metrics["learn"]["entropy"] + 0.5
-                if projected_exits > 0.0:
-                    projected_steps = ckpt_metrics["test"]["steps"] + (
-                        projected_exits * 150.0 # Each exit costs 150 steps
-                    )
-                else:
-                    projected_steps = ckpt_metrics["test"]["steps"]
-                step_diff = projected_steps - 200.0  # Ideal steps for 100% progress
-                diff_baseline = 650.0
-                if step_diff > diff_baseline:
-                    steps_gain = 0.0
-                else:
-                    steps_gain = 1.0 - (step_diff / diff_baseline)
+            # Estimate projected exits based on entropy
+            projected_exits = ckpt_metrics["learn"]["entropy"] - MIN_ENTROPY
 
-                ckpt_metrics["test"]["combo"] += steps_gain
+            # Estimate projected lap time
+            if projected_exits > 0.0:
+                projected_lap_time = (
+                    ckpt_metrics["test"]["steps"]
+                    + (projected_exits * 150.0)  # Each exit costs 10s or 150 steps
+                ) / 15.0
+            else:
+                projected_lap_time = ckpt_metrics["test"]["steps"] / 15.0
+
+            # Divide progress by projected lap time
+            ckpt_metrics["test"]["combo"] = (
+                ckpt_metrics["test"]["progress"] / projected_lap_time
+            )
 
             # Update best metrics & summary
             if ckpt_metrics["test"]["combo"] > best_metrics["combo"]:
@@ -360,7 +357,7 @@ def process_line(line):
                 wandb.run.summary["test/combo"] = best_metrics["combo"]
                 wandb.run.summary["best_checkpoint"] = best_metrics["checkpoint"]
                 wandb.run.summary["learn/entropy"] = best_metrics["entropy"]
-            if ckpt_metrics["learn"]["entropy"] <= -0.75:
+            if ckpt_metrics["learn"]["entropy"] <= MIN_ENTROPY:
                 subprocess.run("./stop-training.sh", shell=True)
         # Resetting tracker variables
         iter_metrics = reset_iter_metrics()

@@ -22,13 +22,13 @@ class CircularBuffer:
 # Globals
 CONFIG = {
     "track": "dubai_open_ccw",
-    "reward_type": 22,
+    "reward_type": 5,
     "waypoint_count": 138,
     "difficulty": {
         "skip-ahead": 0,
-        "look-ahead": 10,
-        "max": 2.8200971604536624,
-        "min": 0.0003228689556401792,
+        "look-ahead": 0,
+        "max": 0.5466957475920301,
+        "min": 0.00011722494281351734,
         "weighting": {"ymax": 1.0, "ymin": 0.0, "k": 30, "x0": 0.5},
     },
     "histogram": {
@@ -66,7 +66,7 @@ CONFIG = {
     "step_reward": {"ymax": 1, "ymin": 0.0, "k": -0.05, "x0": 200},
     "agent": {
         "steering_angle": {"high": 30.0, "low": -30.0},
-        "speed": {"high": 2.2, "low": 1.5},
+        "speed": {"high": 2.4, "low": 1.2},
     },
 }
 LAST_PROGRESS = 0.0
