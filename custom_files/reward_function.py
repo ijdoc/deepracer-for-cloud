@@ -71,6 +71,7 @@ CONFIG = {
 }
 LAST_PROGRESS = 0.0
 PROGRESS_BUFFER = None
+SMOOTHNESS_BUFFER = None
 LAST_THROTTLE = 0.0
 LAST_STEERING = 0.0
 
@@ -194,6 +195,7 @@ def subtract_angles_rad(a, b):
 def reward_function(params):
     global LAST_PROGRESS
     global PROGRESS_BUFFER
+    global SMOOTHNESS_BUFFER
     global LAST_THROTTLE
     global LAST_STEERING
 
@@ -203,6 +205,7 @@ def reward_function(params):
         # Reset progress at the beginning of the episode
         LAST_PROGRESS = 0.0
         PROGRESS_BUFFER = CircularBuffer(CONFIG["difficulty"]["look-ahead"])
+        SMOOTHNESS_BUFFER = CircularBuffer(CONFIG["difficulty"]["look-ahead"])
         LAST_THROTTLE = 0.0
         LAST_STEERING = 0.0
 
@@ -227,6 +230,8 @@ def reward_function(params):
 
     # Smoothness ranges from -1 to 1, where 1 is the smoothest
     smoothness = 2.0 * (0.5 - agent_change)
+    SMOOTHNESS_BUFFER.add_value(smoothness)
+    mean_smoothness = SMOOTHNESS_BUFFER.get_mean()
 
     if step_progress == 0.0:
         projected_steps = 10000.0
@@ -321,6 +326,8 @@ def reward_function(params):
         # Everything else should be positive
         if smoothness < 0.0:
             smoothness = -smoothness
+        if mean_smoothness < 0.0:
+            mean_smoothness = -mean_smoothness
         if throttle_factor < 0.0:
             throttle_factor = -throttle_factor
 
@@ -352,6 +359,8 @@ def reward_function(params):
         reward = float(mean_progress * novelty_weight * smoothness)
     if reward_type == 23:
         reward = float(mean_progress * novelty_weight * throttle_factor)
+    if reward_type == 24:
+        reward = float(mean_progress * novelty_weight * mean_smoothness)
     if reward_type == 30:
         reward = float(step_progress)
     if reward_type == 31:
