@@ -82,13 +82,13 @@ def main(args):
             max_val=CONFIG["difficulty"]["max"],
             min_val=CONFIG["difficulty"]["min"],
         )
-        weighted_difficulty = sigmoid(
-            difficulty,
-            k=CONFIG["difficulty"]["weighting"]["k"],
-            x0=CONFIG["difficulty"]["weighting"]["x0"],
-            ymin=CONFIG["difficulty"]["weighting"]["ymin"],
-            ymax=CONFIG["difficulty"]["weighting"]["ymax"],
-        )
+        # weighted_difficulty = sigmoid(
+        #     difficulty,
+        #     k=CONFIG["difficulty"]["weighting"]["k"],
+        #     x0=CONFIG["difficulty"]["weighting"]["x0"],
+        #     ymin=CONFIG["difficulty"]["weighting"]["ymin"],
+        #     ymax=CONFIG["difficulty"]["weighting"]["ymax"],
+        # )
         importance = get_waypoint_importance(
             get_direction_change(i, waypoints),
             CONFIG["histogram"],
