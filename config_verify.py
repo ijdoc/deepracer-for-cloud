@@ -32,21 +32,21 @@ def plot_index(line, axs):
 
 def main(args):
 
-    step_reward = CONFIG["step_reward"]
+    # step_reward = CONFIG["step_reward"]
     projected_steps = [i for i in range(100, 501, 10)]
-    step_reward_plot = [
-        sigmoid(
-            i,
-            k=step_reward["k"],
-            x0=step_reward["x0"],
-            ymin=step_reward["ymin"],
-            ymax=step_reward["ymax"],
-        )
-        for i in projected_steps
-    ]
-    aggregated_reward = [
-        projected_steps[i] * step_reward_plot[i] for i in range(len(projected_steps))
-    ]
+    # step_reward_plot = [
+    #     sigmoid(
+    #         i,
+    #         k=step_reward["k"],
+    #         x0=step_reward["x0"],
+    #         ymin=step_reward["ymin"],
+    #         ymax=step_reward["ymax"],
+    #     )
+    #     for i in projected_steps
+    # ]
+    # aggregated_reward = [
+    #     projected_steps[i] * step_reward_plot[i] for i in range(len(projected_steps))
+    # ]
 
     fig, axs = plt.subplots(2, 2, figsize=(10, 10))
 
@@ -127,7 +127,7 @@ def main(args):
         )
         axs[1, 1].cla()
         axs[1, 1].grid(True)
-        axs[1, 1].plot(projected_steps, step_reward_plot, linestyle="-", color="black")
+        # axs[1, 1].plot(projected_steps, step_reward_plot, linestyle="-", color="black")
         axs[1, 1].plot(projected_steps, aggregated_reward, linestyle="-", color="red")
 
     axs[0, 0].set_title(

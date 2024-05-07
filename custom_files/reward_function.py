@@ -21,52 +21,51 @@ class CircularBuffer:
 
 # Globals
 CONFIG = {
-    "track": "dubai_open_ccw",
-    "reward_type": 24,
-    "waypoint_count": 138,
-    "difficulty": {
-        "skip-ahead": 0,
-        "look-ahead": 6,
-        "max": 2.2910734340629073,
-        "min": 0.000269512823309887,
-        "weighting": {"ymax": 1.0, "ymin": 0.0, "k": 30, "x0": 0.5},
-    },
+    "track": "Albert",
+    "reward_type": 6,
+    "waypoint_count": 344,
+    "aggregate": 15,
     "histogram": {
-        "counts": [3, 3, 3, 2, 4, 63, 19, 14, 11, 7, 7, 2],
+        "counts": [3, 5, 18, 29, 38, 49, 54, 59, 31, 30, 15, 13],
         "weights": [
-            0.6557,
-            0.6557,
-            0.6557,
             1.0,
-            0.4836,
+            0.5786,
+            0.122,
+            0.0554,
+            0.0296,
+            0.0109,
+            0.005,
             0.0,
-            0.0759,
-            0.1148,
-            0.155,
-            0.2623,
-            0.2623,
-            1.0,
+            0.0484,
+            0.0518,
+            0.1571,
+            0.1896,
         ],
         "edges": [
-            -0.5316530778825277,
-            -0.44179067575964787,
-            -0.35192827363676804,
-            -0.26206587151388827,
-            -0.17220346939100845,
-            -0.08234106726812862,
-            0.007521334854751149,
-            0.09738373697763103,
-            0.1872461391005108,
-            0.27710854122339057,
-            0.36697094334627045,
-            0.4568333454691502,
-            0.5466957475920301,
+            -0.1818631112092999,
+            -0.1567841240486577,
+            -0.1317051368880155,
+            -0.1066261497273733,
+            -0.0815471625667311,
+            -0.056468175406088894,
+            -0.0313891882454467,
+            -0.006310201084804484,
+            0.018768786075837707,
+            0.0438477732364799,
+            0.06892676039712212,
+            0.09400574755776434,
+            0.11908473471840651,
         ],
     },
-    "step_reward": {"ymax": 1, "ymin": 0.0, "k": -0.05, "x0": 200},
+    "difficulty": {
+        "skip-ahead": 0,
+        "look-ahead": 5,
+        "max": 0.9612126837475136,
+        "min": 0.001130939116824159,
+    },
     "agent": {
         "steering_angle": {"high": 30.0, "low": -30.0},
-        "speed": {"high": 2.3, "low": 1.5},
+        "speed": {"high": 1.41, "low": 1.39},
     },
 }
 LAST_PROGRESS = 0.0
@@ -327,7 +326,7 @@ def reward_function(params):
 
     # This trace is needed for train & test logging
     print(
-        f"MY_TRACE_LOG:{params['steps']},{this_waypoint},{params['progress']},{step_reward},{reward},{is_finished}"
+        f'MY_TRACE_LOG:{params["steps"]},{this_waypoint},{params["progress"]},{mean_progress},{params["speed"]},{params["steering_angle"]},{reward},{is_finished}'
     )
 
     return reward

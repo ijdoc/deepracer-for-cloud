@@ -54,19 +54,21 @@ def reset_iter_metrics():
     }
 
 
-# def reset_tables():
-#     columns = [
-#         "episode",
-#         "step",
-#         "waypoint",
-#         "progress",
-#         "step_reward",
-#         "reward",
-#     ]
-#     return {
-#         "test": wandb.Table(columns=columns),
-#         "train": wandb.Table(columns=columns),
-#     }
+def reset_tables():
+    columns = [
+        "episode",
+        "step",
+        "waypoint",
+        "progress",
+        "_progress",
+        "speed",
+        "steer",
+        "reward",
+    ]
+    return {
+        "test": wandb.Table(columns=columns),
+        "train": wandb.Table(columns=columns),
+    }
 
 
 ckpt_metrics = {
@@ -127,7 +129,7 @@ with open("./custom_files/model_metadata.json", "r") as json_file:
     config_dict["m"] = logged_dict
 
 logged_dict = {}
-logged_dict["step"] = CONFIG["step_reward"]
+# logged_dict["step"] = CONFIG["step_reward"]
 logged_dict["difficulty_weighting"] = CONFIG["difficulty"]["weighting"]
 config_dict["r"] = logged_dict
 config_dict["reward-type"] = CONFIG["reward_type"]
@@ -180,7 +182,7 @@ if not DEBUG:
     subprocess.run(f"git branch {wandb.run.name}", shell=True)
     subprocess.run(f"git push -u origin {wandb.run.name}", shell=True)
 
-    # tables = reset_tables()
+    tables = reset_tables()
 
 
 def get_float(string):
@@ -198,7 +200,7 @@ def process_line(line):
     global is_testing
     global best_metrics
     global checkpoint
-    # global tables
+    global tables
     global step_metrics
 
     timestamp = datetime.now()
@@ -207,21 +209,25 @@ def process_line(line):
         steps = int(float(parts[0]))
         waypoint = int(float(parts[1]))
         progress = float(parts[2])
-        step_reward = float(parts[3])
-        reward = float(parts[4])
-        is_finished = int(parts[5])
+        mean_progress = float(parts[3])
+        speed = float(parts[4])
+        steer = float(parts[5])
+        reward = float(parts[6])
+        is_finished = int(parts[7])
         job = "train"
         if is_testing:
             job = "test"
-        # if not DEBUG:
-        #     tables[job].add_data(
-        #         episode[job],
-        #         steps,
-        #         waypoint,
-        #         progress,
-        #         step_reward,
-        #         reward,
-        #     )
+        if not DEBUG:
+            tables[job].add_data(
+                episode[job],
+                steps,
+                waypoint,
+                progress,
+                mean_progress,
+                speed,
+                steer,
+                reward,
+            )
         step_metrics[job]["reward"].append(reward)
         if is_finished == 1:
             reward = np.sum(step_metrics[job]["reward"])
@@ -346,8 +352,8 @@ def process_line(line):
                         "test/steps": ckpt_metrics["test"]["steps"],
                         "test/progress": ckpt_metrics["test"]["progress"],
                         "test/combo": ckpt_metrics["test"]["combo"],
-                        # "train_trace": tables["train"],
-                        # "test_trace": tables["test"],
+                        "train_trace": tables["train"],
+                        "test_trace": tables["test"],
                     }
                 )
                 # Update test metrics summary
@@ -361,7 +367,7 @@ def process_line(line):
                 subprocess.run("./stop-training.sh", shell=True)
         # Resetting tracker variables
         iter_metrics = reset_iter_metrics()
-        # tables = reset_tables()
+        tables = reset_tables()
         is_testing = False
 
     elif "Starting evaluation phase" in line:

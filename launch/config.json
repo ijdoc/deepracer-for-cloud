@@ -7,7 +7,8 @@
             "--agent-speed-low=1.39",
             "--learning-rate=0.0002",
             "--skip-ahead=0",
-            "--look-ahead=5"
+            "--look-ahead=5",
+            "--aggregate=15"
         ]
     }
 }
