@@ -45,7 +45,7 @@ def main(args):
         # Open the file in read mode
         for line in run_file.readlines():
             if line.startswith("DR_WORLD_NAME="):
-                track_name = line.split("=")[1]
+                track_name = line.split("=")[1].strip()
                 break
 
     # Check if the track file exists
