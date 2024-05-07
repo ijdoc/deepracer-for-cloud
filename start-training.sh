@@ -13,6 +13,7 @@ agent_speed_low_value=1.2
 reward_type_value=5
 learning_rate_value=0.0002
 bin_count_value=12
+aggregate_value=15
 skip_ahead_value=0
 look_ahead_value=0
 pretrained_flag=0
@@ -52,6 +53,9 @@ while getopts ":h-:" opt; do
                 bin-count)
                     bin_count_value="$value" # Directly use the parsed value
                     ;;
+                aggregate)
+                    aggregate_value="$value" # Directly use the parsed value
+                    ;;
                 skip-ahead)
                     skip_ahead_value="$value" # Directly use the parsed value
                     ;;
@@ -80,6 +84,7 @@ config_options="$config_options --agent-speed-low $agent_speed_low_value"
 config_options="$config_options --learning-rate $learning_rate_value"
 config_options="$config_options --reward-type $reward_type_value"
 config_options="$config_options --bin-count $bin_count_value"
+config_options="$config_options --aggregate $aggregate_value"
 config_options="$config_options --skip-ahead $skip_ahead_value --look-ahead $look_ahead_value"
 
 debug_option="--debug"

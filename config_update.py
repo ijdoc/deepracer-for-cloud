@@ -8,19 +8,19 @@ import json
 from utils import reward_config_utils as rcu
 
 # Cumulative max is ~141@161 steps in our case
-step_reward = {
-    "ymax": 1,
-    "ymin": 0.0,
-    "k": -0.05,
-    "x0": 200,
-}
+# step_reward = {
+#     "ymax": 1,
+#     "ymin": 0.0,
+#     "k": -0.05,
+#     "x0": 200,
+# }
 
-difficulty_weighting = {
-    "ymax": 1.0,
-    "ymin": 0.0,
-    "k": 30,
-    "x0": 0.50,
-}
+# difficulty_weighting = {
+#     "ymax": 1.0,
+#     "ymin": 0.0,
+#     "k": 30,
+#     "x0": 0.50,
+# }
 
 class VariableTransformer(cst.CSTTransformer):
     def __init__(self, variable_name, new_value):
@@ -75,19 +75,20 @@ def main(args):
         "track": args.track,
         "reward_type": args.reward_type,
         "waypoint_count": len(waypoints),
-        "difficulty": {
-            "skip-ahead": args.skip_ahead,
-            "look-ahead": args.look_ahead,
-            "max": max(difficulties),
-            "min": min(difficulties),
-            "weighting": difficulty_weighting,
-        },
+        "aggregate": args.aggregate,
         "histogram": {
             "counts": counts.tolist(),
             "weights": factors,
             "edges": bin_edges.tolist(),
         },
-        "step_reward": step_reward,
+        "difficulty": {
+            "skip-ahead": args.skip_ahead,
+            "look-ahead": args.look_ahead,
+            "max": max(difficulties),
+            "min": min(difficulties),
+            # "weighting": difficulty_weighting,
+        },
+        # "step_reward": step_reward,
     }
 
     # Open the agent file for reading
@@ -146,7 +147,7 @@ if __name__ == "__main__":
     argparser.add_argument(
         "--track",
         help="the track used to verify the reward function",
-        default="dubai_open_ccw",
+        default="Albert",
         required=False,
     )
     argparser.add_argument(
@@ -185,6 +186,13 @@ if __name__ == "__main__":
         "--bin-count",
         help="the number of bins to consider for learning importance histogram",
         default=12,
+        required=False,
+        type=int,
+    )
+    argparser.add_argument(
+        "--aggregate",
+        help="the number of steps to aggregate for the mean reward",
+        default=15,
         required=False,
         type=int,
     )

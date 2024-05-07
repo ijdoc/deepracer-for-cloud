@@ -74,7 +74,7 @@ def main(args):
     # Second pass to plot verifications
     for i in range(waypoint_count):
         direction = get_direction(i, waypoints)
-        dir_change, difficulty = get_waypoint_difficulty(
+        dir_change, _, difficulty = get_waypoint_difficulty(
             i,
             waypoints,
             skip_ahead=CONFIG["difficulty"]["skip-ahead"],

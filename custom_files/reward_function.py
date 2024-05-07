@@ -22,13 +22,13 @@ class CircularBuffer:
 # Globals
 CONFIG = {
     "track": "dubai_open_ccw",
-    "reward_type": 5,
+    "reward_type": 24,
     "waypoint_count": 138,
     "difficulty": {
         "skip-ahead": 0,
-        "look-ahead": 0,
-        "max": 0.5466957475920301,
-        "min": 0.00011722494281351734,
+        "look-ahead": 6,
+        "max": 2.2910734340629073,
+        "min": 0.000269512823309887,
         "weighting": {"ymax": 1.0, "ymin": 0.0, "k": 30, "x0": 0.5},
     },
     "histogram": {
@@ -66,7 +66,7 @@ CONFIG = {
     "step_reward": {"ymax": 1, "ymin": 0.0, "k": -0.05, "x0": 200},
     "agent": {
         "steering_angle": {"high": 30.0, "low": -30.0},
-        "speed": {"high": 2.4, "low": 1.2},
+        "speed": {"high": 2.3, "low": 1.5},
     },
 }
 LAST_PROGRESS = 0.0
@@ -175,7 +175,7 @@ def get_waypoint_difficulty(
     return aggregate_change, difficulty, normalized_difficulty
 
 
-def get_waypoint_novelty(change, histogram):
+def get_waypoint_importance(change, histogram):
     """
     Get waypoint weight based on how rare the direction change is in the entire track.
     This can be used to give more weight to waypoints that are less likely to occur during
@@ -193,25 +193,24 @@ def subtract_angles_rad(a, b):
 
 
 def reward_function(params):
+    global LAST_THROTTLE
+    global LAST_STEERING
     global LAST_PROGRESS
     global PROGRESS_BUFFER
     global SMOOTHNESS_BUFFER
-    global LAST_THROTTLE
-    global LAST_STEERING
 
     this_waypoint = params["closest_waypoints"][0]
 
     if params["steps"] <= 2:
         # Reset progress at the beginning of the episode
-        LAST_PROGRESS = 0.0
-        PROGRESS_BUFFER = CircularBuffer(CONFIG["difficulty"]["look-ahead"])
-        SMOOTHNESS_BUFFER = CircularBuffer(CONFIG["difficulty"]["look-ahead"])
         LAST_THROTTLE = 0.0
         LAST_STEERING = 0.0
+        LAST_PROGRESS = 0.0
+        PROGRESS_BUFFER = CircularBuffer(CONFIG["aggregate"])
+        SMOOTHNESS_BUFFER = CircularBuffer(CONFIG["aggregate"])
 
-    # Get the step progress
-    step_progress = params["progress"] - LAST_PROGRESS
-    PROGRESS_BUFFER.add_value(step_progress)
+    # Get the mean step progress
+    PROGRESS_BUFFER.add_value(params["progress"] - LAST_PROGRESS)
     mean_progress = PROGRESS_BUFFER.get_mean()
     LAST_PROGRESS = params["progress"]
 
@@ -228,57 +227,35 @@ def reward_function(params):
     LAST_STEERING = params["steering_angle"]
     LAST_THROTTLE = params["speed"]
 
-    # Smoothness ranges from -1 to 1, where 1 is the smoothest
-    smoothness = 2.0 * (0.5 - agent_change)
-    SMOOTHNESS_BUFFER.add_value(smoothness)
+    # Smoothness ranges from 1 to -1, where 1 is the smoothest
+    SMOOTHNESS_BUFFER.add_value(2.0 * (0.5 - agent_change))
     mean_smoothness = SMOOTHNESS_BUFFER.get_mean()
 
-    if step_progress == 0.0:
+    if mean_progress == 0.0:
         projected_steps = 10000.0
     else:
-        projected_steps = 100.0 / step_progress
+        projected_steps = 100.0 / mean_progress
 
-    if step_progress >= 0.0:
-        # We reward projected_steps based on each step's progress.
-        # The sigmoid saturates the reward to a maximum value below the
-        # projected_steps.
-        step_reward = sigmoid(
-            projected_steps,
-            k=CONFIG["step_reward"]["k"],
-            x0=CONFIG["step_reward"]["x0"],
-            ymin=CONFIG["step_reward"]["ymin"],
-            ymax=CONFIG["step_reward"]["ymax"],
-        )
-    else:
-        # We are going backwards
-        step_reward = -sigmoid(
-            -projected_steps,
-            k=CONFIG["step_reward"]["k"],
-            x0=CONFIG["step_reward"]["x0"],
-            ymin=CONFIG["step_reward"]["ymin"],
-            ymax=CONFIG["step_reward"]["ymax"],
-        )
-
-    if mean_progress >= 0.0:
-        # We reward projected_steps based on each step's progress.
-        # The sigmoid saturates the reward to a maximum value below the
-        # projected_steps.
-        mean_progress_reward = sigmoid(
-            projected_steps,
-            k=CONFIG["step_reward"]["k"],
-            x0=CONFIG["step_reward"]["x0"],
-            ymin=CONFIG["step_reward"]["ymin"],
-            ymax=CONFIG["step_reward"]["ymax"],
-        )
-    else:
-        # We are going backwards
-        mean_progress_reward = -sigmoid(
-            -projected_steps,
-            k=CONFIG["step_reward"]["k"],
-            x0=CONFIG["step_reward"]["x0"],
-            ymin=CONFIG["step_reward"]["ymin"],
-            ymax=CONFIG["step_reward"]["ymax"],
-        )
+    # if mean_progress >= 0.0:
+    #     # We reward projected_steps based on each step's progress.
+    #     # The sigmoid saturates the reward to a maximum value below the
+    #     # projected_steps.
+    #     mean_progress_reward = sigmoid(
+    #         projected_steps,
+    #         k=CONFIG["step_reward"]["k"],
+    #         x0=CONFIG["step_reward"]["x0"],
+    #         ymin=CONFIG["step_reward"]["ymin"],
+    #         ymax=CONFIG["step_reward"]["ymax"],
+    #     )
+    # else:
+    #     # We are going backwards
+    #     mean_progress_reward = -sigmoid(
+    #         -projected_steps,
+    #         k=CONFIG["step_reward"]["k"],
+    #         x0=CONFIG["step_reward"]["x0"],
+    #         ymin=CONFIG["step_reward"]["ymin"],
+    #         ymax=CONFIG["step_reward"]["ymax"],
+    #     )
 
     _, difficulty, norm_difficulty = get_waypoint_difficulty(
         this_waypoint,
@@ -294,7 +271,7 @@ def reward_function(params):
         "low"
     ]
     throttle_diff = abs(target_throttle - params["speed"])
-    # Trottle_factor ranges from -1 to 1, where 1 is given to the target throttle
+    # Trottle_factor ranges from 1 to -1, where 1 is given to the target throttle
     throttle_factor = (2.0 * (1.0 - (throttle_diff / throttle_range))) - 1.0
 
     # Calculate weighted difficulty
@@ -307,72 +284,42 @@ def reward_function(params):
     # )
 
     # Calculate novelty weight
-    novelty = get_waypoint_novelty(
+    novelty = get_waypoint_importance(
         get_direction_change(this_waypoint, params["waypoints"]), CONFIG["histogram"]
     )
     novelty_weight = 1.0 + (novelty * (novelty_factor - 1.0))
 
     reward_type = CONFIG["reward_type"]
 
-    if reward_type >= 0 and reward_type < 10:
-        base_reward = step_reward
-    elif reward_type >= 10 and reward_type < 20:
-        base_reward = mean_progress_reward
-    elif reward_type >= 20 and reward_type < 30:
+    if reward_type >= 0 and reward_type < 20:
         base_reward = mean_progress
-    elif reward_type >= 30 and reward_type < 40:
-        base_reward = step_progress
+    # elif reward_type >= 20 and reward_type < 40:
+    #     base_reward = mean_progress_reward
     if base_reward < 0.0:
         # Everything else should be positive
-        if smoothness < 0.0:
-            smoothness = -smoothness
         if mean_smoothness < 0.0:
             mean_smoothness = -mean_smoothness
         if throttle_factor < 0.0:
             throttle_factor = -throttle_factor
 
     if reward_type == 0:
-        reward = float(step_reward)
+        reward = float(
+            novelty_weight * (mean_progress * (throttle_factor + mean_smoothness))
+        )
     if reward_type == 1:
-        reward = float(step_reward * novelty_weight)
+        reward = float(novelty_weight * mean_progress * mean_smoothness)
     if reward_type == 2:
-        reward = float(step_reward * novelty_weight * smoothness)
+        reward = float(novelty_weight * mean_progress * throttle_factor)
     if reward_type == 3:
-        reward = float(step_reward * novelty_weight * throttle_factor)
-    if reward_type == 8:
-        reward = float(step_reward * smoothness)
-    if reward_type == 9:
-        reward = float(step_reward * throttle_factor)
-    if reward_type == 10:
-        reward = float(mean_progress_reward)
-    if reward_type == 11:
-        reward = float(mean_progress_reward * novelty_weight)
-    if reward_type == 12:
-        reward = float(mean_progress_reward * novelty_weight * smoothness)
-    if reward_type == 13:
-        reward = float(mean_progress_reward * novelty_weight * throttle_factor)
-    if reward_type == 20:
+        reward = float(novelty_weight * mean_progress)
+    if reward_type == 4:
+        reward = float(mean_progress * (throttle_factor + mean_smoothness))
+    if reward_type == 5:
+        reward = float(mean_progress * mean_smoothness)
+    if reward_type == 6:
+        reward = float(mean_progress * throttle_factor)
+    if reward_type == 7:
         reward = float(mean_progress)
-    if reward_type == 21:
-        reward = float(mean_progress * novelty_weight)
-    if reward_type == 22:
-        reward = float(mean_progress * novelty_weight * smoothness)
-    if reward_type == 23:
-        reward = float(mean_progress * novelty_weight * throttle_factor)
-    if reward_type == 24:
-        reward = float(mean_progress * novelty_weight * mean_smoothness)
-    if reward_type == 30:
-        reward = float(step_progress)
-    if reward_type == 31:
-        reward = float(step_progress * novelty_weight)
-    if reward_type == 32:
-        reward = float(step_progress * novelty_weight * smoothness)
-    if reward_type == 33:
-        reward = float(step_progress * novelty_weight * throttle_factor)
-    if reward_type == 38:
-        reward = float(step_progress * smoothness)
-    if reward_type == 39:
-        reward = float(step_progress * throttle_factor)
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:
