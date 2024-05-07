@@ -136,15 +136,8 @@ config_dict["reward-type"] = CONFIG["reward_type"]
 config_dict["bin-count"] = len(CONFIG["histogram"]["counts"])
 config_dict["skip-ahead"] = CONFIG["difficulty"]["skip-ahead"]
 config_dict["look-ahead"] = CONFIG["difficulty"]["look-ahead"]
+config_dict["world_name"] = CONFIG["track"]
 
-
-# Open env file for reading
-with open("./run.env", "r") as run_file:
-    # Open the file in read mode
-    for line in run_file.readlines():
-        if line.startswith("DR_WORLD_NAME="):
-            config_dict["world_name"] = line.split("=")[1]
-            break
 
 # Start training job
 if not DEBUG:

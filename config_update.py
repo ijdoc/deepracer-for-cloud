@@ -40,12 +40,20 @@ class VariableTransformer(cst.CSTTransformer):
 
 def main(args):
 
+    # Open env file for reading
+    with open("./run.env", "r") as run_file:
+        # Open the file in read mode
+        for line in run_file.readlines():
+            if line.startswith("DR_WORLD_NAME="):
+                track_name = line.split("=")[1]
+                break
+
     # Check if the track file exists
-    if os.path.exists(f"{args.track}.npy"):
-        npy_data = np.load(f"{args.track}.npy")
+    if os.path.exists(f"{track_name}.npy"):
+        npy_data = np.load(f"{track_name}.npy")
     else:
         # Download the track
-        npy_data = rcu.download(args.track)
+        npy_data = rcu.download(track_name)
 
     waypoint_count = npy_data.shape[0]
     waypoints = list([tuple(sublist[0:2]) for sublist in npy_data])
@@ -72,7 +80,7 @@ def main(args):
     f_max = max(factors)
     factors = [round((num - f_min) / (f_max - f_min), 4) for num in factors.tolist()]
     reward_config = {
-        "track": args.track,
+        "track": track_name,
         "reward_type": args.reward_type,
         "waypoint_count": len(waypoints),
         "aggregate": args.aggregate,
@@ -144,12 +152,6 @@ def main(args):
 
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser()
-    argparser.add_argument(
-        "--track",
-        help="the track used to verify the reward function",
-        default="Albert",
-        required=False,
-    )
     argparser.add_argument(
         "--agent-speed-high",
         help="the maximum speed of the agent",
