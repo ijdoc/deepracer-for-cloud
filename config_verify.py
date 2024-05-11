@@ -6,7 +6,7 @@ from custom_files.reward_function import (
     sigmoid,
     get_waypoint_difficulty,
     get_direction,
-    get_waypoint_importance,
+    get_histogram_value,
     get_direction_change,
     get_next_distinct_index,
 )
@@ -73,7 +73,7 @@ def main(args):
     # Second pass to plot verifications
     for i in range(waypoint_count):
         direction = get_direction(i, waypoints)
-        dir_change, _, difficulty = get_waypoint_difficulty(
+        dir_change, difficulty, norm_difficulty = get_waypoint_difficulty(
             i,
             waypoints,
             skip_ahead=CONFIG["difficulty"]["skip-ahead"],
@@ -88,10 +88,16 @@ def main(args):
         #     ymin=CONFIG["difficulty"]["weighting"]["ymin"],
         #     ymax=CONFIG["difficulty"]["weighting"]["ymax"],
         # )
-        importance = get_waypoint_importance(
+        importance = get_histogram_value(
             get_direction_change(i, waypoints),
-            CONFIG["histogram"],
+            CONFIG["importance"],
         )
+        throttle = get_histogram_value(
+            difficulty,
+            CONFIG["difficulty"]["histogram"],
+        )
+        throttle -= CONFIG["agent"]["speed"]["low"]
+        throttle /= CONFIG["agent"]["speed"]["high"] - CONFIG["agent"]["speed"]["low"]
 
         # Define the vertices of the polygon, (x, y) pairs
         next_waypoint = get_next_distinct_index(i, waypoints)
@@ -103,9 +109,9 @@ def main(args):
         ]
 
         color = "red"
-        if difficulty < 0.5:
+        if norm_difficulty < 0.5:
             color = "green"
-        plot_difficulty = abs((difficulty * 2) - 1)
+        plot_difficulty = abs((norm_difficulty * 2) - 1)
         axs[0].add_patch(
             Polygon(
                 vertices,
@@ -115,12 +121,16 @@ def main(args):
                 linewidth=0,
             )
         )
+        color = "red"
+        if throttle > 0.5:
+            color = "green"
+        plot_throttle = abs((throttle * 2) - 1)
         axs[1].add_patch(
             Polygon(
                 vertices,
                 closed=True,
-                color="red",
-                alpha=importance,
+                color=color,
+                alpha=plot_throttle,
                 linewidth=0,
             )
         )
@@ -132,7 +142,7 @@ def main(args):
     axs[0].set_title(
         f"Normalized Difficulty (look_ahead={CONFIG['difficulty']['look-ahead']})"
     )
-    axs[1].set_title(f"Importance ({len(CONFIG['histogram']['counts'])} bins)")
+    axs[1].set_title(f"Throttle")
     # axs[1, 1].set_title(f"Aggregated Step Reward")
 
     plt.tight_layout()

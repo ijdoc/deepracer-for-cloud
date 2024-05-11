@@ -25,9 +25,9 @@ CONFIG = {
     "reward_type": 6,
     "waypoint_count": 344,
     "aggregate": 15,
-    "histogram": {
+    "importance": {
         "counts": [3, 5, 18, 29, 38, 49, 54, 59, 31, 30, 15, 13],
-        "weights": [
+        "values": [
             1.0,
             0.5786,
             0.122,
@@ -58,14 +58,24 @@ CONFIG = {
         ],
     },
     "difficulty": {
-        "skip-ahead": 0,
-        "look-ahead": 5,
-        "max": 0.9612126837475136,
-        "min": 0.001130939116824159,
+        "skip-ahead": 1,
+        "look-ahead": 4,
+        "max": 0.8426378525049475,
+        "min": 0.0014958053766309662,
+        "histogram": {
+            "counts": [217, 112, 15],
+            "edges": [
+                0.0014958053766309662,
+                0.2818764877527365,
+                0.562257170128842,
+                0.8426378525049475,
+            ],
+            "values": [3.2, 2.8361, 2.5],
+        },
     },
     "agent": {
         "steering_angle": {"high": 30.0, "low": -30.0},
-        "speed": {"high": 3.2, "low": 2.48},
+        "speed": {"high": 3.2, "low": 2.5},
     },
 }
 LAST_PROGRESS = 0.0
@@ -75,8 +85,10 @@ LAST_THROTTLE = 0.0
 LAST_STEERING = 0.0
 
 # Values we don't want to keep recalculating
-throttle_range = CONFIG["agent"]["speed"]["high"] - CONFIG["agent"]["speed"]["low"]
-novelty_factor = max(CONFIG["histogram"]["counts"]) / min(CONFIG["histogram"]["counts"])
+THROTTLE_RANGE = CONFIG["agent"]["speed"]["high"] - CONFIG["agent"]["speed"]["low"]
+IMPORTANCE_FACTOR = max(CONFIG["importance"]["counts"]) / min(
+    CONFIG["importance"]["counts"]
+)
 
 
 def get_next_distinct_index(i, waypoints):
@@ -174,16 +186,14 @@ def get_waypoint_difficulty(
     return aggregate_change, difficulty, normalized_difficulty
 
 
-def get_waypoint_importance(change, histogram):
+def get_histogram_value(input_val, histogram):
     """
-    Get waypoint weight based on how rare the direction change is in the entire track.
-    This can be used to give more weight to waypoints that are less likely to occur during
-    training, and therefore are more important to learn.
+    Get the target value associated to a given histogram.
     """
-    for j in range(len(histogram["weights"])):
-        if change >= histogram["edges"][j] and change < histogram["edges"][j + 1]:
-            return histogram["weights"][j]
-    return histogram["weights"][j]  # when change is equal to the last edge
+    for j in range(len(histogram["values"])):
+        if input_val >= histogram["edges"][j] and input_val < histogram["edges"][j + 1]:
+            return histogram["values"][j]
+    return histogram["values"][j]  # when input_val is >= the last edge
 
 
 def subtract_angles_rad(a, b):
@@ -266,12 +276,10 @@ def reward_function(params):
     )
 
     # Calculate difficulty-weighted target throttle and associated factor
-    target_throttle = (norm_difficulty * throttle_range) + CONFIG["agent"]["speed"][
-        "low"
-    ]
+    target_throttle = get_histogram_value(difficulty, CONFIG["difficulty"]["histogram"])
     throttle_diff = abs(target_throttle - params["speed"])
     # Trottle_factor ranges from 1 to -1, where 1 is given to the target throttle
-    throttle_factor = (2.0 * (1.0 - (throttle_diff / throttle_range))) - 1.0
+    throttle_factor = (2.0 * (1.0 - (throttle_diff / THROTTLE_RANGE))) - 1.0
 
     # Calculate weighted difficulty
     # weighted_difficulty = sigmoid(
@@ -282,11 +290,11 @@ def reward_function(params):
     #     ymax=CONFIG["difficulty"]["weighting"]["ymax"],
     # )
 
-    # Calculate novelty weight
-    novelty = get_waypoint_importance(
-        get_direction_change(this_waypoint, params["waypoints"]), CONFIG["histogram"]
+    # Calculate importance weight
+    importance = get_histogram_value(
+        get_direction_change(this_waypoint, params["waypoints"]), CONFIG["importance"]
     )
-    novelty_weight = 1.0 + (novelty * (novelty_factor - 1.0))
+    importance_weight = 1.0 + (importance * (IMPORTANCE_FACTOR - 1.0))
 
     reward_type = CONFIG["reward_type"]
 
@@ -303,14 +311,14 @@ def reward_function(params):
 
     if reward_type == 0:
         reward = float(
-            novelty_weight * (mean_progress * (throttle_factor + mean_smoothness))
+            importance_weight * (mean_progress * (throttle_factor + mean_smoothness))
         )
     if reward_type == 1:
-        reward = float(novelty_weight * mean_progress * mean_smoothness)
+        reward = float(importance_weight * mean_progress * mean_smoothness)
     if reward_type == 2:
-        reward = float(novelty_weight * mean_progress * throttle_factor)
+        reward = float(importance_weight * mean_progress * throttle_factor)
     if reward_type == 3:
-        reward = float(novelty_weight * mean_progress)
+        reward = float(importance_weight * mean_progress)
     if reward_type == 4:
         reward = float(mean_progress * (throttle_factor + mean_smoothness))
     if reward_type == 5:

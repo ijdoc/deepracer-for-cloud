@@ -22,6 +22,7 @@ from utils import reward_config_utils as rcu
 #     "x0": 0.50,
 # }
 
+
 class VariableTransformer(cst.CSTTransformer):
     def __init__(self, variable_name, new_value):
         self.variable_name = variable_name
@@ -63,31 +64,42 @@ def main(args):
     changes = []
     difficulties = []
     for i in range(waypoint_count):
-        change, _, difficulty = get_waypoint_difficulty(
+        change, difficulty, _ = get_waypoint_difficulty(
             i, waypoints, skip_ahead=args.skip_ahead, look_ahead=args.look_ahead
         )
         changes.append(get_direction_change(i, waypoints))
         difficulties.append(difficulty)
 
     # Obtain aggregate values/weights
-    counts, bin_edges = np.histogram(
+    c_counts, c_bin_edges = np.histogram(
         changes,
         bins=args.bin_count,
     )
-    factors = sum(counts) / counts
-    factors = factors / min(factors)
-    f_min = min(factors)
-    f_max = max(factors)
-    factors = [round((num - f_min) / (f_max - f_min), 4) for num in factors.tolist()]
+    c_vals = sum(c_counts) / c_counts
+    c_vals = c_vals / min(c_vals)
+    f_min = min(c_vals)
+    f_max = max(c_vals)
+    c_vals = [round((num - f_min) / (f_max - f_min), 4) for num in c_vals.tolist()]
+    d_counts, d_bin_edges = np.histogram(
+        difficulties,
+        bins=3,
+    )
+    f_min = min(d_counts)
+    f_max = max(d_counts)
+    d_diff = args.agent_speed_high - args.agent_speed_low
+    d_vals = [
+        round((((num - f_min) / (f_max - f_min)) * d_diff) + args.agent_speed_low, 4)
+        for num in d_counts.tolist()
+    ]
     reward_config = {
         "track": track_name,
         "reward_type": args.reward_type,
         "waypoint_count": len(waypoints),
         "aggregate": args.aggregate,
-        "histogram": {
-            "counts": counts.tolist(),
-            "weights": factors,
-            "edges": bin_edges.tolist(),
+        "importance": {
+            "counts": c_counts.tolist(),
+            "values": c_vals,
+            "edges": c_bin_edges.tolist(),
         },
         "difficulty": {
             "skip-ahead": args.skip_ahead,
@@ -95,6 +107,11 @@ def main(args):
             "max": max(difficulties),
             "min": min(difficulties),
             # "weighting": difficulty_weighting,
+            "histogram": {
+                "counts": d_counts.tolist(),
+                "edges": d_bin_edges.tolist(),
+                "values": d_vals,
+            },
         },
         # "step_reward": step_reward,
     }
