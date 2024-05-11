@@ -65,7 +65,7 @@ CONFIG = {
     },
     "agent": {
         "steering_angle": {"high": 30.0, "low": -30.0},
-        "speed": {"high": 1.41, "low": 1.39},
+        "speed": {"high": 3.2, "low": 2.48},
     },
 }
 LAST_PROGRESS = 0.0

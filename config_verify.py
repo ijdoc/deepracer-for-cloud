@@ -48,7 +48,7 @@ def main(args):
     #     projected_steps[i] * step_reward_plot[i] for i in range(len(projected_steps))
     # ]
 
-    fig, axs = plt.subplots(2, 2, figsize=(10, 10))
+    fig, axs = plt.subplots(1, 2, figsize=(10, 10))
 
     # Check if the track file exists
     if os.path.exists(f"{CONFIG['track']}.npy"):
@@ -63,13 +63,12 @@ def main(args):
     outer_line = list([tuple(sublist[4:6]) for sublist in npy_data])
 
     # Start the plots
-    for i in range(2):
-        for j in range(2):
-            plot_line(inner_line, axs[i, j])
-            plot_line(outer_line, axs[i, j])
-            plot_index(inner_line, axs[i, j])
-            plot_index(outer_line, axs[i, j])
-            axs[i, j].grid(True)
+    for j in range(2):
+        plot_line(inner_line, axs[j])
+        plot_line(outer_line, axs[j])
+        plot_index(inner_line, axs[j])
+        plot_index(outer_line, axs[j])
+        axs[j].grid(True)
 
     # Second pass to plot verifications
     for i in range(waypoint_count):
@@ -107,7 +106,7 @@ def main(args):
         if difficulty < 0.5:
             color = "green"
         plot_difficulty = abs((difficulty * 2) - 1)
-        axs[0, 0].add_patch(
+        axs[0].add_patch(
             Polygon(
                 vertices,
                 closed=True,
@@ -116,7 +115,7 @@ def main(args):
                 linewidth=0,
             )
         )
-        axs[0, 1].add_patch(
+        axs[1].add_patch(
             Polygon(
                 vertices,
                 closed=True,
@@ -125,16 +124,16 @@ def main(args):
                 linewidth=0,
             )
         )
-        axs[1, 1].cla()
-        axs[1, 1].grid(True)
+        # axs[1].cla()
+        # axs[1].grid(True)
         # axs[1, 1].plot(projected_steps, step_reward_plot, linestyle="-", color="black")
-        axs[1, 1].plot(projected_steps, aggregated_reward, linestyle="-", color="red")
+        # axs[1, 1].plot(projected_steps, aggregated_reward, linestyle="-", color="red")
 
-    axs[0, 0].set_title(
+    axs[0].set_title(
         f"Normalized Difficulty (look_ahead={CONFIG['difficulty']['look-ahead']})"
     )
-    axs[0, 1].set_title(f"Importance ({len(CONFIG['histogram']['counts'])} bins)")
-    axs[1, 1].set_title(f"Aggregated Step Reward")
+    axs[1].set_title(f"Importance ({len(CONFIG['histogram']['counts'])} bins)")
+    # axs[1, 1].set_title(f"Aggregated Step Reward")
 
     plt.tight_layout()
     plt.show()

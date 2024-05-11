@@ -13,8 +13,8 @@ from custom_files.reward_function import CONFIG
 
 # FIXME: Define from command line arguments in parent script?
 os.environ["WANDB_RUN_GROUP"] = "2405"
-GLOBAL_MIN_STEPS = 320.0
-MIN_ENTROPY = -1.0
+GLOBAL_MIN_STEPS = 300.0
+MIN_ENTROPY = 0.0
 
 # Create ArgumentParser
 parser = argparse.ArgumentParser(description="Log testing metrics")
@@ -137,6 +137,7 @@ config_dict["bin-count"] = len(CONFIG["histogram"]["counts"])
 config_dict["skip-ahead"] = CONFIG["difficulty"]["skip-ahead"]
 config_dict["look-ahead"] = CONFIG["difficulty"]["look-ahead"]
 config_dict["world_name"] = CONFIG["track"]
+config_dict["aggregate"] = CONFIG["aggregate"]
 
 
 # Start training job
@@ -356,6 +357,10 @@ def process_line(line):
                 wandb.run.summary["test/combo"] = best_metrics["combo"]
                 wandb.run.summary["best_checkpoint"] = best_metrics["checkpoint"]
                 wandb.run.summary["learn/entropy"] = best_metrics["entropy"]
+            # Stop when you get to 100% progress. Useful to test:
+            # - Limit of minimum speed
+            # if ckpt_metrics["test"]["progress"] == 100:
+            #     subprocess.run("./stop-training.sh", shell=True)
             if ckpt_metrics["learn"]["entropy"] <= MIN_ENTROPY:
                 subprocess.run("./stop-training.sh", shell=True)
         # Resetting tracker variables
