@@ -1,7 +1,6 @@
 import os
 import argparse
 import numpy as np
-from custom_files.reward_function import get_direction_change, get_waypoint_difficulty
 import libcst as cst
 from black import FileMode, format_str
 import json
@@ -61,58 +60,12 @@ def main(args):
     inner_line = list([tuple(sublist[2:4]) for sublist in npy_data])
     outer_line = list([tuple(sublist[4:6]) for sublist in npy_data])
 
-    changes = []
-    difficulties = []
-    for i in range(waypoint_count):
-        change, difficulty, _ = get_waypoint_difficulty(
-            i, waypoints, skip_ahead=args.skip_ahead, look_ahead=args.look_ahead
-        )
-        changes.append(get_direction_change(i, waypoints))
-        difficulties.append(difficulty)
 
-    # Obtain aggregate values/weights
-    c_counts, c_bin_edges = np.histogram(
-        changes,
-        bins=args.bin_count,
-    )
-    c_vals = sum(c_counts) / c_counts
-    c_vals = c_vals / min(c_vals)
-    f_min = min(c_vals)
-    f_max = max(c_vals)
-    c_vals = [round((num - f_min) / (f_max - f_min), 4) for num in c_vals.tolist()]
-    d_counts, d_bin_edges = np.histogram(
-        difficulties,
-        bins=2,  # keep them even
-    )
-    f_min = min(d_counts)
-    f_max = max(d_counts)
-    d_diff = args.agent_speed_high - args.agent_speed_low
-    d_vals = [
-        round((((num - f_min) / (f_max - f_min)) * d_diff) + args.agent_speed_low, 4)
-        for num in d_counts.tolist()
-    ]
     reward_config = {
         "track": track_name,
         "reward_type": args.reward_type,
         "waypoint_count": len(waypoints),
         "aggregate": args.aggregate,
-        "importance": {
-            "counts": c_counts.tolist(),
-            "values": c_vals,
-            "edges": c_bin_edges.tolist(),
-        },
-        "difficulty": {
-            "skip-ahead": args.skip_ahead,
-            "look-ahead": args.look_ahead,
-            "max": max(difficulties),
-            "min": min(difficulties),
-            # "weighting": difficulty_weighting,
-            "histogram": {
-                "counts": d_counts.tolist(),
-                "edges": d_bin_edges.tolist(),
-                "values": d_vals,
-            },
-        },
         # "step_reward": step_reward,
     }
 
