@@ -57,14 +57,7 @@ def reward_function(params):
     else:
         projected_steps = 100.0 / mean_progress
 
-    # Trottle_factor ranges from 1.2 to 0.8, where 1.2 is given to max speed
-    throttle_factor = (
-        CONFIG["throttle_factor_diff"]
-        * (CONFIG["agent"]["speed"]["high"] - params["speed"])
-        / THROTTLE_RANGE
-    ) + 1.0
-
-    reward = float(mean_progress * throttle_factor)
+    reward = float(mean_progress)
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:

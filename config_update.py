@@ -49,7 +49,6 @@ def main(args):
         "track": track_name,
         "waypoint_count": len(waypoints),
         "aggregate": args.aggregate,
-        "throttle_factor_diff": args.throttle_factor_diff,
     }
 
     # Open the agent file for reading
@@ -124,20 +123,6 @@ if __name__ == "__main__":
         "--learning-rate",
         help="the learning rate of the agent",
         required=True,
-        type=float,
-    )
-    argparser.add_argument(
-        "--look-ahead",
-        help="the number of waypoints to consider when calculating upcoming track difficulty. 0 means consider the current waypoint only.",
-        default=0,
-        required=False,
-        type=int,
-    )
-    argparser.add_argument(
-        "--throttle-factor-diff",
-        help="the throttle factor difference between high and low speeds",
-        default=1.0,
-        required=False,
         type=float,
     )
     argparser.add_argument(

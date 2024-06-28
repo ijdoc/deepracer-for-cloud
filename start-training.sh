@@ -10,13 +10,11 @@ display_help() {
 # Define default values for command-line options
 agent_speed_high_value=2.0
 agent_speed_low_value="$agent_speed_high_value"
-throttle_factor_diff_value=1.0
 reward_type_value=0
 learning_rate_value=0.0002
 bin_count_value=12
 aggregate_value=15
 skip_ahead_value=0
-look_ahead_value=0
 pretrained_flag=0
 debug_flag=0
 
@@ -49,9 +47,6 @@ while getopts ":h-:" opt; do
                 agent-speed-low)
                     agent_speed_low_value="$value" # Directly use the parsed value
                     ;;
-                throttle-factor-diff)
-                    throttle_factor_diff_value="$value" # Directly use the parsed value
-                    ;;
                 learning-rate)
                     learning_rate_value="$value" # Directly use the parsed value
                     ;;
@@ -60,12 +55,6 @@ while getopts ":h-:" opt; do
                     ;;
                 aggregate)
                     aggregate_value="$value" # Directly use the parsed value
-                    ;;
-                skip-ahead)
-                    skip_ahead_value="$value" # Directly use the parsed value
-                    ;;
-                look-ahead)
-                    look_ahead_value="$value" # Directly use the parsed value
                     ;;
                 pretrained)
                     pretrained_flag=1
@@ -88,8 +77,6 @@ config_options="--agent-speed-high $agent_speed_high_value"
 config_options="$config_options --agent-speed-low $agent_speed_low_value"
 config_options="$config_options --learning-rate $learning_rate_value"
 config_options="$config_options --aggregate $aggregate_value"
-config_options="$config_options --look-ahead $look_ahead_value"
-config_options="$config_options --throttle-factor-diff $throttle_factor_diff_value"
 
 debug_option="--debug"
 if [ $debug_flag -ne 1 ]; then
