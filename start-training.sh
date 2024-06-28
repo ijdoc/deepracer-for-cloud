@@ -8,8 +8,8 @@ display_help() {
 }
 
 # Define default values for command-line options
-agent_speed_high_value=2.4
-agent_speed_low_value=1.2
+agent_speed_high_value=2.0
+agent_speed_low_value="$agent_speed_high_value"
 reward_type_value=5
 learning_rate_value=0.0002
 bin_count_value=12
@@ -37,6 +37,10 @@ while getopts ":h-:" opt; do
                     ;;
                 debug)
                     debug_flag=1
+                    ;;
+                agent-speed)
+                    agent_speed_high_value="$value" # Directly use the parsed value
+                    agent_speed_low_value="$value" # Directly use the parsed value
                     ;;
                 agent-speed-high)
                     agent_speed_high_value="$value" # Directly use the parsed value
