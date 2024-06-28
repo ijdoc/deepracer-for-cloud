@@ -44,6 +44,10 @@ function dr-update-env {
     export DR_ROBOMAKER_GUI_PORT="5901-5920"
   fi
 
+  # Setting the default region to ensure that things work also in the
+  # non default regions.
+  export AWS_DEFAULT_REGION=${DR_AWS_APP_REGION}
+
 }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
@@ -116,6 +120,10 @@ elif [[ "${DR_CLOUD,,}" == "remote" ]]; then
   DR_TRAIN_COMPOSE_FILE="$DR_DOCKER_FILE_SEP $DIR/docker/docker-compose-training.yml $DR_DOCKER_FILE_SEP $DIR/docker/docker-compose-endpoint.yml"
   DR_EVAL_COMPOSE_FILE="$DR_DOCKER_FILE_SEP $DIR/docker/docker-compose-eval.yml $DR_DOCKER_FILE_SEP $DIR/docker/docker-compose-endpoint.yml"
   DR_MINIO_COMPOSE_FILE=""
+elif [[ "${DR_CLOUD,,}" == "aws" ]]; then
+  DR_LOCAL_PROFILE_ENDPOINT_URL=""
+  DR_TRAIN_COMPOSE_FILE="$DR_DOCKER_FILE_SEP $DIR/docker/docker-compose-training.yml $DR_DOCKER_FILE_SEP $DIR/docker/docker-compose-aws.yml"
+  DR_EVAL_COMPOSE_FILE="$DR_DOCKER_FILE_SEP $DIR/docker/docker-compose-eval.yml $DR_DOCKER_FILE_SEP $DIR/docker/docker-compose-aws.yml"
 else
   DR_LOCAL_PROFILE_ENDPOINT_URL=""
   DR_TRAIN_COMPOSE_FILE="$DR_DOCKER_FILE_SEP $DIR/docker/docker-compose-training.yml"
