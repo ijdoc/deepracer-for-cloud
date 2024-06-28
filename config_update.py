@@ -138,7 +138,7 @@ if __name__ == "__main__":
         help="the throttle factor difference between high and low speeds",
         default=1.0,
         required=False,
-        type=int,
+        type=float,
     )
     argparser.add_argument(
         "--aggregate",
