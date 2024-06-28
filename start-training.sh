@@ -10,6 +10,8 @@ display_help() {
 # Define default values for command-line options
 agent_speed_high_value=2.0
 agent_speed_low_value="$agent_speed_high_value"
+throttle_factor_max_value=1.0
+throttle_factor_min_value="$throttle_factor_max_value"
 reward_type_value=0
 learning_rate_value=0.0002
 bin_count_value=12
@@ -47,6 +49,12 @@ while getopts ":h-:" opt; do
                     ;;
                 agent-speed-low)
                     agent_speed_low_value="$value" # Directly use the parsed value
+                    ;;
+                throttle-factor-max)
+                    throttle_factor_max_value="$value" # Directly use the parsed value
+                    ;;
+                throttle-factor-min)
+                    throttle_factor_min_value="$value" # Directly use the parsed value
                     ;;
                 reward-type)
                     reward_type_value="$value" # Directly use the parsed value
