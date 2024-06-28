@@ -6,21 +6,6 @@ from black import FileMode, format_str
 import json
 from utils import reward_config_utils as rcu
 
-# Cumulative max is ~141@161 steps in our case
-# step_reward = {
-#     "ymax": 1,
-#     "ymin": 0.0,
-#     "k": -0.05,
-#     "x0": 200,
-# }
-
-# difficulty_weighting = {
-#     "ymax": 1.0,
-#     "ymin": 0.0,
-#     "k": 30,
-#     "x0": 0.50,
-# }
-
 
 class VariableTransformer(cst.CSTTransformer):
     def __init__(self, variable_name, new_value):
@@ -60,13 +45,11 @@ def main(args):
     inner_line = list([tuple(sublist[2:4]) for sublist in npy_data])
     outer_line = list([tuple(sublist[4:6]) for sublist in npy_data])
 
-
     reward_config = {
         "track": track_name,
-        "reward_type": args.reward_type,
         "waypoint_count": len(waypoints),
         "aggregate": args.aggregate,
-        # "step_reward": step_reward,
+        "throttle_factor_diff": args.throttle_factor_diff,
     }
 
     # Open the agent file for reading
@@ -144,13 +127,6 @@ if __name__ == "__main__":
         type=float,
     )
     argparser.add_argument(
-        "--skip-ahead",
-        help="the number of waypoints to skip when calculating upcoming track difficulty. 0 means start from the current waypoint.",
-        default=1,
-        required=False,
-        type=int,
-    )
-    argparser.add_argument(
         "--look-ahead",
         help="the number of waypoints to consider when calculating upcoming track difficulty. 0 means consider the current waypoint only.",
         default=0,
@@ -158,9 +134,9 @@ if __name__ == "__main__":
         type=int,
     )
     argparser.add_argument(
-        "--bin-count",
-        help="the number of bins to consider for learning importance histogram",
-        default=12,
+        "--throttle-factor-diff",
+        help="the throttle factor difference between high and low speeds",
+        default=1.0,
         required=False,
         type=int,
     )
@@ -170,12 +146,6 @@ if __name__ == "__main__":
         default=15,
         required=False,
         type=int,
-    )
-    argparser.add_argument(
-        "--reward-type",
-        help="the reward function to use",
-        type=int,
-        required=True,
     )
 
     args = argparser.parse_args()

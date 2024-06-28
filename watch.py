@@ -128,9 +128,11 @@ with open("./custom_files/model_metadata.json", "r") as json_file:
     logged_dict["space"] = model_dict["action_space"]
     config_dict["m"] = logged_dict
 
-config_dict["reward-type"] = CONFIG["reward_type"]
 config_dict["world_name"] = CONFIG["track"]
 config_dict["aggregate"] = CONFIG["aggregate"]
+config_dict["waypoint_count"] = CONFIG["waypoint_count"]
+config_dict["throttle_factor_diff"] = CONFIG["throttle_factor_diff"]
+
 
 
 # Start training job

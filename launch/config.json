@@ -7,10 +7,8 @@
             "--agent-speed-low=2.1",
             "--look-ahead=5",
             "--learning-rate=0.0002",
-            "--reward-type=1",
             "--skip-ahead=0",
-            "--throttle-factor-max=1.2",
-            "--throttle-factor-min=0.8"
+            "--throttle-factor-diff=1.0"
         ]
     }
 }
