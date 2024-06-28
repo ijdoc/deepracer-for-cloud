@@ -82,7 +82,7 @@ def main(args):
     c_vals = [round((num - f_min) / (f_max - f_min), 4) for num in c_vals.tolist()]
     d_counts, d_bin_edges = np.histogram(
         difficulties,
-        bins=4, # keep them even
+        bins=2,  # keep them even
     )
     f_min = min(d_counts)
     f_max = max(d_counts)

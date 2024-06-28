@@ -4,8 +4,8 @@
 **/*.png
 retrain.sh
 *.tar.gz
-.wandb/**
-wandb/**
+**/.wandb
+**/wandb
 *.pyc
 .vscode/
 logs/

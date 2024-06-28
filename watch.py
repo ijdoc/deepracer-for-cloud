@@ -12,7 +12,7 @@ import argparse
 from custom_files.reward_function import CONFIG
 
 # FIXME: Define from command line arguments in parent script?
-os.environ["WANDB_RUN_GROUP"] = "2405"
+os.environ["WANDB_RUN_GROUP"] = "2406"
 GLOBAL_MIN_STEPS = 300.0
 MIN_ENTROPY = 0.0
 
