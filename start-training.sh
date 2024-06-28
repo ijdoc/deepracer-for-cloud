@@ -10,7 +10,7 @@ display_help() {
 # Define default values for command-line options
 agent_speed_high_value=2.0
 agent_speed_low_value="$agent_speed_high_value"
-reward_type_value=5
+reward_type_value=0
 learning_rate_value=0.0002
 bin_count_value=12
 aggregate_value=15

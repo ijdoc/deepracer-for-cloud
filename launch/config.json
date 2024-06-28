@@ -3,11 +3,14 @@
     "overrides": {
         "args": [
             "--aggregate=15",
-            "--agent-speed=2.3",
+            "--agent-speed-high=2.6",
+            "--agent-speed-low=2.1",
             "--look-ahead=5",
             "--learning-rate=0.0002",
-            "--reward-type=0",
-            "--skip-ahead=0"
+            "--reward-type=1",
+            "--skip-ahead=0",
+            "--throttle-factor-max=1.2",
+            "--throttle-factor-min=0.8"
         ]
     }
 }
