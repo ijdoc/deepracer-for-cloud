@@ -2,13 +2,12 @@
 {
     "overrides": {
         "args": [
-            "--reward-type=6",
-            "--agent-speed-high=1.41",
-            "--agent-speed-low=1.39",
-            "--learning-rate=0.0002",
-            "--skip-ahead=0",
+            "--aggregate=15",
+            "--agent-speed=2.3",
             "--look-ahead=5",
-            "--aggregate=15"
+            "--learning-rate=0.0002",
+            "--reward-type=0",
+            "--skip-ahead=0"
         ]
     }
 }

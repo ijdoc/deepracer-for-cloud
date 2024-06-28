@@ -21,61 +21,56 @@ class CircularBuffer:
 
 # Globals
 CONFIG = {
-    "track": "Albert",
-    "reward_type": 6,
-    "waypoint_count": 344,
+    "track": "jyllandsringen_open_ccw",
+    "reward_type": 0,
+    "waypoint_count": 156,
     "aggregate": 15,
     "importance": {
-        "counts": [3, 5, 18, 29, 38, 49, 54, 59, 31, 30, 15, 13],
+        "counts": [2, 2, 5, 6, 6, 64, 37, 15, 5, 4, 5, 5],
         "values": [
             1.0,
-            0.5786,
-            0.122,
-            0.0554,
-            0.0296,
-            0.0109,
-            0.005,
+            1.0,
+            0.3806,
+            0.3118,
+            0.3118,
             0.0,
-            0.0484,
-            0.0518,
-            0.1571,
-            0.1896,
+            0.0235,
+            0.1054,
+            0.3806,
+            0.4839,
+            0.3806,
+            0.3806,
         ],
         "edges": [
-            -0.1818631112092999,
-            -0.1567841240486577,
-            -0.1317051368880155,
-            -0.1066261497273733,
-            -0.0815471625667311,
-            -0.056468175406088894,
-            -0.0313891882454467,
-            -0.006310201084804484,
-            0.018768786075837707,
-            0.0438477732364799,
-            0.06892676039712212,
-            0.09400574755776434,
-            0.11908473471840651,
+            -0.44222918675310563,
+            -0.36422850757194436,
+            -0.2862278283907831,
+            -0.20822714920962176,
+            -0.1302264700284605,
+            -0.052225790847299225,
+            0.0257748883338621,
+            0.10377556751502337,
+            0.18177624669618464,
+            0.2597769258773459,
+            0.3377776050585072,
+            0.41577828423966845,
+            0.49377896342082983,
         ],
     },
     "difficulty": {
-        "skip-ahead": 1,
-        "look-ahead": 4,
-        "max": 0.8426378525049475,
-        "min": 0.0014958053766309662,
+        "skip-ahead": 0,
+        "look-ahead": 5,
+        "max": 2.028487986274303,
+        "min": 0.0,
         "histogram": {
-            "counts": [217, 112, 15],
-            "edges": [
-                0.0014958053766309662,
-                0.2818764877527365,
-                0.562257170128842,
-                0.8426378525049475,
-            ],
-            "values": [3.2, 2.8361, 2.5],
+            "counts": [122, 34],
+            "edges": [0.0, 1.0142439931371514, 2.028487986274303],
+            "values": [2.3, 2.3],
         },
     },
     "agent": {
         "steering_angle": {"high": 30.0, "low": -30.0},
-        "speed": {"high": 3.2, "low": 2.5},
+        "speed": {"high": 2.3009999999999997, "low": 2.299},
     },
 }
 LAST_PROGRESS = 0.0
@@ -310,23 +305,23 @@ def reward_function(params):
             throttle_factor = -throttle_factor
 
     if reward_type == 0:
-        reward = float(
-            importance_weight * (mean_progress * (throttle_factor + mean_smoothness))
-        )
-    if reward_type == 1:
-        reward = float(importance_weight * mean_progress * mean_smoothness)
-    if reward_type == 2:
-        reward = float(importance_weight * mean_progress * throttle_factor)
-    if reward_type == 3:
-        reward = float(importance_weight * mean_progress)
-    if reward_type == 4:
-        reward = float(mean_progress * (throttle_factor + mean_smoothness))
-    if reward_type == 5:
-        reward = float(mean_progress * mean_smoothness)
-    if reward_type == 6:
-        reward = float(mean_progress * throttle_factor)
-    if reward_type == 7:
         reward = float(mean_progress)
+    if reward_type == 1:
+        reward = float(mean_progress * throttle_factor)
+    # if reward_type == 2:
+    #     reward = float(importance_weight * mean_progress * throttle_factor)
+    # if reward_type == 3:
+    #     reward = float(importance_weight * mean_progress)
+    # if reward_type == 4:
+    #     reward = float(mean_progress * (throttle_factor + mean_smoothness))
+    # if reward_type == 5:
+    #     reward = float(mean_progress * mean_smoothness)
+    # if reward_type == 6:
+    #     reward = float(
+    #         importance_weight * (mean_progress * (throttle_factor + mean_smoothness))
+    #     )
+    # if reward_type == 7:
+    #     reward = float(importance_weight * mean_progress * mean_smoothness)
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:

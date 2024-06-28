@@ -121,6 +121,9 @@ def main(args):
         # Load the JSON data into a Python dictionary
         model_dict = json.load(json_file)
 
+    if args.agent_speed_high == args.agent_speed_low:
+        args.agent_speed_high += 1e-3
+        args.agent_speed_low -= 1e-3
     model_dict["action_space"]["speed"]["high"] = args.agent_speed_high
     model_dict["action_space"]["speed"]["low"] = args.agent_speed_low
 
