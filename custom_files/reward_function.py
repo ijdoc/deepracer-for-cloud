@@ -107,7 +107,7 @@ def reward_function(params):
     BUFFER["progress"].add_value(params["progress"] - LAST["progress"])
     BUFFER["direction"].add_value(this_direction)
     mean_progress = BUFFER["progress"].get_mean()
-    difficulty = 10.0 * BUFFER["direction"].get_absnormcumdiff()
+    difficulty = 5.0 * BUFFER["direction"].get_absnormcumdiff()
     LAST["progress"] = params["progress"]
     LAST["direction"] = this_direction
     base_reward = 0.1

@@ -2,7 +2,7 @@
 {
     "overrides": {
         "args": [
-            "--aggregate=15",
+            "--aggregate=8",
             "--agent-speed-high=2.2",
             "--agent-speed-low=1.9",
             "--learning-rate=0.0002"
