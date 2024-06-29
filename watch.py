@@ -61,8 +61,7 @@ def reset_tables():
         "waypoint",
         "progress",
         "_progress",
-        "speed",
-        "steer",
+        "difficulty",
         "reward",
     ]
     return {
@@ -133,7 +132,6 @@ config_dict["aggregate"] = CONFIG["aggregate"]
 config_dict["waypoint_count"] = CONFIG["waypoint_count"]
 
 
-
 # Start training job
 if not DEBUG:
     if args.pretrained:
@@ -198,10 +196,9 @@ def process_line(line):
         waypoint = int(float(parts[1]))
         progress = float(parts[2])
         mean_progress = float(parts[3])
-        speed = float(parts[4])
-        steer = float(parts[5])
-        reward = float(parts[6])
-        is_finished = int(parts[7])
+        difficulty = float(parts[4])
+        reward = float(parts[5])
+        is_finished = int(parts[6])
         job = "train"
         if is_testing:
             job = "test"
@@ -212,8 +209,7 @@ def process_line(line):
                 waypoint,
                 progress,
                 mean_progress,
-                speed,
-                steer,
+                difficulty,
                 reward,
             )
         step_metrics[job]["reward"].append(reward)
