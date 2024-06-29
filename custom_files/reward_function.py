@@ -2,7 +2,6 @@ import math
 
 
 class CircularBuffer:
-
     def __init__(self, size, value=0.0):
         self.size = size
         self.buffer = [value] * size  # Initialize with value
@@ -32,7 +31,7 @@ CONFIG = {
     "aggregate": 15,
     "agent": {
         "steering_angle": {"high": 30.0, "low": -30.0},
-        "speed": {"high": 2.6, "low": 2.1},
+        "speed": {"high": 2.2, "low": 1.9},
     },
 }
 LAST = {
@@ -108,12 +107,12 @@ def reward_function(params):
     BUFFER["progress"].add_value(params["progress"] - LAST["progress"])
     BUFFER["direction"].add_value(this_direction)
     mean_progress = BUFFER["progress"].get_mean()
-    difficulty = BUFFER["direction"].get_absnormcumdiff()
+    difficulty = 10.0 * BUFFER["direction"].get_absnormcumdiff()
     LAST["progress"] = params["progress"]
     LAST["direction"] = this_direction
     base_reward = 0.1
 
-    reward = float(base_reward + (mean_progress * difficulty))
+    reward = float(mean_progress * (1.0 + difficulty))
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:
