@@ -28,10 +28,10 @@ class CircularBuffer:
 CONFIG = {
     "track": "jyllandsringen_open_ccw",
     "waypoint_count": 156,
-    "aggregate": 15,
+    "aggregate": 8,
     "agent": {
         "steering_angle": {"high": 30.0, "low": -30.0},
-        "speed": {"high": 2.2, "low": 1.9},
+        "speed": {"high": 2.25, "low": 1.75},
     },
 }
 LAST = {
@@ -107,10 +107,9 @@ def reward_function(params):
     BUFFER["progress"].add_value(params["progress"] - LAST["progress"])
     BUFFER["direction"].add_value(this_direction)
     mean_progress = BUFFER["progress"].get_mean()
-    difficulty = 5.0 * BUFFER["direction"].get_absnormcumdiff()
+    difficulty = 4.0 * BUFFER["direction"].get_absnormcumdiff()
     LAST["progress"] = params["progress"]
     LAST["direction"] = this_direction
-    base_reward = 0.1
 
     reward = float(mean_progress * (1.0 + difficulty))
 
