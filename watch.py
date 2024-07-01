@@ -11,6 +11,8 @@ import subprocess
 import argparse
 from custom_files.reward_function import CONFIG
 
+wandb.require("core")
+
 # FIXME: Define from command line arguments in parent script?
 os.environ["WANDB_RUN_GROUP"] = "2407"
 GLOBAL_MIN_STEPS = 500.0
@@ -60,7 +62,8 @@ def reset_tables():
         "step",
         "waypoint",
         "progress",
-        "mean_progress",
+        "distance",
+        "efficiency",
         "reward",
     ]
     return {
@@ -194,9 +197,10 @@ def process_line(line):
         steps = int(float(parts[0]))
         waypoint = int(float(parts[1]))
         progress = float(parts[2])
-        mean_progress = float(parts[3])
-        reward = float(parts[4])
-        is_finished = int(parts[5])
+        distance = float(parts[3])
+        efficiency = float(parts[4])
+        reward = float(parts[5])
+        is_finished = int(parts[6])
         job = "train"
         if is_testing:
             job = "test"
@@ -206,7 +210,8 @@ def process_line(line):
                 steps,
                 waypoint,
                 progress,
-                mean_progress,
+                distance,
+                efficiency,
                 reward,
             )
         step_metrics[job]["reward"].append(reward)

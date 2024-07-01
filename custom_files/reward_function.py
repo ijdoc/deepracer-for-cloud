@@ -14,22 +14,23 @@ class CircularBuffer:
     def get_values(self):
         return self.buffer
 
-    def get_mean(self):
-        return sum(self.buffer) / self.size
+    def get_sum(self):
+        return sum(self.buffer)
 
 
 # Globals
 CONFIG = {
     "track": "2022_april_pro_ccw",
     "waypoint_count": 227,
-    "aggregate": 15,
+    "aggregate": 25,
     "agent": {
         "steering_angle": {"high": 30.0, "low": -30.0},
-        "speed": {"high": 2.001, "low": 1.999},
+        "speed": {"high": 2.56799405690119, "low": 2.5659940569011903},
     },
 }
 LAST = {
     "progress": 0.0,
+    "position": [0.0, 0.0],
 }
 BUFFER = {}
 
@@ -44,17 +45,27 @@ def reward_function(params):
         # Reset values at the beginning of the episode
         LAST = {
             "progress": 0.0,
+            "position": [params["x"], params["y"]],
         }
         BUFFER = {
             "progress": CircularBuffer(CONFIG["aggregate"], LAST["progress"]),
+            "distance": CircularBuffer(CONFIG["aggregate"], 0.0),
         }
 
-    # Get the mean step progress
+    # Get the path efficiency
     BUFFER["progress"].add_value(params["progress"] - LAST["progress"])
-    mean_progress = BUFFER["progress"].get_mean()
+    BUFFER["distance"].add_value(
+        math.hypot(params["x"] - LAST["position"][0], params["y"] - LAST["position"][1])
+    )
+    path_efficiency = 0.0
+    progress = BUFFER["progress"].get_sum()
+    distance_travelled = BUFFER["distance"].get_sum()
+    if distance_travelled > 0.0:
+        path_efficiency = progress / distance_travelled
     LAST["progress"] = params["progress"]
+    LAST["position"] = [params["x"], params["y"]]
 
-    reward = float(mean_progress)
+    reward = float(path_efficiency)
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:
@@ -62,7 +73,7 @@ def reward_function(params):
 
     # This trace is needed for train & test logging
     print(
-        f'MY_TRACE_LOG:{params["steps"]},{this_waypoint},{params["progress"]},{mean_progress},{reward},{is_finished}'
+        f'MY_TRACE_LOG:{params["steps"]},{this_waypoint},{progress},{distance_travelled},{path_efficiency},{reward},{is_finished}'
     )
 
     return reward
