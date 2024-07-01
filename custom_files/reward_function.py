@@ -22,10 +22,10 @@ class CircularBuffer:
 CONFIG = {
     "track": "2022_april_pro_ccw",
     "waypoint_count": 227,
-    "aggregate": 25,
+    "aggregate": 22,
     "agent": {
         "steering_angle": {"high": 30.0, "low": -30.0},
-        "speed": {"high": 2.56799405690119, "low": 2.5659940569011903},
+        "speed": {"high": 1.6095110023512869, "low": 1.607511002351287},
     },
 }
 LAST = {
@@ -65,7 +65,10 @@ def reward_function(params):
     LAST["progress"] = params["progress"]
     LAST["position"] = [params["x"], params["y"]]
 
-    reward = float(path_efficiency)
+    if params["steps"] <= (CONFIG["aggregate"] / 2):
+        reward = 0.0
+    else:
+        reward = float(path_efficiency) / 10.0
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:
@@ -73,7 +76,7 @@ def reward_function(params):
 
     # This trace is needed for train & test logging
     print(
-        f'MY_TRACE_LOG:{params["steps"]},{this_waypoint},{progress},{distance_travelled},{path_efficiency},{reward},{is_finished}'
+        f'MY_TRACE_LOG:{params["steps"]},{this_waypoint},{params["progress"]},{progress},{distance_travelled},{path_efficiency},{reward},{is_finished}'
     )
 
     return reward

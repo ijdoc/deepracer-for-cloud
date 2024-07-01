@@ -62,8 +62,9 @@ def reset_tables():
         "step",
         "waypoint",
         "progress",
-        "distance",
-        "efficiency",
+        "_progress",
+        "_distance",
+        "_efficiency",
         "reward",
     ]
     return {
@@ -197,10 +198,11 @@ def process_line(line):
         steps = int(float(parts[0]))
         waypoint = int(float(parts[1]))
         progress = float(parts[2])
-        distance = float(parts[3])
-        efficiency = float(parts[4])
-        reward = float(parts[5])
-        is_finished = int(parts[6])
+        buffer_progress = float(parts[3])
+        distance = float(parts[4])
+        efficiency = float(parts[5])
+        reward = float(parts[6])
+        is_finished = int(parts[7])
         job = "train"
         if is_testing:
             job = "test"
@@ -210,6 +212,7 @@ def process_line(line):
                 steps,
                 waypoint,
                 progress,
+                buffer_progress,
                 distance,
                 efficiency,
                 reward,
