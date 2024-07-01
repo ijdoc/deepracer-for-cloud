@@ -12,7 +12,7 @@ import argparse
 from custom_files.reward_function import CONFIG
 
 # FIXME: Define from command line arguments in parent script?
-os.environ["WANDB_RUN_GROUP"] = "2406"
+os.environ["WANDB_RUN_GROUP"] = "2407"
 GLOBAL_MIN_STEPS = 500.0
 MIN_ENTROPY = 0.0
 
@@ -60,8 +60,7 @@ def reset_tables():
         "step",
         "waypoint",
         "progress",
-        "_progress",
-        "difficulty",
+        "mean_progress",
         "reward",
     ]
     return {
@@ -196,9 +195,8 @@ def process_line(line):
         waypoint = int(float(parts[1]))
         progress = float(parts[2])
         mean_progress = float(parts[3])
-        difficulty = float(parts[4])
-        reward = float(parts[5])
-        is_finished = int(parts[6])
+        reward = float(parts[4])
+        is_finished = int(parts[5])
         job = "train"
         if is_testing:
             job = "test"
@@ -209,7 +207,6 @@ def process_line(line):
                 waypoint,
                 progress,
                 mean_progress,
-                difficulty,
                 reward,
             )
         step_metrics[job]["reward"].append(reward)
@@ -302,7 +299,7 @@ def process_line(line):
                 if (
                     not DEBUG
                     and best_metrics["progress"] >= 100.0
-                    and ckpt_metrics["test"]["steps"] <= GLOBAL_MIN_STEPS
+                    # and ckpt_metrics["test"]["steps"] <= GLOBAL_MIN_STEPS
                 ):
                     print(
                         f'{timestamp} 🚀 Uploading full progress checkpoint {checkpoint} expecting {best_metrics["steps"]:0.2f} steps)'
@@ -351,7 +348,8 @@ def process_line(line):
             # - Limit of minimum speed
             # if ckpt_metrics["test"]["progress"] == 100:
             #     subprocess.run("./stop-training.sh", shell=True)
-            if ckpt_metrics["learn"]["entropy"] <= MIN_ENTROPY:
+            # if ckpt_metrics["learn"]["entropy"] <= MIN_ENTROPY:
+            if checkpoint == 150:
                 subprocess.run("./stop-training.sh", shell=True)
         # Resetting tracker variables
         iter_metrics = reset_iter_metrics()
