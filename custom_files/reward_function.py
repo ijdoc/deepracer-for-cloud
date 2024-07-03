@@ -70,7 +70,7 @@ def reward_function(params):
     LAST["progress"] = params["progress"]
     LAST["position"] = [params["x"], params["y"]]
 
-    reward = float(mean_progress * path_efficiency)
+    reward = float(mean_progress * abs(path_efficiency))
 
     is_finished = 0
     if params["is_offtrack"] or params["progress"] == 100.0:
