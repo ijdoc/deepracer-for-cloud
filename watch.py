@@ -15,8 +15,8 @@ wandb.require("core")
 
 # FIXME: Define from command line arguments in parent script?
 os.environ["WANDB_RUN_GROUP"] = "2407"
-GLOBAL_MIN_STEPS = 500.0
-MIN_ENTROPY = 0.0
+GLOBAL_MIN_STEPS = 620.0
+MIN_ENTROPY = -0.5
 
 # Create ArgumentParser
 parser = argparse.ArgumentParser(description="Log testing metrics")
@@ -140,14 +140,14 @@ if not DEBUG:
     if args.pretrained:
         wandb.init(
             config=config_dict,
-            entity="iamjdoc",
+            entity="team-jdoc",
             project="dr-reborn",
             job_type="retrain",
         )
     else:
         wandb.init(
             config=config_dict,
-            entity="iamjdoc",
+            entity="team-jdoc",
             project="dr-reborn",
             job_type="train",
             resume="allow",  # Needed to assume the launch-provided id
@@ -307,7 +307,7 @@ def process_line(line):
                 if (
                     not DEBUG
                     and best_metrics["progress"] >= 100.0
-                    # and ckpt_metrics["test"]["steps"] <= GLOBAL_MIN_STEPS
+                    and ckpt_metrics["test"]["steps"] <= GLOBAL_MIN_STEPS
                 ):
                     print(
                         f'{timestamp} 🚀 Uploading full progress checkpoint {checkpoint} expecting {best_metrics["steps"]:0.2f} steps)'
@@ -352,12 +352,9 @@ def process_line(line):
                 wandb.run.summary["test/combo"] = best_metrics["combo"]
                 wandb.run.summary["best_checkpoint"] = best_metrics["checkpoint"]
                 wandb.run.summary["learn/entropy"] = best_metrics["entropy"]
-            # Stop when you get to 100% progress. Useful to test:
-            # - Limit of minimum speed
+            # if checkpoint == 100:
             # if ckpt_metrics["test"]["progress"] == 100:
-            #     subprocess.run("./stop-training.sh", shell=True)
-            # if ckpt_metrics["learn"]["entropy"] <= MIN_ENTROPY:
-            if checkpoint == 150:
+            if ckpt_metrics["learn"]["entropy"] <= MIN_ENTROPY:
                 subprocess.run("./stop-training.sh", shell=True)
         # Resetting tracker variables
         iter_metrics = reset_iter_metrics()
