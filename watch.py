@@ -15,7 +15,7 @@ wandb.require("core")
 
 # FIXME: Define from command line arguments in parent script?
 os.environ["WANDB_RUN_GROUP"] = "2407"
-GLOBAL_MIN_STEPS = 620.0
+TRACK_STEPS_RECORD = 606.63
 MIN_ENTROPY = -0.5
 
 # Create ArgumentParser
@@ -307,7 +307,7 @@ def process_line(line):
                 if (
                     not DEBUG
                     and best_metrics["progress"] >= 100.0
-                    and ckpt_metrics["test"]["steps"] <= GLOBAL_MIN_STEPS
+                    and ckpt_metrics["test"]["steps"] <= TRACK_STEPS_RECORD
                 ):
                     print(
                         f'{timestamp} 🚀 Uploading full progress checkpoint {checkpoint} expecting {best_metrics["steps"]:0.2f} steps)'
@@ -315,9 +315,7 @@ def process_line(line):
                     update_run_env(wandb.run.name, checkpoint)
                     subprocess.run("./upload.sh", shell=True)
                     # subprocess.Popen(["./upload.sh"])  # Non-blocking!
-                    # print(
-                    #     f"TODO: Create model reference to s3://jdoc-one-deepracer-data-b5pi7cdvar/{wandb.run.name}-{checkpoint}/"
-                    # )
+                    # Log model artifact by reference
                     wandb.log_model(
                         path=f"s3://jdoc-one-deepracer-data-b5pi7cdvar/{wandb.run.name}-{checkpoint}/",
                         name=f"{wandb.run.name}",
