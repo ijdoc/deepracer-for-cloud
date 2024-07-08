@@ -15,7 +15,7 @@ wandb.require("core")
 
 # FIXME: Define from command line arguments in parent script?
 os.environ["WANDB_RUN_GROUP"] = "2407"
-TRACK_STEPS_RECORD = 606.63
+TRACK_STEPS_RECORD = 571.95
 MIN_ENTROPY = -0.5
 
 # Create ArgumentParser
@@ -276,25 +276,26 @@ def process_line(line):
                         f'{timestamp} WARNING: Empty list. Skipped {metric} mean calculation for ckpt {checkpoint}'
                     )
 
-            # Estimate projected exits based on entropy
-            projected_exits = ckpt_metrics["learn"]["entropy"] - MIN_ENTROPY
-
-            # Estimate projected lap time
-            if projected_exits > 0.0:
-                projected_lap_time = (
-                    ckpt_metrics["test"]["steps"]
-                    + (projected_exits * 150.0)  # Each exit costs 10s or 150 steps
-                ) / 15.0
+            # Simple combo metric calculation
+            if ckpt_metrics["test"]["progress"] < 100:
+                ckpt_metrics["test"]["combo"] = ckpt_metrics["test"]["progress"] / 100.0
             else:
-                projected_lap_time = ckpt_metrics["test"]["steps"] / 15.0
-
-            # Divide progress by projected lap time
-            ckpt_metrics["test"]["combo"] = (
-                ckpt_metrics["test"]["progress"] / projected_lap_time
-            )
+                ckpt_metrics["test"]["combo"] = (
+                    (750.00 - ckpt_metrics["test"]["steps"]) / 100.00
+                ) + min(1.17, ((3.0 - ckpt_metrics["learn"]["entropy"]) / 3.0))
 
             # Update best metrics & summary
-            if ckpt_metrics["test"]["combo"] > best_metrics["combo"]:
+            if (
+                ckpt_metrics["test"]["progress"] >= best_metrics["progress"]
+                or (
+                    ckpt_metrics["test"]["progress"] >= 100.0
+                    and ckpt_metrics["test"]["steps"] <= best_metrics["steps"]
+                )
+                or (
+                    ckpt_metrics["test"]["progress"] >= 100.0
+                    and ckpt_metrics["learn"]["entropy"] <= best_metrics["entropy"]
+                )
+            ):
                 best_metrics["reward"] = ckpt_metrics["test"]["reward"]
                 best_metrics["steps"] = ckpt_metrics["test"]["steps"]
                 best_metrics["progress"] = ckpt_metrics["test"]["progress"]
