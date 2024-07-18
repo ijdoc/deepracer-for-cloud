@@ -49,6 +49,7 @@ def main(args):
         "track": track_name,
         "waypoint_count": len(waypoints),
         "aggregate": args.aggregate,
+        "look-ahead": args.look_ahead,
     }
 
     # Open the agent file for reading
@@ -129,6 +130,13 @@ if __name__ == "__main__":
         "--aggregate",
         help="the number of steps to aggregate for the mean reward",
         default=15,
+        required=False,
+        type=int,
+    )
+    argparser.add_argument(
+        "--look-ahead",
+        help="the number of waypoints ahead used to calculate difficulty",
+        default=10,
         required=False,
         type=int,
     )

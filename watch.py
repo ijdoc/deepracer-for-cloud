@@ -15,7 +15,7 @@ wandb.require("core")
 
 # FIXME: Define from command line arguments in parent script?
 os.environ["WANDB_RUN_GROUP"] = "2407"
-TRACK_STEPS_RECORD = 571.95
+TRACK_STEPS_RECORD = 540
 MIN_ENTROPY = -0.5
 
 # Create ArgumentParser
@@ -63,8 +63,9 @@ def reset_tables():
         "waypoint",
         "progress",
         "_progress",
-        "_distance",
-        "_efficiency",
+        "efficiency",
+        "difficulty",
+        "throttle",
         "reward",
     ]
     return {
@@ -198,11 +199,12 @@ def process_line(line):
         steps = int(float(parts[0]))
         waypoint = int(float(parts[1]))
         progress = float(parts[2])
-        buffer_progress = float(parts[3])
-        distance = float(parts[4])
-        efficiency = float(parts[5])
-        reward = float(parts[6])
-        is_finished = int(parts[7])
+        mean_progress = float(parts[3])
+        efficiency = float(parts[4])
+        difficulty = float(parts[5])
+        throttle = float(parts[6])
+        reward = float(parts[7])
+        is_finished = int(parts[8])
         job = "train"
         if is_testing:
             job = "test"
@@ -212,9 +214,10 @@ def process_line(line):
                 steps,
                 waypoint,
                 progress,
-                buffer_progress,
-                distance,
+                mean_progress,
                 efficiency,
+                difficulty,
+                throttle,
                 reward,
             )
         step_metrics[job]["reward"].append(reward)
