@@ -25,11 +25,11 @@ class CircularBuffer:
 CONFIG = {
     "track": "2022_april_pro_ccw",
     "waypoint_count": 227,
-    "aggregate": 32,
-    "look-ahead": 10,
+    "aggregate": 10,
+    "look-ahead": 7,
     "agent": {
         "steering_angle": {"high": 30.0, "low": -30.0},
-        "speed": {"high": 2.0031423703244955, "low": 1.3031682250413643},
+        "speed": {"high": 2.2502132028215445, "low": 1.4220324493442158},
     },
 }
 LAST = {
@@ -124,9 +124,7 @@ def reward_function(params):
     next_waypoint = this_waypoint
     difficulty = 0.0
     for i in range(CONFIG["look-ahead"]):
-        difficulty += get_direction_change_ahead(
-            next_waypoint, params["waypoints"]
-        )
+        difficulty += get_direction_change_ahead(next_waypoint, params["waypoints"])
         next_waypoint = get_next_distinct_index(next_waypoint, params["waypoints"])
     difficulty = math.fabs(difficulty) / CONFIG["look-ahead"]
 
@@ -162,7 +160,7 @@ def reward_function(params):
         CONFIG["agent"]["speed"]["high"] - CONFIG["agent"]["speed"]["low"]
     )
     # Goes from 1 to 0 as difficulty increases from 0 to ~pi/10
-    speed_importance = sigmoid(difficulty, k=-40, x0=0.157, ymin=0.0, ymax=1.0)
+    speed_importance = sigmoid(difficulty, k=-40, x0=0.1, ymin=0.0, ymax=1.0)
     speed_factor = (1.0 - speed_importance) + (speed_fraction * speed_importance)
 
     reward = float(mean_progress * abs(path_efficiency) * speed_factor)
